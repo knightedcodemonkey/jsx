@@ -1,6 +1,6 @@
 {
   "name": "@knighted/jsx",
-  "version": "1.0.0-alpha.2",
+  "version": "1.0.0-rc.0",
   "description": "A simple JSX transpiler that runs in node.js or the browser.",
   "keywords": [
     "jsx browser transform",
@@ -20,6 +20,11 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
+    "./lite": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/lite/index.js",
+      "default": "./dist/lite/index.js"
+    },
     "./package.json": "./package.json"
   },
   "engines": {
@@ -27,7 +32,7 @@
   },
   "engineStrict": true,
   "scripts": {
-    "build": "duel",
+    "build": "duel && npm run build:lite",
     "precheck-types": "npm run build",
     "check-types": "npm run check-types:lib && npm run check-types:demo",
     "check-types:lib": "tsc --noEmit --project tsconfig.json",
@@ -39,6 +44,7 @@
     "dev": "vite dev --config vite.config.ts",
     "build:demo": "vite build --config vite.config.ts",
     "preview": "vite preview --config vite.config.ts",
+    "build:lite": "tsup --config tsup.config.ts",
     "prepack": "npm run build"
   },
   "devDependencies": {
@@ -49,6 +55,7 @@
     "eslint": "^9.39.1",
     "jsdom": "^27.2.0",
     "prettier": "^3.7.3",
+    "tsup": "^8.3.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.48.0",
     "vite": "^7.2.4",
