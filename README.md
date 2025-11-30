@@ -96,6 +96,16 @@ When you are not using a bundler, load the module directly from a CDN that under
 
 If you are building locally with Vite/Rollup/Webpack make sure the WASM binding is installable (see the `npm_config_ignore_platform` tip above) so the bundler can resolve `@oxc-parser/binding-wasm32-wasi`.
 
+### Lite bundle entry
+
+If you already run this package through your own bundler you can trim a few extra kilobytes by importing the minified entry:
+
+```ts
+import { jsx } from '@knighted/jsx/lite'
+```
+
+The `lite` export ships the exact same API as the default entry but is pre-minified via `tsup`, so bundlers have less work to do and browsers download ~10% less code. No functionality is removed—you can freely swap between the standard and lite imports.
+
 ## Testing
 
 Run the Vitest suite (powered by jsdom) to exercise the DOM runtime and component support:
@@ -108,7 +118,7 @@ Tests live in `test/jsx.test.ts` and cover DOM props/events, custom components, 
 
 ## Browser demo / Vite build
 
-This repo ships with a ready-to-run Vite demo under `examples/browser` that bundles the library (and the WASM binding vendored in `vendor/binding-wasm32-wasi`). Use it for a full end-to-end verification in a real browser:
+This repo ships with a ready-to-run Vite demo under `examples/browser` that bundles the library (and the WASM binding vendored in `vendor/binding-wasm32-wasi`). Use it for a full end-to-end verification in a real browser (the demo now imports `@knighted/jsx/lite` so you can confirm the lighter entry behaves identically):
 
 ```sh
 # Start a dev server at http://localhost:5173
@@ -119,7 +129,7 @@ npm run build:demo
 npm run preview
 ```
 
-The Vite config aliases `@oxc-parser/binding-wasm32-wasi` to the vendored copy so you don’t have to perform any extra install tricks locally, while production consumers can still rely on the published package.
+The Vite config aliases `@oxc-parser/binding-wasm32-wasi` to the vendored copy so you don’t have to perform any extra install tricks locally, while production consumers can still rely on the published package. For a zero-build verification of the lite bundle, open `examples/esm-demo-lite.html` directly in your browser (it sources `https://esm.sh/@knighted/jsx/lite`).
 
 ## Limitations
 
@@ -136,7 +146,7 @@ Tradeoffs to keep in mind:
 - **Parser vs tokenizer** – `htm` performs lightweight string tokenization, while `@knighted/jsx` pays a higher one-time parse cost but gains the full JSX grammar (fragments, spread children, nested namespaces) without heuristics. For large or deeply nested templates the WASM-backed parser is typically faster and more accurate than string slicing.
 - **DOM-first rendering** – this runtime builds DOM nodes directly, so the cost after parsing is mostly attribute assignment and child insertion. `htm` usually feeds a virtual DOM/hyperscript factory (e.g., Preact’s `h`), which may add an extra abstraction layer before hitting the DOM.
 - **Bundle size** – including the parser and WASM binding is heavier than `htm`’s ~1 kB tokenizer. If you just need hyperscript sugar, `htm` stays leaner; if you value real JSX semantics without a build step, the extra kilobytes buy you correctness and speed on complex trees.
-  - **Actual size** – the published `dist/jsx.js` bundle for `@knighted/jsx` is ~13.9 kB uncompressed and ~3.6 kB min+gzip (as of v1.0.0-alpha.0). `htm` weighs in at roughly 0.7 kB min+gzip. Expect the parser-powered approach to add ~3 kB over `htm` in production payloads.
+  - **Actual size** – the default `dist/jsx.js` bundle is ~13.9 kB raw / ~3.6 kB min+gzip, while the new `@knighted/jsx/lite` entry is ~5.7 kB raw / ~2.5 kB min+gzip. `htm` weighs in at roughly 0.7 kB min+gzip, so the lite entry narrows the gap to ~1.8 kB for production payloads.
 
 In short, `@knighted/jsx` trades a slightly larger runtime for the ability to parse genuine JSX with native performance, whereas `htm` favors minimal footprint and hyperscript integration. Pick the tool that aligns with your rendering stack and performance envelope.
 

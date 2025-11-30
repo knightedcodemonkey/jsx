@@ -1,4 +1,4 @@
-import { jsx, type JsxComponent } from '@knighted/jsx'
+import { jsx, type JsxComponent } from '@knighted/jsx/lite'
 import './style.css'
 
 const Tagline: JsxComponent<{ accent?: string }> = ({ children, accent = 'soft' }) => {
