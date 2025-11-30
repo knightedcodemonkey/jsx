@@ -22,6 +22,7 @@
   "engineStrict": true,
   "scripts": {
     "build": "duel",
+    "precheck-types": "npm run build",
     "check-types": "npm run check-types:lib && npm run check-types:demo",
     "check-types:lib": "tsc --noEmit --project tsconfig.json",
     "check-types:demo": "tsc --noEmit --project examples/browser/tsconfig.json",
