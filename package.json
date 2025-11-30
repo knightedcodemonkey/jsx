@@ -1,9 +1,15 @@
 {
   "name": "@knighted/jsx",
-  "version": "1.0.0-alpha.0",
+  "version": "1.0.0-alpha.1",
   "description": "A simple JSX transpiler that runs in node.js or the browser.",
   "keywords": [
-    "jsx transform"
+    "jsx browser transform",
+    "jsx transpiler",
+    "jsx compiler",
+    "jsx parser",
+    "jsx runtime",
+    "jsx node",
+    "jsx"
   ],
   "type": "module",
   "main": "./dist/index.js",

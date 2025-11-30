@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@knighted/jsx – esm.sh demo</title>
+    <style>
+      :root {
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        color: #111;
+        background: #f7f7f8;
+        line-height: 1.5;
+      }
+
+      body {
+        margin: 0;
+        padding: 2rem;
+      }
+
+      h1 {
+        margin-top: 0;
+        font-size: clamp(1.75rem, 3vw, 2.5rem);
+      }
+
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      .card {
+        background: white;
+        border-radius: 1rem;
+        padding: 1.5rem;
+        box-shadow: 0 15px 45px rgba(15, 23, 42, 0.08);
+      }
+
+      .list {
+        padding-left: 1.5rem;
+      }
+
+      .counter-button {
+        margin-top: 1rem;
+        padding: 0.75rem 1.25rem;
+        border: none;
+        border-radius: 999px;
+        background: #111;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .counter-value {
+        font-size: 2rem;
+        font-weight: 700;
+      }
+
+      .deep-tree {
+        background: white;
+        border-radius: 1.25rem;
+        padding: 1.75rem;
+        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.12);
+        border: 1px solid rgba(15, 23, 42, 0.05);
+      }
+
+      .deep-tree header {
+        margin-bottom: 1.25rem;
+      }
+
+      .eyebrow {
+        font-size: 0.75rem;
+        letter-spacing: 0.35em;
+        text-transform: uppercase;
+        color: #6b7280;
+        margin: 0 0 0.5rem;
+      }
+
+      .feature-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+      }
+
+      .feature-group {
+        border-radius: 1rem;
+        padding: 1rem;
+        background: #f9fafb;
+        border: 1px solid rgba(15, 23, 42, 0.06);
+      }
+
+      .feature-group h3 {
+        margin: 0 0 0.75rem;
+        font-size: 1.05rem;
+      }
+
+      .feature-grid {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+      }
+
+      .feature-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.6rem 0.75rem;
+        border-radius: 0.85rem;
+        background: hsla(var(--badge-hue, 210), 80%, 60%, 0.12);
+        border: 1px solid hsla(var(--badge-hue, 210), 70%, 60%, 0.25);
+      }
+
+      .feature-label {
+        color: #111827;
+        font-weight: 600;
+      }
+
+      .feature-value {
+        font-weight: 700;
+        color: #1f2937;
+      }
+
+      .demo-link {
+        color: #2563eb;
+        text-decoration: none;
+        font-weight: 600;
+      }
+
+      .demo-link:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="app">
+      <header>
+        <h1>@knighted/jsx + esm.sh</h1>
+        <p>
+          Drop this file anywhere, open it in a browser, and enjoy native JSX template
+          literals.
+        </p>
+      </header>
+    </main>
+
+    <script type="module">
+      import { jsx } from 'https://esm.sh/@knighted/jsx'
+
+      const app = document.getElementById('app')
+
+      const Counter = ({ start = 0 }) => {
+        let value = start
+        const valueLabel = jsx`<span class="counter-value">{${value}}</span>`
+
+        const increment = () => {
+          value += 1
+          valueLabel.textContent = String(value)
+        }
+
+        return jsx`
+          <section class="card">
+            <header>
+              <h2>Counter</h2>
+            </header>
+            <p>Current total: {${valueLabel}}</p>
+            <button class="counter-button" onClick={${increment}}>
+              Increment
+            </button>
+          </section>
+        `
+      }
+
+      const milestones = ['hydrate DOM', 'wire events', 'ship 🚀']
+
+      const featureMatrix = [
+        {
+          title: 'Component props',
+          tone: 'accent',
+          live: 'polite',
+          items: [
+            { label: 'Function props', count: 2, hue: 160 },
+            { label: 'Boolean props', count: 4, hue: 120, emphasized: true },
+            { label: 'Style objects', count: 3, hue: 210 },
+          ],
+        },
+        {
+          title: 'DOM attributes',
+          tone: 'primary',
+          live: 'assertive',
+          items: [
+            { label: 'Data attributes', count: 6, hue: 30 },
+            { label: 'Aria tags', count: 5, hue: 10 },
+            { label: 'Event handlers', count: 3, hue: 280 },
+          ],
+        },
+        {
+          title: 'Children rendering',
+          tone: 'muted',
+          live: 'polite',
+          items: [
+            { label: 'Nested fragments', count: 4, hue: 320 },
+            { label: 'Iterables', count: 7, hue: 200 },
+            { label: 'Text nodes', count: 2, hue: 45 },
+          ],
+        },
+      ]
+
+      const DeepTree = ({ heading, footerLink }) => {
+        const groups = featureMatrix.map(
+          group =>
+            jsx`
+            <li
+              class="feature-group"
+              data-tone={${group.tone}}
+              aria-live={${group.live}}
+            >
+              <h3>{${group.title}}</h3>
+              <ul class="feature-grid">
+                {${group.items.map(
+                  item =>
+                    jsx`
+                    <li
+                      class="feature-row"
+                      data-count={${item.count}}
+                      aria-hidden={${item.hidden ?? false}}
+                      aria-pressed={${item.emphasized ?? false}}
+                      style={${{ '--badge-hue': String(item.hue) }}}
+                    >
+                      <span class="feature-label">{${item.label}}</span>
+                      <span class="feature-value">{${item.count}}</span>
+                    </li>
+                  `,
+                )}}
+              </ul>
+            </li>
+          `,
+        )
+
+        return jsx`
+          <section id="deep-demo" class="deep-tree" data-groups={${groups.length}}>
+            <header>
+              <p class="eyebrow">{${'Deep JSX verification'}}</p>
+              <h2>{${heading}}</h2>
+              <p>
+                {${'This section mirrors the Vite demo and renders nested fragments, arrays, and dynamic attributes.'}}
+              </p>
+            </header>
+            <ul class="feature-list">{${groups}}</ul>
+            <footer>
+              <a class="demo-link" href={${footerLink}} target="_blank" rel="noreferrer">
+                Inspect repo on GitHub ↗
+              </a>
+            </footer>
+          </section>
+        `
+      }
+
+      const demo = jsx`
+        <>
+          <section class="card">
+            <header>
+              <h2>Dynamic JSX without a bundler</h2>
+            </header>
+            <p>
+              Everything you see below was generated with the <code>jsx</code> template tag running
+              directly in the browser via <code>esm.sh</code>.
+            </p>
+            <ul class="list">
+              {${milestones.map(item => jsx`<li>{${item}}</li>`)} }
+            </ul>
+            <p>
+              <a class="demo-link" href="#deep-demo">Jump to the nested JSX example ↴</a>
+            </p>
+          </section>
+          <${Counter} start={${1}} />
+          <${DeepTree}
+            heading={${'Nested JSX stress test'}}
+            footerLink={${'https://github.com/knightedcodemonkey/jsx'}}
+          />
+        </>
+      `
+
+      app?.append(demo)
+    </script>
+  </body>
+</html>
