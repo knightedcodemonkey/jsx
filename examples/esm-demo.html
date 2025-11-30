@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>@knighted/jsx – esm.sh demo</title>
+    <title>@knighted/jsx &mdash; esm.sh demo</title>
     <style>
       :root {
         font-family:
@@ -162,11 +162,9 @@
       import { jsx } from 'https://esm.sh/@knighted/jsx'
 
       const app = document.getElementById('app')
-
       const Counter = ({ start = 0 }) => {
         let value = start
         const valueLabel = jsx`<span class="counter-value">{${value}}</span>`
-
         const increment = () => {
           value += 1
           valueLabel.textContent = String(value)
@@ -186,7 +184,6 @@
       }
 
       const milestones = ['hydrate DOM', 'wire events', 'ship 🚀']
-
       const featureMatrix = [
         {
           title: 'Component props',
@@ -219,7 +216,6 @@
           ],
         },
       ]
-
       const DeepTree = ({ heading, footerLink }) => {
         const groups = featureMatrix.map(
           group =>
@@ -269,7 +265,6 @@
           </section>
         `
       }
-
       const demo = jsx`
         <>
           <section class="card">

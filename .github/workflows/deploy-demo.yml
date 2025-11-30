@@ -24,7 +24,7 @@ jobs:
       - name: Package ESM demo
         run: |
           mkdir -p build
-          cp examples/esm-demo.html build/index.html
+          cp examples/esm-demo-lite.html build/index.html
       - name: Setup Pages
         uses: actions/configure-pages@v5.0.0
       - name: Upload artifact

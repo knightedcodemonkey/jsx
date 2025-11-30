@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>@knighted/jsx/lite – esm.sh demo</title>
+    <title>@knighted/jsx/lite &mdash; esm.sh demo</title>
     <style>
       :root {
         font-family:
@@ -141,10 +141,9 @@
     </main>
 
     <script type="module">
-      import { jsx } from 'https://esm.sh/@knighted/jsx/lite'
+      import { jsx } from 'https://esm.sh/@knighted/jsx@1.0.0-rc.0/lite'
 
       const app = document.getElementById('app')
-
       const Counter = ({ start = 0 }) => {
         let value = start
         const valueLabel = jsx`<span class="counter-value">{${value}}</span>`
@@ -169,9 +168,7 @@
           </section>
         `
       }
-
       const milestones = ['hydrate DOM', 'apply props', 'bundle less']
-
       const featureMatrix = [
         {
           title: 'Parser fidelity',
@@ -204,7 +201,6 @@
           ],
         },
       ]
-
       const DeepTree = ({ heading, footerLink }) => {
         const groups = featureMatrix.map(
           group =>
@@ -250,7 +246,6 @@
           </section>
         `
       }
-
       const demo = jsx`
         <>
           <section class="card">
@@ -268,7 +263,7 @@
               <a class="demo-link" href="#deep-lite">Jump to the lite stress test ↴</a>
             </p>
           </section>
-          <${Counter} start={${2}} />
+          <${Counter} start={${0}} />
           <${DeepTree}
             heading={${'Nested JSX (lite build)'}}
             footerLink={${'https://github.com/knightedcodemonkey/jsx'}}
