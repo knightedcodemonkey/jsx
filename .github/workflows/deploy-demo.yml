@@ -1,12 +1,6 @@
 name: Deploy ESM Demo
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'examples/esm-demo.html'
-      - '.github/workflows/deploy-demo.yml'
   workflow_dispatch:
 
 permissions:
