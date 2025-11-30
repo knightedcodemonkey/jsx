@@ -141,6 +141,10 @@
       .demo-link:hover {
         text-decoration: underline;
       }
+
+      .deep-tree footer {
+        margin-top: 1.5rem;
+      }
     </style>
   </head>
   <body>
@@ -173,7 +177,7 @@
             <header>
               <h2>Counter</h2>
             </header>
-            <p>Current total: {${valueLabel}}</p>
+            <p>Current total: {' '}{${valueLabel}}</p>
             <button class="counter-button" onClick={${increment}}>
               Increment
             </button>
@@ -273,8 +277,9 @@
               <h2>Dynamic JSX without a bundler</h2>
             </header>
             <p>
-              Everything you see below was generated with the <code>jsx</code> template tag running
-              directly in the browser via <code>esm.sh</code>.
+              Everything you see below was generated with the{' '}
+              <code>jsx</code>{' '}template tag running directly in the browser via{' '}
+              <code>esm.sh</code>.
             </p>
             <ul class="list">
               {${milestones.map(item => jsx`<li>{${item}}</li>`)} }
