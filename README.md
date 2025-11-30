@@ -129,7 +129,7 @@ npm run build:demo
 npm run preview
 ```
 
-The Vite config aliases `@oxc-parser/binding-wasm32-wasi` to the vendored copy so you don’t have to perform any extra install tricks locally, while production consumers can still rely on the published package. For a zero-build verification of the lite bundle, open `examples/esm-demo-lite.html` directly in your browser (it sources `https://esm.sh/@knighted/jsx/lite`).
+The Vite config aliases `@oxc-parser/binding-wasm32-wasi` to the vendored copy so you don't have to perform any extra install tricks locally, while production consumers can still rely on the published package. For a zero-build verification of the lite bundle, open `examples/esm-demo-lite.html` locally (double-click or run `open examples/esm-demo-lite.html`) or visit the deployed GitHub Pages build produced by `.github/workflows/deploy-demo.yml` (it serves that same lite HTML demo).
 
 ## Limitations
 

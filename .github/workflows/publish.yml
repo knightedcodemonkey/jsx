@@ -39,4 +39,4 @@ jobs:
         uses: JS-DevTools/npm-publish@v4.1.1
         with:
           access: public
-          tag: latest
+          tag: ${{ contains(github.ref, '-') && 'next' || 'latest' }}
