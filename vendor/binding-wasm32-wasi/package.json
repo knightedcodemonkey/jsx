@@ -1,0 +1,41 @@
+{
+  "name": "@oxc-parser/binding-wasm32-wasi",
+  "version": "0.99.0",
+  "cpu": [
+    "wasm32"
+  ],
+  "main": "parser.wasi.cjs",
+  "files": [
+    "parser.wasm32-wasi.wasm",
+    "parser.wasi.cjs",
+    "parser.wasi-browser.js",
+    "wasi-worker.mjs",
+    "wasi-worker-browser.mjs",
+    "browser-bundle.js"
+  ],
+  "description": "Oxc Parser Node API",
+  "keywords": [
+    "oxc",
+    "parser"
+  ],
+  "author": "Boshen and oxc contributors",
+  "homepage": "https://oxc.rs",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oxc-project/oxc.git",
+    "directory": "napi/parser"
+  },
+  "bugs": "https://github.com/oxc-project/oxc/issues",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "browser": "parser.wasi-browser.js",
+  "dependencies": {
+    "@napi-rs/wasm-runtime": "^1.0.7"
+  }
+}

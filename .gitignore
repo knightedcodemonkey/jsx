@@ -1,0 +1,15 @@
+*.tgz
+
+coverage
+# node
+node_modules/
+npm-debug.log*
+
+# build artifacts
+dist/
+examples/browser/dist/
+
+# coverage output
+coverage/
+coverage-v8/
+coverage/vitest/

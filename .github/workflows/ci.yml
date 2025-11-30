@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+      - name: Setup Node
+        uses: actions/setup-node@v4.3.0
+        with:
+          node-version: '24.11.1'
+      - name: Install Dependencies
+        run: npm ci
+      - name: Save error log
+        uses: actions/upload-artifact@v4.6.2
+        if: ${{ failure() }}
+        with:
+          name: npm-debug-log-${{ hashFiles('package-lock.json') }}
+          path: npm-debug.log
+      - name: Check Types
+        run: npm run check-types
+      - name: Test
+        run: npm test
+      - name: Build
+        run: npm run build
+      - name: Pack
+        run: npm pack

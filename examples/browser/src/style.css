@@ -1,0 +1,143 @@
+:root {
+  font-family:
+    'Inter',
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#app {
+  width: min(480px, 90vw);
+}
+
+.demo-card {
+  background: #1e293b;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.demo-card h1 {
+  font-size: 1.8rem;
+  margin: 0;
+}
+
+.demo-card p {
+  margin: 0;
+  color: #94a3b8;
+}
+
+.demo-link {
+  color: #38bdf8;
+  text-decoration: none;
+  font-weight: 600;
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.demo-link:hover {
+  text-decoration: underline;
+}
+
+.demo-button {
+  border: none;
+  padding: 14px 18px;
+  border-radius: 999px;
+  background: linear-gradient(130deg, #4ade80, #2dd4bf);
+  color: #0f172a;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.stack {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.deep-tree {
+  margin-top: 40px;
+  background: rgba(15, 23, 42, 0.35);
+  border-radius: 24px;
+  padding: 32px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  backdrop-filter: blur(24px);
+  color: #e2e8f0;
+}
+
+.deep-tree header {
+  margin-bottom: 24px;
+}
+
+.eyebrow {
+  font-size: 0.8rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  margin: 0 0 8px;
+}
+
+.feature-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.feature-group {
+  background: rgba(15, 23, 42, 0.45);
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.feature-group h3 {
+  margin: 0 0 12px;
+  font-size: 1.1rem;
+}
+
+.feature-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.feature-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: hsla(var(--badge-hue, 210), 80%, 60%, 0.15);
+  border: 1px solid hsla(var(--badge-hue, 210), 70%, 60%, 0.25);
+}
+
+.feature-label {
+  color: #cbd5f5;
+}
+
+.feature-value {
+  font-weight: 700;
+  color: #f8fafc;
+}

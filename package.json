@@ -1,0 +1,76 @@
+{
+  "name": "@knighted/jsx",
+  "version": "1.0.0-alpha.0",
+  "description": "A simple JSX transpiler that runs in node.js or the browser.",
+  "keywords": [
+    "jsx transform"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "engineStrict": true,
+  "scripts": {
+    "build": "duel",
+    "check-types": "npm run check-types:lib && npm run check-types:demo",
+    "check-types:lib": "tsc --noEmit --project tsconfig.json",
+    "check-types:demo": "tsc --noEmit --project examples/browser/tsconfig.json",
+    "lint": "eslint src test",
+    "prettier": "prettier -w .",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "dev": "vite dev --config vite.config.ts",
+    "build:demo": "vite build --config vite.config.ts",
+    "preview": "vite preview --config vite.config.ts",
+    "prepack": "npm run build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@knighted/duel": "^2.1.6",
+    "@types/jsdom": "^27.0.0",
+    "@vitest/coverage-v8": "^4.0.14",
+    "eslint": "^9.39.1",
+    "jsdom": "^27.2.0",
+    "prettier": "^3.7.3",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.48.0",
+    "vite": "^7.2.4",
+    "vitest": "^4.0.14"
+  },
+  "dependencies": {
+    "oxc-parser": "^0.99.0"
+  },
+  "optionalDependencies": {
+    "@oxc-parser/binding-darwin-arm64": "^0.99.0",
+    "@oxc-parser/binding-linux-x64-gnu": "^0.99.0",
+    "@oxc-parser/binding-wasm32-wasi": "^0.99.0"
+  },
+  "files": [
+    "dist"
+  ],
+  "author": "KCM <knightedcodemonkey@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/knightedcodemonkey/jsx.git"
+  },
+  "bugs": {
+    "url": "https://github.com/knightedcodemonkey/jsx/issues"
+  },
+  "prettier": {
+    "arrowParens": "avoid",
+    "printWidth": 90,
+    "semi": false,
+    "singleQuote": true
+  }
+}
