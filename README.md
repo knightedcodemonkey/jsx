@@ -127,6 +127,19 @@ The Vite config aliases `@oxc-parser/binding-wasm32-wasi` to the vendored copy s
 - JSX identifiers are resolved at runtime through template interpolations; you cannot reference closures directly inside the template without using `${...}`.
 - Promises/async components are not supported.
 
+## Performance notes vs `htm`
+
+[`htm`](https://github.com/developit/htm) popularized tagged template literals for view rendering by tokenizing the template strings on the fly and calling a user-provided hyperscript function. This library takes a different approach: every invocation runs the native `oxc-parser` (compiled to WebAssembly) to build a real JSX AST before constructing DOM nodes.
+
+Tradeoffs to keep in mind:
+
+- **Parser vs tokenizer** – `htm` performs lightweight string tokenization, while `@knighted/jsx` pays a higher one-time parse cost but gains the full JSX grammar (fragments, spread children, nested namespaces) without heuristics. For large or deeply nested templates the WASM-backed parser is typically faster and more accurate than string slicing.
+- **DOM-first rendering** – this runtime builds DOM nodes directly, so the cost after parsing is mostly attribute assignment and child insertion. `htm` usually feeds a virtual DOM/hyperscript factory (e.g., Preact’s `h`), which may add an extra abstraction layer before hitting the DOM.
+- **Bundle size** – including the parser and WASM binding is heavier than `htm`’s ~1 kB tokenizer. If you just need hyperscript sugar, `htm` stays leaner; if you value real JSX semantics without a build step, the extra kilobytes buy you correctness and speed on complex trees.
+  - **Actual size** – the published `dist/jsx.js` bundle for `@knighted/jsx` is ~13.9 kB uncompressed and ~3.6 kB min+gzip (as of v1.0.0-alpha.0). `htm` weighs in at roughly 0.7 kB min+gzip. Expect the parser-powered approach to add ~3 kB over `htm` in production payloads.
+
+In short, `@knighted/jsx` trades a slightly larger runtime for the ability to parse genuine JSX with native performance, whereas `htm` favors minimal footprint and hyperscript integration. Pick the tool that aligns with your rendering stack and performance envelope.
+
 ## License
 
 MIT © Knighted Code Monkey
