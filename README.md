@@ -21,7 +21,8 @@ The parser automatically uses native bindings when it runs in Node.js. To enable
 npm_config_ignore_platform=true npm install @oxc-parser/binding-wasm32-wasi
 ```
 
-> Tip: public CDNs such as `esm.sh` or `jsdelivr` already publish bundles that include the WASM binding, so you can import this package directly from those endpoints in `<script type="module">` blocks without any extra setup.
+> [!TIP]
+> Public CDNs such as `esm.sh` or `jsdelivr` already publish bundles that include the WASM binding, so you can import this package directly from those endpoints in `<script type="module">` blocks without any extra setup.
 
 ## Usage
 
@@ -39,6 +40,35 @@ const button = jsx`
 
 document.body.append(button)
 ```
+
+## Loader integration
+
+Use the published loader entry (`@knighted/jsx/loader`) when you want your bundler to rewrite tagged template literals at build time. The loader finds every `jsx\`…\`` invocation, rebuilds the template with real JSX semantics, and hands back transformed source that can run in any environment.
+
+```js
+// rspack.config.js / webpack.config.js
+export default {
+  module: {
+    rules: [
+      {
+        test: /\.[jt]sx?$/,
+        include: path.resolve(__dirname, 'src'),
+        use: [
+          {
+            loader: '@knighted/jsx/loader',
+            options: {
+              // Optional: rename the tagged template identifier (defaults to `jsx`).
+              tag: 'jsx',
+            },
+          },
+        ],
+      },
+    ],
+  },
+}
+```
+
+Pair the loader with your existing TypeScript/JSX transpiler (SWC, Babel, Rspack’s builtin loader, etc.) so regular React components and the tagged templates can live side by side. The demo fixture under `test/fixtures/rspack-app` shows a full setup that mixes Lit and React—run `npm run build`, `npm run setup:wasm`, and `npm run build:fixture`, then serve the folder to see the output in a browser.
 
 ### Interpolations
 
