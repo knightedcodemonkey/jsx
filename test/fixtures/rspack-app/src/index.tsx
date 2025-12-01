@@ -2,7 +2,6 @@ import { LitElement, html } from 'lit'
 import { jsx, type JsxRenderable } from '@knighted/jsx'
 import { useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { jsx as reactJsx, jsxs as reactJsxs } from 'react/jsx-runtime'
 
 type ReactBadgeProps = {
   label: string
@@ -11,12 +10,17 @@ type ReactBadgeProps = {
 const ReactBadge = ({ label }: ReactBadgeProps) => {
   const [clicks, setClicks] = useState(0)
 
-  return reactJsxs('button', {
-    className: 'react-badge',
-    type: 'button',
-    onClick: () => setClicks((value: number) => value + 1),
-    children: [label, ' · clicks: ', clicks],
-  })
+  return (
+    <button
+      className="react-badge"
+      type="button"
+      onClick={() => setClicks(value => value + 1)}
+    >
+      {label}
+      {' · clicks: '}
+      {clicks}
+    </button>
+  )
 }
 
 type HybridCardProps = {
@@ -55,7 +59,7 @@ class HybridElement extends LitElement {
 
     const host = document.createElement('span')
     this.reactRoot = createRoot(host)
-    this.reactRoot.render(reactJsx(ReactBadge, { label }))
+    this.reactRoot.render(<ReactBadge label={label} />)
     this.reactBadgeHost = host
     return host
   }
