@@ -25,6 +25,10 @@
       "import": "./dist/lite/index.js",
       "default": "./dist/lite/index.js"
     },
+    "./loader": {
+      "import": "./dist/loader/jsx.js",
+      "default": "./dist/loader/jsx.js"
+    },
     "./package.json": "./package.json"
   },
   "engines": {
@@ -41,6 +45,7 @@
     "prettier": "prettier -w .",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
+    "build:fixture": "node scripts/build-rspack-fixture.mjs",
     "dev": "vite dev --config vite.config.ts",
     "build:demo": "vite build --config vite.config.ts",
     "preview": "vite preview --config vite.config.ts",
@@ -51,11 +56,16 @@
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@knighted/duel": "^2.1.6",
+    "@rspack/core": "^1.0.5",
     "@types/jsdom": "^27.0.0",
     "@vitest/coverage-v8": "^4.0.14",
     "eslint": "^9.39.1",
+    "http-server": "^14.1.1",
     "jsdom": "^27.2.0",
+    "lit": "^3.2.1",
     "prettier": "^3.7.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "tar": "^7.4.3",
     "tsup": "^8.3.0",
     "typescript": "^5.9.3",
@@ -64,6 +74,7 @@
     "vitest": "^4.0.14"
   },
   "dependencies": {
+    "magic-string": "^0.30.21",
     "oxc-parser": "^0.99.0"
   },
   "optionalDependencies": {
