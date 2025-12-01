@@ -3,7 +3,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { extract } from 'tar'
 
-const PACKAGE_SPEC = process.env.WASM_BINDING_PACKAGE ?? '@oxc-parser/binding-wasm32-wasi@^0.99.0'
+const PACKAGE_SPEC =
+  process.env.WASM_BINDING_PACKAGE ?? '@oxc-parser/binding-wasm32-wasi@^0.99.0'
 const cwd = process.cwd()
 
 function runNpmPack() {
@@ -21,7 +22,12 @@ async function main() {
   try {
     const tarballName = runNpmPack()
     const tarballPath = path.resolve(cwd, tarballName)
-    const targetDir = path.resolve(cwd, 'node_modules', '@oxc-parser', 'binding-wasm32-wasi')
+    const targetDir = path.resolve(
+      cwd,
+      'node_modules',
+      '@oxc-parser',
+      'binding-wasm32-wasi',
+    )
 
     fs.rmSync(targetDir, { recursive: true, force: true })
     fs.mkdirSync(targetDir, { recursive: true })

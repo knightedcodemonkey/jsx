@@ -130,7 +130,7 @@ Tests live in `test/jsx.test.ts` and cover DOM props/events, custom components, 
 
 ## Browser demo / Vite build
 
-This repo ships with a ready-to-run Vite demo under `examples/browser` that bundles the library (make sure you have installed the WASM binding via the command above first). Use it for a full end-to-end verification in a real browser (the demo now imports `@knighted/jsx/lite` so you can confirm the lighter entry behaves identically):
+This repo ships with a ready-to-run Vite demo under `examples/browser` that bundles the library (make sure you have installed the WASM binding via the command above first). Use it for a full end-to-end verification in a real browser (the demo imports `@knighted/jsx/lite` so you can confirm the lighter entry behaves identically):
 
 ```sh
 # Start a dev server at http://localhost:5173
