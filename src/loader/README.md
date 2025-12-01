@@ -96,7 +96,7 @@ Your source can stay idiomatic JSX—just remember everything dynamic still live
 ## Limitations
 
 - Only works on tagged template literals that use the configured `tag`. Regular JSX files still need the usual JSX transformer.
-- The loader inlines expressions that appear _inside_ JSX: props, children, spreads, and custom component names (`<FancyButton />`). Expressions directly on the template literal (``jsx`foo ${bar}```) are **not** allowed—move them into JSX braces instead.
+- Template literal `${expr}` segments that sit outside JSX braces are wrapped automatically, so destructured props and children count as “used” without helper code. (You can still write `{expr}` manually if you prefer.)
 - Async transforms are not supported; the loader runs synchronously as part of the bundler pipeline.
 
 ## Tips
@@ -110,9 +110,10 @@ The repository also ships a complete Rspack + Lit + React example at `test/fixtu
 
 To preview it manually:
 
-1. Ensure the wasm binding is available (`npm run setup:wasm` downloads `@oxc-parser/binding-wasm32-wasi` once). If you deliberately want the no-op stub, pass `-- --use-stub` to the next step.
-2. Run `npm run build:fixture` (writes `test/fixtures/rspack-app/dist/bundle.js` using Rspack and the published loader). Alternatively, execute the e2e test or point Rspack at the fixture entry yourself.
-3. Open `test/fixtures/rspack-app/index.html` in a browser. It loads `./dist/bundle.js`, registers `<hybrid-element>`, and renders the Lit template that embeds JSX alongside a React-generated badge.
+1. Build the library once (`npm run build`) so the ESM/CJS loader artifacts exist under `dist/`.
+2. Ensure the wasm binding is available (`npm run setup:wasm` downloads `@oxc-parser/binding-wasm32-wasi` once). If you deliberately want the no-op stub, pass `-- --use-stub` to the build step later.
+3. Run `npm run build:fixture` (writes `test/fixtures/rspack-app/dist/bundle.js` using Rspack and the published loader). Alternatively, execute the e2e test or point Rspack at the fixture entry yourself.
+4. Serve the fixture directory (`npx http-server test/fixtures/rspack-app -p 8080 -o` or any static server) and open `http://127.0.0.1:8080/index.html`. It loads `./dist/bundle.js`, registers `<hybrid-element>`, and renders the Lit template that embeds JSX alongside a React-generated badge.
 
 The e2e test normally writes to a temporary directory and deletes it, so you only get a persistent bundle when you explicitly target the fixture’s `dist/` folder. The HTML file is a convenient viewer for manual verification once the bundle exists. If you pass `--use-stub`, the bundle will still run but throws when the parser is invoked—the real wasm binding is required for interactive usage.
 

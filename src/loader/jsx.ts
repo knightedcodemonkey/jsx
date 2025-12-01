@@ -33,32 +33,54 @@ type TemplatePlaceholder = {
   code: string
 }
 
-type TemplateExpressionContext = 'tag' | 'spread' | 'attribute' | 'child'
+type TemplateExpressionContext =
+  | { type: 'tag' }
+  | { type: 'spread' }
+  | { type: 'attributeExisting' }
+  | { type: 'attributeString'; quote: '"' | "'" }
+  | { type: 'attributeUnquoted' }
+  | { type: 'childExisting' }
+  | { type: 'childText' }
+
+const stripTrailingWhitespace = (value: string) => value.replace(/\s+$/g, '')
+const stripLeadingWhitespace = (value: string) => value.replace(/^\s+/g, '')
 
 const getTemplateExpressionContext = (
   left: string,
   right: string,
-): TemplateExpressionContext | null => {
-  const trimmedLeft = left.replace(/\s+$/g, '')
-  const trimmedRight = right.replace(/^\s+/g, '')
+): TemplateExpressionContext => {
+  const trimmedLeft = stripTrailingWhitespace(left)
+  const trimmedRight = stripLeadingWhitespace(right)
 
   if (trimmedLeft.endsWith('<') || trimmedLeft.endsWith('</')) {
-    return 'tag'
+    return { type: 'tag' }
   }
 
   if (/{\s*\.\.\.$/.test(trimmedLeft) && trimmedRight.startsWith('}')) {
-    return 'spread'
+    return { type: 'spread' }
+  }
+
+  const attrStringMatch = trimmedLeft.match(/=\s*(["'])$/)
+  if (attrStringMatch) {
+    const quoteChar = attrStringMatch[1] as '"' | "'"
+    if (trimmedRight.startsWith(quoteChar)) {
+      return { type: 'attributeString', quote: quoteChar }
+    }
   }
 
   if (trimmedLeft.endsWith('={') && trimmedRight.startsWith('}')) {
-    return 'attribute'
+    return { type: 'attributeExisting' }
+  }
+
+  if (/=\s*$/.test(trimmedLeft)) {
+    return { type: 'attributeUnquoted' }
   }
 
   if (trimmedLeft.endsWith('{') && trimmedRight.startsWith('}')) {
-    return 'child'
+    return { type: 'childExisting' }
   }
 
-  return null
+  return { type: 'childText' }
 }
 
 type TransformConfig = {
@@ -288,10 +310,38 @@ const buildTemplateSource = (
   const tagPlaceholderMap = new Map<string, string>()
   let template = ''
   let placeholderIndex = 0
+  let trimStartNext = 0
+  let mutated = false
+
+  const registerMarker = (code: string, isTag: boolean) => {
+    if (isTag) {
+      const existing = tagPlaceholderMap.get(code)
+      if (existing) {
+        return existing
+      }
+      const marker = `${TAG_PLACEHOLDER_PREFIX}${tagPlaceholderMap.size}__`
+      tagPlaceholderMap.set(code, marker)
+      placeholderMap.set(marker, code)
+      return marker
+    }
+
+    const marker = `${TEMPLATE_EXPR_PLACEHOLDER_PREFIX}${placeholderIndex++}__`
+    placeholderMap.set(marker, code)
+    return marker
+  }
 
   quasis.forEach((quasi, index) => {
-    const value = quasi.value as { cooked?: string; raw?: string }
-    template += value.cooked ?? value.raw ?? ''
+    let chunk = (quasi.value as { cooked?: string; raw?: string }).cooked
+    if (typeof chunk !== 'string') {
+      chunk = (quasi.value as { raw?: string }).raw ?? ''
+    }
+
+    if (trimStartNext > 0) {
+      chunk = chunk.slice(trimStartNext)
+      trimStartNext = 0
+    }
+
+    template += chunk
 
     const expression = expressions[index]
     if (!expression) {
@@ -307,39 +357,53 @@ const buildTemplateSource = (
     const nextChunk = quasis[index + 1]
     const nextValue = nextChunk?.value as { cooked?: string; raw?: string } | undefined
     const rightText = nextValue?.cooked ?? nextValue?.raw ?? ''
-    const leftText = value.cooked ?? value.raw ?? ''
-    const context = getTemplateExpressionContext(leftText, rightText)
-
-    if (!context) {
-      throw new Error(
-        `Template expressions inside ${tag}\`\` blocks are not supported. Move the logic into JSX braces instead.`,
-      )
-    }
-
+    const context = getTemplateExpressionContext(chunk, rightText)
     const code = source.slice(start, end)
-    let marker: string
+    const marker = registerMarker(code, context.type === 'tag')
 
-    if (context === 'tag') {
-      const existing = tagPlaceholderMap.get(code)
-      if (existing) {
-        marker = existing
-      } else {
-        marker = `${TAG_PLACEHOLDER_PREFIX}${tagPlaceholderMap.size}__`
-        tagPlaceholderMap.set(code, marker)
+    const appendMarker = (wrapper?: (identifier: string) => string) => {
+      template += wrapper ? wrapper(marker) : marker
+    }
+
+    switch (context.type) {
+      case 'tag':
+      case 'spread':
+      case 'attributeExisting':
+      case 'childExisting': {
+        appendMarker()
+        break
       }
-    } else {
-      marker = `${TEMPLATE_EXPR_PLACEHOLDER_PREFIX}${placeholderIndex++}__`
+      case 'attributeString': {
+        const quoteChar = context.quote
+        if (!template.endsWith(quoteChar)) {
+          throw new Error(
+            `[jsx-loader] Expected attribute quote ${quoteChar} before template expression inside ${tag}\`\` block.`,
+          )
+        }
+        template = template.slice(0, -1)
+        appendMarker(identifier => `{${identifier}}`)
+        mutated = true
+        if (rightText.startsWith(quoteChar)) {
+          trimStartNext = 1
+        }
+        break
+      }
+      case 'attributeUnquoted': {
+        appendMarker(identifier => `{${identifier}}`)
+        mutated = true
+        break
+      }
+      case 'childText': {
+        appendMarker(identifier => `{${identifier}}`)
+        mutated = true
+        break
+      }
     }
-
-    if (!placeholderMap.has(marker)) {
-      placeholderMap.set(marker, code)
-    }
-
-    template += marker
   })
 
   return {
     source: template,
+    mutated,
     placeholders: Array.from(placeholderMap.entries()).map(([marker, code]) => ({
       marker,
       code,
@@ -402,8 +466,9 @@ const transformSource = (source: string, config: TransformConfig) => {
         config.resourcePath,
       )
       const restored = restoreTemplatePlaceholders(code, templateSource.placeholders)
+      const templateChanged = changed || templateSource.mutated
 
-      if (!changed) {
+      if (!templateChanged) {
         return
       }
 

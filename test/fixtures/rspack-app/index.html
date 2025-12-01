@@ -41,10 +41,12 @@
         <h1>Lit + React Hybrid (Loader E2E)</h1>
         <p>This page loads the bundle produced by the Rspack integration fixture.</p>
         <p>
-          Run <code>npm run setup:wasm</code> once so the real parser binding is
-          available, then run <code>npm run build:fixture</code> to emit
+          Run <code>npm run build</code> first so the loader code is compiled, then run
+          <code>npm run setup:wasm</code> once so the real parser binding is available,
+          followed by <code>npm run build:fixture</code> to emit
           <code>dist/bundle.js</code> next to this HTML file (the Vitest e2e test also
-          builds it, but into a temp directory).
+          builds it, but into a temp directory). Serve this folder with any static server
+          to view the demo.
         </p>
       </header>
 
@@ -53,10 +55,10 @@
       </section>
 
       <pre>
+        npm run build
         npm run setup:wasm
         npm run build:fixture
-        # use "npm run build:fixture -- --use-stub" if you explicitly want to bundle with the wasm s
-      tub
+        # use "npm run build:fixture -- --use-stub" if you explicitly want to bundle with the wasm stub
       </pre>
     </main>
 

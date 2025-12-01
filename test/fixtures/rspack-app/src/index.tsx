@@ -25,30 +25,22 @@ type HybridCardProps = {
   children?: JsxRenderable
 }
 
-const HybridCard = ({ title, reactNode, children }: HybridCardProps) => {
-  void title
-  void reactNode
-  void children
-
-  return jsx`
+const HybridCard = ({ title, reactNode, children }: HybridCardProps) =>
+  jsx`
     <article className="hybrid-card">
-      <h2>{title}</h2>
-      <div className="react-slot">{reactNode}</div>
-      <div className="nested-slot">{children}</div>
+      <h2>${title}</h2>
+      <div className="react-slot">${reactNode}</div>
+      <div className="nested-slot">${children}</div>
     </article>
   `
-}
 
-const NestedListItem = ({ label }: { label: string }) => {
-  void label
-
-  return jsx`
+const NestedListItem = ({ label }: { label: string }) =>
+  jsx`
     <li data-kind="react-nested">
       Nested slot from React component:
-      <strong>{label}</strong>
+      <strong>${label}</strong>
     </li>
   `
-}
 
 type ReactRoot = ReturnType<typeof createRoot>
 
@@ -78,7 +70,6 @@ class HybridElement extends LitElement {
   render() {
     const label = 'Hybrid ready'
     const reactNode = this.mountReactBadge(label)
-    void reactNode
 
     return html`
       <section>

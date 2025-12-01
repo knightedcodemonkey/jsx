@@ -67,9 +67,19 @@ describe('jsx loader', () => {
     expect(transformed).toContain('<${Fancy} kind={${variant}} />')
   })
 
-  it('throws when outer template expressions are used', async () => {
-    const source = 'const view = jsx`<div>${count}</div>`'
+  it('allows template literal expressions without JSX braces', async () => {
+    const source = [
+      "const value = 'Hello'",
+      'const view = jsx`',
+      '  <button title="${value}">',
+      '    Label: ${value}',
+      '  </button>',
+      '`',
+    ].join('\n')
 
-    await expect(runLoader(source)).rejects.toThrow(/Template expressions inside jsx`/)
+    const transformed = await runLoader(source)
+
+    expect(transformed).toContain('title={${value}}')
+    expect(transformed).toContain('Label: {${value}}')
   })
 })
