@@ -108,4 +108,75 @@ describe('jsx loader', () => {
   it('surfaces parser errors with helpful metadata', async () => {
     await expect(runLoader('const = 5')).rejects.toThrow('[jsx-loader]')
   })
+
+  it('returns source when no tagged templates are present', async () => {
+    const source = ['const meaning = 42', 'const doubled = meaning * 2'].join('\n')
+    const transformed = await runLoader(source)
+    expect(transformed).toBe(source)
+  })
+
+  it('skips non-identifier tagged template calls', async () => {
+    const source = [
+      'const factory = { jsx }',
+      "const title = 'hi'",
+      'const view = factory.jsx`',
+      '  <button>${title}</button>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source)
+    expect(transformed).toBe(source)
+  })
+
+  it('rewrites unquoted attribute expressions', async () => {
+    const source = [
+      "const mode = 'quiet'",
+      'const view = jsx`',
+      '  <button data-mode=${mode} />',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source)
+    expect(transformed).toContain('data-mode={${mode}}')
+  })
+
+  it('collects spread children expressions', async () => {
+    const source = [
+      'const parts = [document.createTextNode("a")]',
+      'const view = jsx`',
+      '  <>',
+      '    {...parts}',
+      '  </>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source)
+    expect(transformed).toContain('{...${parts}}')
+  })
+
+  it('sorts multiple tagged templates before mutating', async () => {
+    const source = [
+      "const title = 'ok'",
+      "const label = 'ready'",
+      'const first = jsx`<button title="${title}" />`',
+      'const second = jsx`<span>${label}</span>`',
+    ].join('\n')
+
+    const transformed = await runLoader(source)
+    expect(transformed).toContain('title={${title}}')
+    expect(transformed).toContain('<span>{${label}}</span>')
+  })
+
+  it('throws when attribute strings are spaced away from expressions', async () => {
+    const source = [
+      "const label = 'oops'",
+      'const view = jsx`',
+      '  <button title=" ${label}">',
+      '    Click me',
+      '  </button>',
+      '`',
+    ].join('\n')
+
+    await expect(runLoader(source)).rejects.toThrow('Expected attribute quote')
+  })
 })
