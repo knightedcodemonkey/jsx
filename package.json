@@ -45,6 +45,7 @@
     "build:demo": "vite build --config vite.config.ts",
     "preview": "vite preview --config vite.config.ts",
     "build:lite": "tsup --config tsup.config.ts",
+    "setup:wasm": "node scripts/setup-wasm.mjs",
     "prepack": "npm run build"
   },
   "devDependencies": {
@@ -55,6 +56,7 @@
     "eslint": "^9.39.1",
     "jsdom": "^27.2.0",
     "prettier": "^3.7.3",
+    "tar": "^7.4.3",
     "tsup": "^8.3.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.48.0",

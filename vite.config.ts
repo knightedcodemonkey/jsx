@@ -23,12 +23,12 @@ export default defineConfig({
         find: '@knighted/jsx',
         replacement: path.resolve(__dirname, 'src/index.ts'),
       },
-      {
-        find: '@oxc-parser/binding-wasm32-wasi',
-        replacement: path.resolve(__dirname, 'vendor/binding-wasm32-wasi'),
-      },
     ],
   },
+  optimizeDeps: {
+    exclude: ['oxc-parser', '@oxc-parser/binding-wasm32-wasi'],
+  },
+  assetsInclude: ['**/*.wasm'],
   build: {
     outDir: path.resolve(demoRoot, 'dist'),
     emptyOutDir: true,

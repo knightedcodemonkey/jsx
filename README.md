@@ -94,7 +94,19 @@ When you are not using a bundler, load the module directly from a CDN that under
 </script>
 ```
 
-If you are building locally with Vite/Rollup/Webpack make sure the WASM binding is installable (see the `npm_config_ignore_platform` tip above) so the bundler can resolve `@oxc-parser/binding-wasm32-wasi`.
+If you are building locally with Vite/Rollup/Webpack make sure the WASM binding is installable so the bundler can resolve `@oxc-parser/binding-wasm32-wasi` (details below).
+
+### Installing the WASM binding locally
+
+`@oxc-parser/binding-wasm32-wasi` publishes with `"cpu": ["wasm32"]`, so npm/yarn/pnpm skip it on macOS and Linux unless you override the platform guard. Run the helper script after cloning (or whenever you clean `node_modules`) to pull the binding into place for the Vite demo and any other local bundler builds:
+
+```sh
+npm run setup:wasm
+```
+
+The script downloads the published tarball via `npm pack`, extracts it into `node_modules/@oxc-parser/binding-wasm32-wasi`, and removes the temporary archive so your lockfile stays untouched. If you need to test a different binding build, set `WASM_BINDING_PACKAGE` before running the script (for example, `WASM_BINDING_PACKAGE=@oxc-parser/binding-wasm32-wasi@0.100.0 npm run setup:wasm`).
+
+Prefer the manual route? You can still run `npm_config_ignore_platform=true npm install --no-save @oxc-parser/binding-wasm32-wasi@^0.99.0`, but the script above replicates the vendored behavior with less ceremony.
 
 ### Lite bundle entry
 
@@ -118,7 +130,7 @@ Tests live in `test/jsx.test.ts` and cover DOM props/events, custom components, 
 
 ## Browser demo / Vite build
 
-This repo ships with a ready-to-run Vite demo under `examples/browser` that bundles the library (and the WASM binding vendored in `vendor/binding-wasm32-wasi`). Use it for a full end-to-end verification in a real browser (the demo now imports `@knighted/jsx/lite` so you can confirm the lighter entry behaves identically):
+This repo ships with a ready-to-run Vite demo under `examples/browser` that bundles the library (make sure you have installed the WASM binding via the command above first). Use it for a full end-to-end verification in a real browser (the demo now imports `@knighted/jsx/lite` so you can confirm the lighter entry behaves identically):
 
 ```sh
 # Start a dev server at http://localhost:5173
@@ -129,7 +141,7 @@ npm run build:demo
 npm run preview
 ```
 
-The Vite config aliases `@oxc-parser/binding-wasm32-wasi` to the vendored copy so you don't have to perform any extra install tricks locally, while production consumers can still rely on the published package. For a zero-build verification of the lite bundle, open `examples/esm-demo-lite.html` locally (double-click or run `open examples/esm-demo-lite.html`) or visit the deployed GitHub Pages build produced by `.github/workflows/deploy-demo.yml` (it serves that same lite HTML demo).
+For a zero-build verification of the lite bundle, open `examples/esm-demo-lite.html` locally (double-click or run `open examples/esm-demo-lite.html`) or visit the deployed GitHub Pages build produced by `.github/workflows/deploy-demo.yml` (it serves that same lite HTML demo).
 
 ## Limitations
 
