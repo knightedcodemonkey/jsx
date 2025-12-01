@@ -82,4 +82,30 @@ describe('jsx loader', () => {
     expect(transformed).toContain('title={${value}}')
     expect(transformed).toContain('Label: {${value}}')
   })
+
+  it('honors manual JSX wrappers for tags, spreads, and braces', async () => {
+    const source = [
+      "const tag = 'section'",
+      "const label = 'custom'",
+      'const props = { role: "presentation" }',
+      'const child = document.createElement("span")',
+      'const view = jsx`',
+      '  <${tag} data-label={${label}} {...${props}}>',
+      '    {${child}}',
+      '  </${tag}>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source)
+
+    expect(transformed).toMatch(
+      /<\$\{tag\} data-label=\{\$\{label\}\} \{\.\.\.\$\{props\}\}>/,
+    )
+    expect(transformed).toContain('{${child}}')
+    expect(transformed).toContain('</${tag}>')
+  })
+
+  it('surfaces parser errors with helpful metadata', async () => {
+    await expect(runLoader('const = 5')).rejects.toThrow('[jsx-loader]')
+  })
 })
