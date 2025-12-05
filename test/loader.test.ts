@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 
 import loader from '../src/loader/jsx'
 
-const runLoader = (source: string, options?: { tag?: string }) =>
+const runLoader = (source: string, options?: { tag?: string; tags?: string[] }) =>
   new Promise<string>((resolve, reject) => {
     const context = {
       resourcePath: '/virtual/file.tsx',
@@ -65,6 +65,33 @@ describe('jsx loader', () => {
 
     const transformed = await runLoader(source, { tag: 'htmlx' })
     expect(transformed).toContain('<${Fancy} kind={${variant}} />')
+  })
+
+  it('limits transformations to the configured tag list when provided', async () => {
+    const source = [
+      "const label = 'only react'",
+      'const view = jsx`<Widget>${label}</Widget>`',
+      'const reactView = reactJsx`<ReactWidget>${label}</ReactWidget>`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { tags: ['reactJsx'] })
+
+    expect(transformed).toContain('<${ReactWidget}>{${label}}</${ReactWidget}>')
+    expect(transformed).toContain('const view = jsx`<Widget>${label}</Widget>`')
+  })
+
+  it('rewrites reactJsx templates without additional configuration', async () => {
+    const source = [
+      "const label = 'demo'",
+      'const view = reactJsx`',
+      '  <ReactBadge>{${label}}</ReactBadge>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source)
+    expect(transformed).toContain('<${ReactBadge}>')
+    expect(transformed).toContain('>{${label}}')
+    expect(transformed).toContain('</${ReactBadge}>')
   })
 
   it('allows template literal expressions without JSX braces', async () => {

@@ -88,6 +88,7 @@ describe('jsx loader integration', () => {
           extensions: ['.ts', '.tsx', '.js', '.jsx'],
           alias: {
             '@knighted/jsx': path.resolve(rootDir, 'dist/index.js'),
+            '@knighted/jsx/react': path.resolve(rootDir, 'dist/react/index.js'),
             '@oxc-parser/binding-wasm32-wasi': path.resolve(
               fixtureDir,
               'stubs/oxc-wasm.js',

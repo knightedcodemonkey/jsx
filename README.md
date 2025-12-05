@@ -15,6 +15,9 @@ npm install @knighted/jsx
 > [!IMPORTANT]
 > This package is ESM-only and targets browsers or ESM-aware bundlers. `require()` is not supported; use native `import`/`<script type="module">` and a DOM-like environment.
 
+> [!NOTE]
+> Planning to use the React runtime (`@knighted/jsx/react`)? Install `react@>=18` and `react-dom@>=18` alongside this package so the helper can create elements and render them through ReactDOM.
+
 The parser automatically uses native bindings when it runs in Node.js. To enable the WASM binding for browser builds you also need the `@oxc-parser/binding-wasm32-wasi` package. Because npm enforces the `cpu: ["wasm32"]` flag you must opt into the install explicitly:
 
 ```sh
@@ -41,9 +44,29 @@ const button = jsx`
 document.body.append(button)
 ```
 
+### React runtime (`reactJsx`)
+
+Need to compose React elements instead of DOM nodes? Import the dedicated helper from the `@knighted/jsx/react` subpath (React 18+ and `react-dom` are still required to mount the tree):
+
+```ts
+import { reactJsx } from '@knighted/jsx/react'
+import { createRoot } from 'react-dom/client'
+
+const view = reactJsx`
+  <section className="react-demo">
+    <h2>Hello from React</h2>
+    <button onClick={${() => console.log('clicked!')}}>Tap me</button>
+  </section>
+`
+
+createRoot(document.getElementById('root')!).render(view)
+```
+
+The React runtime shares the same template semantics as `jsx`, except it returns React elements (via `React.createElement`) so you can embed other React components with `<${MyComponent} />` and use hooks/state as usual. The helper lives in a separate subpath so DOM-only consumers never pay the React dependency cost.
+
 ## Loader integration
 
-Use the published loader entry (`@knighted/jsx/loader`) when you want your bundler to rewrite tagged template literals at build time. The loader finds every `jsx\`…\`` invocation, rebuilds the template with real JSX semantics, and hands back transformed source that can run in any environment.
+Use the published loader entry (`@knighted/jsx/loader`) when you want your bundler to rewrite tagged template literals at build time. The loader finds every ` jsx`` ` (and, by default, ` reactJsx`` ` ) invocation, rebuilds the template with real JSX semantics, and hands back transformed source that can run in any environment.
 
 ```js
 // rspack.config.js / webpack.config.js
@@ -57,8 +80,9 @@ export default {
           {
             loader: '@knighted/jsx/loader',
             options: {
-              // Optional: rename the tagged template identifier (defaults to `jsx`).
-              tag: 'jsx',
+              // Both optional: restrict or rename the tagged templates.
+              // tag: 'jsx', // single-tag option
+              // tags: ['jsx', 'reactJsx'],
             },
           },
         ],
@@ -68,7 +92,22 @@ export default {
 }
 ```
 
-Pair the loader with your existing TypeScript/JSX transpiler (SWC, Babel, Rspack’s builtin loader, etc.) so regular React components and the tagged templates can live side by side. The demo fixture under `test/fixtures/rspack-app` shows a full setup that mixes Lit and React—run `npm run build`, `npm run setup:wasm`, and `npm run build:fixture`, then serve the folder to see the output in a browser.
+Pair the loader with your existing TypeScript/JSX transpiler (SWC, Babel, Rspack’s builtin loader, etc.) so regular React components and the tagged templates can live side by side. The demo fixture under `test/fixtures/rspack-app` shows a full setup that mixes Lit and React:
+
+```sh
+npm run build
+npm run setup:wasm
+npm run build:fixture
+```
+
+Then point a static server at the fixture root (which serves `index.html` and the bundled `dist/bundle.js`) to see it in a browser:
+
+```sh
+# Serve the rspack fixture from the repo root
+npx http-server test/fixtures/rspack-app -p 4173
+```
+
+Visit `http://localhost:4173` (or whichever port you pick) to interact with the Lit + React demo.
 
 ### Interpolations
 

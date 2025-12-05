@@ -1,13 +1,14 @@
 import { LitElement, html } from 'lit'
 import { jsx, type JsxRenderable } from '@knighted/jsx'
-import { useState } from 'react'
+import { reactJsx, type ReactJsxComponent } from '@knighted/jsx/react'
+import { useState, type ReactElement } from 'react'
 import { createRoot } from 'react-dom/client'
 
 type ReactBadgeProps = {
   label: string
 }
 
-const ReactBadge = ({ label }: ReactBadgeProps) => {
+const ReactBadge: ReactJsxComponent<ReactBadgeProps> = ({ label }: ReactBadgeProps) => {
   const [clicks, setClicks] = useState(0)
 
   return (
@@ -50,30 +51,37 @@ type ReactRoot = ReturnType<typeof createRoot>
 
 class HybridElement extends LitElement {
   private reactRoot?: ReactRoot
-  private reactBadgeHost?: HTMLElement
+  private reactHost?: HTMLElement
 
-  private mountReactBadge(label: string) {
-    if (this.reactBadgeHost) {
-      return this.reactBadgeHost
+  private renderReactTree(tree: ReactElement): HTMLElement {
+    if (!this.reactHost) {
+      this.reactHost = document.createElement('span')
     }
 
-    const host = document.createElement('span')
-    this.reactRoot = createRoot(host)
-    this.reactRoot.render(<ReactBadge label={label} />)
-    this.reactBadgeHost = host
-    return host
+    if (!this.reactRoot && this.reactHost) {
+      this.reactRoot = createRoot(this.reactHost)
+    }
+
+    this.reactRoot?.render(tree)
+    return this.reactHost
   }
 
   disconnectedCallback() {
     this.reactRoot?.unmount()
     this.reactRoot = undefined
-    this.reactBadgeHost = undefined
+    this.reactHost = undefined
     super.disconnectedCallback()
   }
 
   render() {
     const label = 'Hybrid ready'
-    const reactNode = this.mountReactBadge(label)
+    const reactTree = reactJsx`
+      <>
+        <${ReactBadge} label={${label}} />
+        <p data-kind="react-status">Rendered with reactJsx</p>
+      </>
+    `
+    const reactNode = this.renderReactTree(reactTree)
 
     return html`
       <section>

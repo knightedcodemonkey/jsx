@@ -12,6 +12,7 @@ const fixtureEntry = path.join(fixtureDir, 'src/index.tsx')
 const outputDir = path.join(fixtureDir, 'dist')
 const loaderPath = path.join(rootDir, 'dist/loader/jsx.js')
 const runtimePath = path.join(rootDir, 'dist/index.js')
+const reactRuntimePath = path.join(rootDir, 'dist/react/index.js')
 const wasmStubPath = path.join(fixtureDir, 'stubs/oxc-wasm.js')
 const wasmBindingPath = path.join(
   rootDir,
@@ -23,6 +24,7 @@ const ensureArtifacts = async () => {
   try {
     await fs.access(loaderPath)
     await fs.access(runtimePath)
+    await fs.access(reactRuntimePath)
   } catch (error) {
     console.error(
       '[build-rspack-fixture] Missing dist artifacts. Run "npm run build" first.',
@@ -80,6 +82,7 @@ try {
       extensions: ['.ts', '.tsx', '.js', '.jsx'],
       alias: {
         '@knighted/jsx': runtimePath,
+        '@knighted/jsx/react': reactRuntimePath,
         ...(useStub ? { '@oxc-parser/binding-wasm32-wasi': wasmStubPath } : {}),
       },
     },

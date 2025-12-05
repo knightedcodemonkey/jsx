@@ -1,41 +1,25 @@
-import { parseSync, type ParserOptions, type OxcError } from 'oxc-parser'
+import { parseSync } from 'oxc-parser'
 import type {
   Expression,
   JSXAttribute,
   JSXChild,
   JSXElement,
   JSXFragment,
-  JSXIdentifier,
-  JSXMemberExpression,
-  JSXNamespacedName,
   JSXSpreadAttribute,
-  Program,
 } from '@oxc-project/types'
-
-type BindingEntry = {
-  name: string
-  value: JsxComponent
-}
-
-type TemplateBuildResult = {
-  source: string
-  placeholders: Map<string, unknown>
-  bindings: BindingEntry[]
-}
+import {
+  buildTemplate,
+  evaluateExpression,
+  extractRootNode,
+  formatParserError,
+  getIdentifierName,
+  normalizeJsxText,
+  parserOptions,
+  type TemplateContext,
+} from './runtime/shared.js'
 
 type Namespace = 'svg' | null
-
-type JsxContext = {
-  source: string
-  placeholders: Map<string, unknown>
-  components: Map<string, JsxComponent>
-}
-
-const OPEN_TAG_RE = /<\s*$/
-const CLOSE_TAG_RE = /<\/\s*$/
-const PLACEHOLDER_PREFIX = '__KX_EXPR__'
-
-let invocationCounter = 0
+type JsxContext = TemplateContext<JsxComponent>
 
 export type JsxRenderable =
   | Node
@@ -53,64 +37,11 @@ export type JsxComponent<Props = Record<string, unknown>> = {
   displayName?: string
 }
 
-const parserOptions: ParserOptions = {
-  lang: 'jsx',
-  sourceType: 'module',
-  range: true,
-  preserveParens: true,
-}
-
 const ensureDomAvailable = () => {
   if (typeof document === 'undefined' || typeof document.createElement !== 'function') {
     throw new Error(
       'The jsx template tag requires a DOM-like environment (document missing).',
     )
-  }
-}
-
-const formatParserError = (error: OxcError) => {
-  let message = `[oxc-parser] ${error.message}`
-
-  if (error.labels?.length) {
-    const label = error.labels[0]
-    if (label.message) {
-      message += `\n${label.message}`
-    }
-  }
-
-  if (error.codeframe) {
-    message += `\n${error.codeframe}`
-  }
-
-  return message
-}
-
-const extractRootNode = (program: Program): JSXElement | JSXFragment => {
-  for (const statement of program.body) {
-    if (statement.type === 'ExpressionStatement') {
-      const expression = statement.expression
-
-      if (expression.type === 'JSXElement' || expression.type === 'JSXFragment') {
-        return expression
-      }
-    }
-  }
-
-  throw new Error('The jsx template must contain a single JSX element or fragment.')
-}
-
-const getIdentifierName = (
-  identifier: JSXIdentifier | JSXNamespacedName | JSXMemberExpression,
-): string => {
-  switch (identifier.type) {
-    case 'JSXIdentifier':
-      return identifier.name
-    case 'JSXNamespacedName':
-      return `${identifier.namespace.name}:${identifier.name.name}`
-    case 'JSXMemberExpression':
-      return `${getIdentifierName(identifier.object)}.${identifier.property.name}`
-    default:
-      return ''
   }
 }
 
@@ -136,13 +67,6 @@ const isPromiseLike = (value: unknown): value is PromiseLike<unknown> => {
   }
 
   return typeof (value as { then?: unknown }).then === 'function'
-}
-
-const normalizeJsxText = (value: string) => {
-  const collapsed = value.replace(/\r/g, '').replace(/\n\s+/g, ' ')
-  const trimmed = collapsed.trim()
-
-  return trimmed.length > 0 ? trimmed : ''
 }
 
 const setDomProp = (element: Element, name: string, value: unknown) => {
@@ -257,15 +181,26 @@ const appendChildValue = (parent: Node & ParentNode, value: JsxRenderable) => {
   parent.appendChild(document.createTextNode(String(value)))
 }
 
+const evaluateExpressionWithNamespace = (
+  expression: Expression | JSXElement | JSXFragment,
+  ctx: JsxContext,
+  namespace: Namespace,
+) => evaluateExpression(expression, ctx, node => evaluateJsxNode(node, ctx, namespace))
+
 const resolveAttributes = (
   attributes: (JSXAttribute | JSXSpreadAttribute)[],
   ctx: JsxContext,
+  namespace: Namespace,
 ) => {
   const props: Record<string, unknown> = {}
 
   attributes.forEach(attribute => {
     if (attribute.type === 'JSXSpreadAttribute') {
-      const spreadValue = evaluateExpression(attribute.argument, ctx)
+      const spreadValue = evaluateExpressionWithNamespace(
+        attribute.argument,
+        ctx,
+        namespace,
+      )
 
       if (spreadValue && typeof spreadValue === 'object' && !Array.isArray(spreadValue)) {
         Object.assign(props, spreadValue)
@@ -291,7 +226,11 @@ const resolveAttributes = (
         return
       }
 
-      props[name] = evaluateExpression(attribute.value.expression, ctx)
+      props[name] = evaluateExpressionWithNamespace(
+        attribute.value.expression,
+        ctx,
+        namespace,
+      )
     }
   })
 
@@ -302,8 +241,9 @@ const applyDomAttributes = (
   element: Element,
   attributes: (JSXAttribute | JSXSpreadAttribute)[],
   ctx: JsxContext,
+  namespace: Namespace,
 ) => {
-  const props = resolveAttributes(attributes, ctx)
+  const props = resolveAttributes(attributes, ctx, namespace)
 
   Object.entries(props).forEach(([name, value]) => {
     if (name === 'key') {
@@ -339,11 +279,21 @@ const evaluateJsxChildren = (
         if (child.expression.type === 'JSXEmptyExpression') {
           break
         }
-        resolved.push(evaluateExpression(child.expression, ctx) as JsxRenderable)
+        resolved.push(
+          evaluateExpressionWithNamespace(
+            child.expression,
+            ctx,
+            namespace,
+          ) as JsxRenderable,
+        )
         break
       }
       case 'JSXSpreadChild': {
-        const spreadValue = evaluateExpression(child.expression, ctx)
+        const spreadValue = evaluateExpressionWithNamespace(
+          child.expression,
+          ctx,
+          namespace,
+        )
         if (spreadValue !== undefined && spreadValue !== null) {
           resolved.push(spreadValue as JsxRenderable)
         }
@@ -366,7 +316,7 @@ const evaluateComponent = (
   component: JsxComponent,
   namespace: Namespace,
 ) => {
-  const props = resolveAttributes(element.openingElement.attributes, ctx)
+  const props = resolveAttributes(element.openingElement.attributes, ctx, namespace)
   const childValues = evaluateJsxChildren(element.children, ctx, namespace)
 
   if (childValues.length === 1) {
@@ -410,7 +360,7 @@ const evaluateJsxElement = (
       ? document.createElementNS('http://www.w3.org/2000/svg', tagName)
       : document.createElement(tagName)
 
-  applyDomAttributes(domElement, opening.attributes, ctx)
+  applyDomAttributes(domElement, opening.attributes, ctx, nextNamespace)
 
   const childValues = evaluateJsxChildren(element.children, ctx, childNamespace)
   childValues.forEach(value => appendChildValue(domElement, value))
@@ -433,166 +383,12 @@ const evaluateJsxNode = (
   return evaluateJsxElement(node, ctx, namespace)
 }
 
-type AnyOxcNode = {
-  type: string
-  [key: string]: unknown
-}
-
-const walkAst = (node: unknown, visitor: (target: AnyOxcNode) => void) => {
-  if (!node || typeof node !== 'object') {
-    return
-  }
-
-  const candidate = node as Partial<AnyOxcNode>
-  if (typeof candidate.type !== 'string') {
-    return
-  }
-
-  visitor(candidate as AnyOxcNode)
-
-  Object.values(candidate).forEach(value => {
-    if (!value) {
-      return
-    }
-
-    if (Array.isArray(value)) {
-      value.forEach(child => walkAst(child, visitor))
-      return
-    }
-
-    if (typeof value === 'object') {
-      walkAst(value, visitor)
-    }
-  })
-}
-
-const collectPlaceholderNames = (
-  expression: Expression | JSXElement | JSXFragment,
-  ctx: JsxContext,
-) => {
-  const placeholders = new Set<string>()
-
-  walkAst(expression, node => {
-    if (node.type === 'Identifier' && ctx.placeholders.has(node.name as string)) {
-      placeholders.add(node.name as string)
-    }
-  })
-
-  return Array.from(placeholders)
-}
-
-const evaluateExpression = (
-  expression: Expression | JSXElement | JSXFragment,
-  ctx: JsxContext,
-) => {
-  if (expression.type === 'JSXElement' || expression.type === 'JSXFragment') {
-    return evaluateJsxNode(expression, ctx, null)
-  }
-
-  if (!('range' in expression) || !expression.range) {
-    throw new Error('Unable to evaluate expression: missing source range information.')
-  }
-
-  const [start, end] = expression.range
-  const source = ctx.source.slice(start, end)
-  const placeholders = collectPlaceholderNames(expression, ctx)
-
-  try {
-    const evaluator = new Function(
-      ...placeholders,
-      `"use strict"; return (${source});`,
-    ) as (...args: unknown[]) => unknown
-    const args = placeholders.map(name => ctx.placeholders.get(name))
-    return evaluator(...args)
-  } catch (error) {
-    throw new Error(
-      `Failed to evaluate expression ${source}: ${(error as Error).message}`,
-    )
-  }
-}
-
-const sanitizeIdentifier = (value: string) => {
-  const cleaned = value.replace(/[^a-zA-Z0-9_$]/g, '')
-  if (!cleaned) {
-    return 'Component'
-  }
-
-  if (!/[A-Za-z_$]/.test(cleaned[0]!)) {
-    return `Component${cleaned}`
-  }
-
-  return cleaned
-}
-
-const ensureBinding = (
-  value: JsxComponent,
-  bindings: BindingEntry[],
-  bindingLookup: Map<JsxComponent, BindingEntry>,
-) => {
-  const existing = bindingLookup.get(value)
-  if (existing) {
-    return existing
-  }
-
-  const descriptor = value.displayName || value.name || `Component${bindings.length}`
-  const baseName = sanitizeIdentifier(descriptor)
-  let candidate = baseName
-  let suffix = 1
-
-  while (bindings.some(binding => binding.name === candidate)) {
-    candidate = `${baseName}${suffix++}`
-  }
-
-  const binding = { name: candidate, value }
-  bindings.push(binding)
-  bindingLookup.set(value, binding)
-  return binding
-}
-
-const buildTemplate = (
-  strings: TemplateStringsArray,
-  values: unknown[],
-): TemplateBuildResult => {
-  const raw = strings.raw ?? strings
-  const placeholders = new Map<string, unknown>()
-  const bindings: BindingEntry[] = []
-  const bindingLookup = new Map<JsxComponent, BindingEntry>()
-  let source = raw[0] ?? ''
-  const templateId = invocationCounter++
-  let placeholderIndex = 0
-
-  for (let idx = 0; idx < values.length; idx++) {
-    const chunk = raw[idx] ?? ''
-    const nextChunk = raw[idx + 1] ?? ''
-    const value = values[idx]
-
-    const isTagNamePosition = OPEN_TAG_RE.test(chunk) || CLOSE_TAG_RE.test(chunk)
-
-    if (isTagNamePosition && typeof value === 'function') {
-      const binding = ensureBinding(value as JsxComponent, bindings, bindingLookup)
-      source += binding.name + nextChunk
-      continue
-    }
-
-    if (isTagNamePosition && typeof value === 'string') {
-      source += value + nextChunk
-      continue
-    }
-
-    const placeholder = `${PLACEHOLDER_PREFIX}${templateId}_${placeholderIndex++}__`
-    placeholders.set(placeholder, value)
-    source += placeholder + nextChunk
-  }
-
-  return { source, placeholders, bindings }
-}
-
 export const jsx = (
   templates: TemplateStringsArray,
   ...values: unknown[]
 ): JsxRenderable => {
   ensureDomAvailable()
-  const build = buildTemplate(templates, values)
+  const build = buildTemplate<JsxComponent>(templates, values)
   const result = parseSync('inline.jsx', build.source, parserOptions)
 
   if (result.errors.length > 0) {
