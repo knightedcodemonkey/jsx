@@ -1,6 +1,6 @@
 {
   "name": "@knighted/jsx",
-  "version": "1.2.0",
+  "version": "1.2.0-rc.0",
   "description": "A simple JSX transpiler that runs in node.js or the browser.",
   "keywords": [
     "jsx browser transform",
