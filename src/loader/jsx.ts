@@ -18,8 +18,13 @@ type AnyNode = {
 type LoaderOptions = {
   /**
    * Name of the tagged template function. Defaults to `jsx`.
+   * Deprecated in favor of `tags`.
    */
   tag?: string
+  /**
+   * List of tagged template function names to transform. Defaults to `['jsx', 'reactJsx']`.
+   */
+  tags?: string[]
 }
 
 type Slot = {
@@ -85,7 +90,7 @@ const getTemplateExpressionContext = (
 
 type TransformConfig = {
   resourcePath: string
-  tag: string
+  tags: string[]
 }
 
 const TEMPLATE_EXPR_PLACEHOLDER_PREFIX = '__JSX_LOADER_TEMPLATE_EXPR_'
@@ -104,7 +109,7 @@ const TEMPLATE_PARSER_OPTIONS: ParserOptions = {
   preserveParens: true,
 }
 
-const DEFAULT_TAG = 'jsx'
+const DEFAULT_TAGS = ['jsx', 'reactJsx']
 
 const escapeTemplateChunk = (chunk: string) =>
   chunk.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\${/g, '\\${')
@@ -281,21 +286,17 @@ const transformTemplateLiteral = (templateSource: string, resourcePath: string) 
   return renderTemplateWithSlots(templateSource, slots)
 }
 
-const isTargetTaggedTemplate = (
-  node: Record<string, unknown>,
-  source: string,
-  tag: string,
-) => {
+const getTaggedTemplateName = (node: Record<string, unknown>) => {
   if (node.type !== 'TaggedTemplateExpression') {
-    return false
+    return null
   }
 
   const tagNode = node.tag as Record<string, unknown>
   if (tagNode.type !== 'Identifier') {
-    return false
+    return null
   }
 
-  return tagNode.name === tag
+  return tagNode.name as string
 }
 
 const TAG_PLACEHOLDER_PREFIX = '__JSX_LOADER_TAG_EXPR_'
@@ -433,10 +434,16 @@ const transformSource = (source: string, config: TransformConfig) => {
     throw new Error(formatParserError(ast.errors[0]!))
   }
 
-  const taggedTemplates: Array<Record<string, unknown>> = []
+  type TaggedTemplateInfo = {
+    node: Record<string, unknown>
+    tagName: string
+  }
+
+  const taggedTemplates: TaggedTemplateInfo[] = []
   walkAst(ast.program, node => {
-    if (isTargetTaggedTemplate(node, source, config.tag)) {
-      taggedTemplates.push(node)
+    const tagName = getTaggedTemplateName(node)
+    if (tagName && config.tags.includes(tagName)) {
+      taggedTemplates.push({ node, tagName })
     }
   })
 
@@ -448,8 +455,9 @@ const transformSource = (source: string, config: TransformConfig) => {
   let mutated = false
 
   taggedTemplates
-    .sort((a, b) => (b.start as number) - (a.start as number))
-    .forEach(node => {
+    .sort((a, b) => (b.node.start as number) - (a.node.start as number))
+    .forEach(entry => {
+      const { node, tagName } = entry
       const quasi = node.quasi as {
         quasis: Array<Record<string, unknown>>
         expressions: Array<Record<string, unknown>>
@@ -459,7 +467,7 @@ const transformSource = (source: string, config: TransformConfig) => {
         quasi.quasis,
         quasi.expressions,
         source,
-        config.tag,
+        tagName,
       )
       const { code, changed } = transformTemplateLiteral(
         templateSource.source,
@@ -493,11 +501,23 @@ export default function jsxLoader(
 
   try {
     const options = this.getOptions?.() ?? {}
-    const tag = options.tag ?? DEFAULT_TAG
+    const explicitTags = Array.isArray(options.tags)
+      ? options.tags.filter(
+          (value): value is string => typeof value === 'string' && value.length > 0,
+        )
+      : null
+    const legacyTag =
+      typeof options.tag === 'string' && options.tag.length > 0 ? options.tag : null
+    const tagList = explicitTags?.length
+      ? explicitTags
+      : legacyTag
+        ? [legacyTag]
+        : DEFAULT_TAGS
+    const tags = Array.from(new Set(tagList))
     const source = typeof input === 'string' ? input : input.toString('utf8')
     const output = transformSource(source, {
       resourcePath: this.resourcePath,
-      tag,
+      tags,
     })
 
     callback(null, output)

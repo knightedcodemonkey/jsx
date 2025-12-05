@@ -181,6 +181,57 @@
       .lite-savings-list span {
         font-size: 1.25rem;
       }
+
+      .react-card {
+        border-left: 4px solid #2563eb;
+      }
+
+      .react-mount {
+        min-height: 220px;
+        border-radius: 1rem;
+        border: 1px dashed rgba(37, 99, 235, 0.4);
+        padding: 1rem;
+        background: linear-gradient(
+          135deg,
+          rgba(37, 99, 235, 0.05),
+          rgba(14, 165, 233, 0.05)
+        );
+      }
+
+      .react-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+      }
+
+      .react-panel h3 {
+        margin: 0;
+      }
+
+      .react-panel button {
+        align-self: flex-start;
+        padding: 0.65rem 1.2rem;
+        border-radius: 999px;
+        border: none;
+        background: #2563eb;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .react-metrics {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        font-weight: 600;
+      }
+
+      .react-metrics span {
+        padding: 0.4rem 0.75rem;
+        border-radius: 999px;
+        background: rgba(37, 99, 235, 0.15);
+        border: 1px solid rgba(37, 99, 235, 0.3);
+      }
     </style>
   </head>
   <body>
@@ -193,6 +244,9 @@
 
     <script type="module">
       import { jsx } from 'https://esm.sh/@knighted/jsx/lite'
+      import { reactJsx } from 'https://esm.sh/@knighted/jsx/react'
+      import { useState } from 'https://esm.sh/react@19'
+      import { createRoot } from 'https://esm.sh/react-dom@19/client'
 
       const app = document.getElementById('app')
       const Counter = ({ start = 0 }) => {
@@ -254,6 +308,48 @@
         { label: 'Entry URL', detail: 'esm.sh/@knighted/jsx/lite' },
         { label: 'What you get', detail: 'JSX runtime helpers only' },
       ]
+
+      const reactMetrics = ['Hooks ready', 'Fragments inline', 'React 19 friendly']
+
+      const ReactBadge = ({ label }) =>
+        reactJsx`
+          <span>{${label}}</span>
+        `
+
+      const ReactRuntimePanel = () => {
+        const [clicks, setClicks] = useState(0)
+
+        return reactJsx`
+          <div className="react-panel">
+            <p className="eyebrow">React runtime</p>
+            <h3>reactJsx + React 19</h3>
+            <p>
+              Button clicks: <strong>{${clicks}}</strong>
+            </p>
+            <div className="react-metrics">
+              {${reactMetrics.map(
+                label => reactJsx`<${ReactBadge} key={${label}} label={${label}} />`,
+              )}}
+            </div>
+            <button type="button" onClick={${() => setClicks(value => value + 1)}}>
+              Trigger React state
+            </button>
+          </div>
+        `
+      }
+
+      const mountReactRuntimeDemo = host => {
+        if (!host) {
+          return null
+        }
+        const root = createRoot(host)
+        root.render(
+          reactJsx`
+            <${ReactRuntimePanel} />
+          `,
+        )
+        return root
+      }
       const DeepTree = ({ heading, footerLink }) => {
         const groups = featureMatrix.map(
           group =>
@@ -347,11 +443,27 @@
             heading={${'Nested JSX stress test'}}
             footerLink={${'https://github.com/knightedcodemonkey/jsx'}}
           />
+          <section class="card react-card">
+            <header>
+              <h2>Try the React runtime</h2>
+              <p>
+                {${'The reactJsx helper builds React elements so you can share a single template style between DOM and React trees.'}}
+              </p>
+            </header>
+            <p>
+              {${'The panel below mounts React 19 + react-dom directly from esm.sh and keeps state with hooks.'}}
+            </p>
+            <div class="react-mount" id="react-runtime-demo"></div>
+            <p>
+              {${'No bundler needed—both the DOM and React runtimes run straight from CDN imports.'}}
+            </p>
+          </section>
           <${LiteSavings} />
         </>
       `
 
       app?.append(demo)
+      mountReactRuntimeDemo(document.getElementById('react-runtime-demo'))
     </script>
   </body>
 </html>
