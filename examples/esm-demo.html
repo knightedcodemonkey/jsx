@@ -239,12 +239,22 @@
       <header>
         <h1>@knighted/jsx/lite + esm.sh</h1>
         <p>Use @knighted/jsx directly in the browser with native modules.</p>
+        <p>
+          View this source on GitHub:
+          <a
+            href="https://github.com/knightedcodemonkey/jsx/blob/main/examples/esm-demo.html"
+            target="_blank"
+            rel="noreferrer"
+          >
+            examples/esm-demo.html
+          </a>
+        </p>
       </header>
     </main>
 
     <script type="module">
-      import { jsx } from 'https://esm.sh/@knighted/jsx/lite'
-      import { reactJsx } from 'https://esm.sh/@knighted/jsx/react'
+      import { jsx } from 'https://esm.sh/@knighted/jsx@next/lite'
+      import { reactJsx } from 'https://esm.sh/@knighted/jsx@next/react'
       import { useState } from 'https://esm.sh/react@19'
       import { createRoot } from 'https://esm.sh/react-dom@19/client'
 
@@ -324,7 +334,7 @@
             <p className="eyebrow">React runtime</p>
             <h3>reactJsx + React 19</h3>
             <p>
-              Button clicks: <strong>{${clicks}}</strong>
+              Button clicks:{' '}<strong>{${clicks}}</strong>
             </p>
             <div className="react-metrics">
               {${reactMetrics.map(
