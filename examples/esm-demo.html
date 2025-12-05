@@ -42,6 +42,28 @@
         box-shadow: 0 15px 45px rgba(15, 23, 42, 0.08);
       }
 
+      .loading-card {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        color: #4b5563;
+      }
+
+      .loading-spinner {
+        width: 2.75rem;
+        height: 2.75rem;
+        border-radius: 50%;
+        border: 3px solid rgba(37, 99, 235, 0.2);
+        border-top-color: #2563eb;
+        animation: spinner 1s linear infinite;
+      }
+
+      @keyframes spinner {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
       .list {
         padding-left: 1.5rem;
       }
@@ -321,6 +343,13 @@
           </a>
         </p>
       </header>
+      <section id="demo-loading" class="card loading-card" aria-live="polite">
+        <div class="loading-spinner" aria-hidden="true"></div>
+        <div>
+          <p><strong>Loading demo modules…</strong></p>
+          <p>esm.sh dependencies stream in on first visit.</p>
+        </div>
+      </section>
     </main>
 
     <script type="module">
@@ -331,6 +360,7 @@
       import { LitElement, css, html } from 'https://esm.sh/lit@3'
 
       const app = document.getElementById('app')
+      const loadingCard = document.getElementById('demo-loading')
       const Counter = ({ start = 0 }) => {
         let value = start
         const valueLabel = jsx`<span class="counter-value">{${value}}</span>`
@@ -831,7 +861,11 @@
         </>
       `
 
-      app?.append(demo)
+      if (loadingCard) {
+        loadingCard.replaceWith(demo)
+      } else {
+        app?.append(demo)
+      }
       mountReactRuntimeDemo(document.getElementById('react-runtime-demo'))
       mountLitReactBridgeDemo(document.getElementById('lit-react-bridge-demo'))
     </script>
