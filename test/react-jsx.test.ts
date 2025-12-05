@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createRoot } from 'react-dom/client'
-import { act } from 'react'
+import { Children, act } from 'react'
+import type { ReactNode } from 'react'
 
 import { reactJsx, type ReactJsxComponent } from '../src/react/index.js'
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -87,5 +88,39 @@ describe('reactJsx template tag', () => {
     expect(() => reactJsx`<section>{${Promise.resolve('later')}}</section>`).toThrow(
       'Async values are not supported inside reactJsx template results.',
     )
+  })
+
+  it('merges spread attributes and flattens iterable children', () => {
+    const extras = { role: 'status', 'aria-live': 'polite' } as const
+    const items = new Set(['alpha', 'beta'])
+
+    const element = reactJsx`
+      <section {...${extras}} hidden data-note={/* transient */}>
+        {/* drop this comment */}
+        {${null}}
+        {${false}}
+        {${items}}
+      </section>
+    `
+
+    const props = element.props as {
+      role?: string
+      'aria-live'?: string
+      hidden?: boolean
+      children?: ReactNode
+      'data-note'?: string
+    }
+
+    expect(props.role).toBe('status')
+    expect(props['aria-live']).toBe('polite')
+    expect(props.hidden).toBe(true)
+    expect(props['data-note']).toBeUndefined()
+
+    const flattened = Children.toArray(props.children)
+    expect(flattened.map(child => String(child)).join('')).toBe('alphabeta')
+  })
+
+  it('surfaces parser errors with helpful context when JSX is invalid', () => {
+    expect(() => reactJsx`<section>`).toThrow('[oxc-parser]')
   })
 })
