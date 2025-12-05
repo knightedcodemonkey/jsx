@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>@knighted/jsx/lite &mdash; esm.sh demo</title>
+    <title>@knighted/jsx &mdash; esm.sh demo</title>
     <style>
       :root {
         font-family:
@@ -186,6 +186,19 @@
         border-left: 4px solid #2563eb;
       }
 
+      .lit-react-card {
+        border-left-color: #f97316;
+      }
+
+      .lit-react-card .react-mount {
+        border-color: rgba(249, 115, 22, 0.35);
+        background: linear-gradient(
+          135deg,
+          rgba(249, 115, 22, 0.08),
+          rgba(234, 179, 8, 0.08)
+        );
+      }
+
       .react-mount {
         min-height: 220px;
         border-radius: 1rem;
@@ -232,12 +245,70 @@
         background: rgba(37, 99, 235, 0.15);
         border: 1px solid rgba(37, 99, 235, 0.3);
       }
+
+      .hybrid-card {
+        border-left: 4px solid #f59e0b;
+      }
+
+      .hybrid-react-cluster {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .hybrid-react-badge {
+        border-radius: 1rem;
+        padding: 1rem 1.25rem;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(37, 99, 235, 0.2);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+      }
+
+      .hybrid-react-badge header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .hybrid-react-badge header strong {
+        font-size: 0.95rem;
+        color: #2563eb;
+      }
+
+      .hybrid-react-badge .handshake-count {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+      }
+
+      .hybrid-react-badge button {
+        margin-top: 0.75rem;
+        border: none;
+        border-radius: 999px;
+        padding: 0.55rem 1.15rem;
+        background: #2563eb;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .hybrid-react-badge[data-connected='false'] {
+        border-color: rgba(234, 88, 12, 0.35);
+        background: rgba(251, 146, 60, 0.08);
+      }
+
+      lit-hosts-react {
+        display: block;
+        margin-top: 1rem;
+      }
     </style>
   </head>
   <body>
     <main id="app">
       <header>
-        <h1>@knighted/jsx/lite + esm.sh</h1>
+        <h1>@knighted/jsx + esm.sh</h1>
         <p>Use @knighted/jsx directly in the browser with native modules.</p>
         <p>
           View this source on GitHub:
@@ -255,8 +326,9 @@
     <script type="module">
       import { jsx } from 'https://esm.sh/@knighted/jsx@next/lite'
       import { reactJsx } from 'https://esm.sh/@knighted/jsx@next/react'
-      import { useState } from 'https://esm.sh/react@19'
+      import { useEffect, useRef, useState } from 'https://esm.sh/react@19'
       import { createRoot } from 'https://esm.sh/react-dom@19/client'
+      import { LitElement, css, html } from 'https://esm.sh/lit@3'
 
       const app = document.getElementById('app')
       const Counter = ({ start = 0 }) => {
@@ -326,6 +398,212 @@
           <span>{${label}}</span>
         `
 
+      const HybridReactBadge = ({ label }) => {
+        const [handshakes, setHandshakes] = useState(1)
+        const [connected, setConnected] = useState(true)
+        const toggleConnection = () => {
+          setHandshakes(value => value + 1)
+          setConnected(value => !value)
+        }
+
+        return reactJsx`
+          <div className="hybrid-react-badge" data-connected={${String(connected)}}>
+            <header>
+              <p className="eyebrow">React child</p>
+              <strong>{${connected ? 'Connected' : 'Paused'}}</strong>
+            </header>
+            <p className="handshake-count">{${handshakes}}</p>
+            <p>
+              {${'Handshakes with the Lit parent since mount.'}}
+            </p>
+            <button type="button" onClick={${toggleConnection}}>
+              {${connected ? 'Pause bridge' : 'Resume bridge'}}
+            </button>
+          </div>
+        `
+      }
+
+      class LitReactMeter extends LitElement {
+        static properties = {
+          count: { type: Number },
+          status: { type: String },
+        }
+
+        static styles = css`
+          :host {
+            display: block;
+            border-radius: 1rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            padding: 1rem 1.25rem;
+            background: white;
+            box-shadow: 0 15px 40px rgba(15, 23, 42, 0.08);
+          }
+
+          .meter-status {
+            font-size: 0.75rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: #fb923c;
+            margin: 0 0 0.4rem;
+          }
+
+          .meter-count {
+            font-size: 2.25rem;
+            font-weight: 700;
+            margin: 0 0 0.5rem;
+            color: #111827;
+          }
+
+          .meter-subtext {
+            font-size: 0.95rem;
+            margin: 0;
+            color: #4b5563;
+          }
+        `
+
+        constructor() {
+          super()
+          this.count = 0
+          this.status = 'Bridge idle'
+        }
+
+        render() {
+          return html`
+            <p class="meter-status">${this.status}</p>
+            <p class="meter-count">${this.count}</p>
+            <p class="meter-subtext">
+              <slot></slot>
+            </p>
+          `
+        }
+      }
+
+      if (!customElements.get('lit-react-meter')) {
+        customElements.define('lit-react-meter', LitReactMeter)
+      }
+
+      class LitHostsReactElement extends LitElement {
+        static properties = {
+          title: { type: String },
+          subtitle: { type: String },
+        }
+
+        static styles = css`
+          :host {
+            display: block;
+          }
+
+          .hybrid-shell {
+            border-radius: 1.25rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            padding: 1.5rem;
+            background: white;
+            box-shadow: 0 15px 45px rgba(15, 23, 42, 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+          }
+
+          .hybrid-shell header h3 {
+            margin: 0.25rem 0 0;
+          }
+
+          .react-slot {
+            padding: 1rem;
+            border-radius: 1rem;
+            background: rgba(37, 99, 235, 0.08);
+            border: 1px dashed rgba(37, 99, 235, 0.35);
+          }
+
+          .react-slot :is(button, span) {
+            font-weight: 600;
+            border-radius: 999px;
+            padding: 0.4rem 0.9rem;
+            border: none;
+            background: white;
+          }
+
+          .nested-slot {
+            border-radius: 0.85rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            padding: 1rem;
+            background: #f9fafb;
+          }
+
+          .nested-slot ul {
+            margin: 0;
+          }
+
+          .hybrid-shell footer {
+            font-size: 0.9rem;
+            color: #4b5563;
+            margin: 0;
+          }
+        `
+
+        constructor() {
+          super()
+          this.title = 'Lit hosts React'
+          this.subtitle = 'reactJsx renders the React subtree while Lit owns the shell.'
+          this.reactRoot = null
+          this.reactHost = null
+        }
+
+        renderReactTree(tree) {
+          if (!this.reactHost) {
+            this.reactHost = document.createElement('div')
+          }
+
+          if (!this.reactRoot && this.reactHost) {
+            this.reactRoot = createRoot(this.reactHost)
+          }
+
+          this.reactRoot?.render(tree)
+          return this.reactHost
+        }
+
+        disconnectedCallback() {
+          this.reactRoot?.unmount()
+          this.reactRoot = null
+          this.reactHost = null
+          super.disconnectedCallback()
+        }
+
+        render() {
+          const reactTree = reactJsx`
+            <div className="hybrid-react-cluster">
+              <${HybridReactBadge} label={${this.title}} />
+              <p className="react-status">Rendered with reactJsx</p>
+            </div>
+          `
+          const reactNode = this.renderReactTree(reactTree)
+
+          return html`
+            <article class="hybrid-shell">
+              <header>
+                <p class="eyebrow">Lit parent</p>
+                <h3>${this.title}</h3>
+                <p>${this.subtitle}</p>
+              </header>
+              <div class="react-slot">${reactNode}</div>
+              <div class="nested-slot">
+                ${jsx`
+                  <ul class="list">
+                    <li>Lit renders DOM nodes via the jsx helper.</li>
+                    <li>The React subtree above mounts with reactJsx.</li>
+                  </ul>
+                `}
+              </div>
+              <footer>React output lives inside the Lit template.</footer>
+            </article>
+          `
+        }
+      }
+
+      if (!customElements.get('lit-hosts-react')) {
+        customElements.define('lit-hosts-react', LitHostsReactElement)
+      }
+
       const ReactRuntimePanel = () => {
         const [clicks, setClicks] = useState(0)
 
@@ -348,6 +626,36 @@
         `
       }
 
+      const LitReactBridgePanel = () => {
+        const [syncCount, setSyncCount] = useState(2)
+        const meterRef = useRef(null)
+
+        useEffect(() => {
+          if (!meterRef.current) {
+            return
+          }
+          meterRef.current.count = syncCount
+          meterRef.current.status =
+            syncCount % 2 === 0 ? 'Even handshake' : 'Odd handshake'
+        }, [syncCount])
+
+        return reactJsx`
+          <div className="react-panel">
+            <p className="eyebrow">React + Lit</p>
+            <h3>Share React state with Lit</h3>
+            <p>
+              {${'React hooks update a Lit web component below using plain custom element refs.'}}
+            </p>
+            <lit-react-meter ref={${meterRef}}>
+              <span>{${'Lit renders this meter while React drives the data flow.'}}</span>
+            </lit-react-meter>
+            <button type="button" onClick={${() => setSyncCount(value => value + 1)}}>
+              Sync Lit with React state
+            </button>
+          </div>
+        `
+      }
+
       const mountReactRuntimeDemo = host => {
         if (!host) {
           return null
@@ -356,6 +664,19 @@
         root.render(
           reactJsx`
             <${ReactRuntimePanel} />
+          `,
+        )
+        return root
+      }
+
+      const mountLitReactBridgeDemo = host => {
+        if (!host) {
+          return null
+        }
+        const root = createRoot(host)
+        root.render(
+          reactJsx`
+            <${LitReactBridgePanel} />
           `,
         )
         return root
@@ -468,12 +789,51 @@
               {${'No bundler needed—both the DOM and React runtimes run straight from CDN imports.'}}
             </p>
           </section>
+          <section class="card hybrid-card">
+            <header>
+              <h2>Lit renders React via reactJsx</h2>
+              <p>
+                {${'This mirrors the rspack-app fixture where a Lit parent instantiates a React tree authored with the reactJsx helper.'}}
+              </p>
+            </header>
+            <p>
+              {${'The custom element below registers on load, mounts React with createRoot, and drops the Node back into the Lit template.'}}
+            </p>
+            <lit-hosts-react></lit-hosts-react>
+            <p>
+              {${'Explore the bundler variant under '}}
+              <a
+                class="demo-link"
+                href="https://github.com/knightedcodemonkey/jsx/tree/main/test/fixtures/rspack-app"
+                target="_blank"
+                rel="noreferrer"
+              >
+                test/fixtures/rspack-app
+              </a>
+            </p>
+          </section>
+          <section class="card react-card lit-react-card">
+            <header>
+              <h2>Combine Lit + React</h2>
+              <p>
+                {${'Stream Lit from esm.sh, register a custom element, and let React drive it with shared state.'}}
+              </p>
+            </header>
+            <p>
+              {${'The bridge below mounts a React panel that references a Lit component with nothing but custom element refs.'}}
+            </p>
+            <div class="react-mount" id="lit-react-bridge-demo"></div>
+            <p>
+              {${'Click the sync button to watch React hooks update the Lit meter in real time.'}}
+            </p>
+          </section>
           <${LiteSavings} />
         </>
       `
 
       app?.append(demo)
       mountReactRuntimeDemo(document.getElementById('react-runtime-demo'))
+      mountLitReactBridgeDemo(document.getElementById('lit-react-bridge-demo'))
     </script>
   </body>
 </html>
