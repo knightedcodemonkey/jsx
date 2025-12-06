@@ -1,6 +1,6 @@
 # `@knighted/jsx` Loader
 
-Transform `jsx` tagged template literals in any bundler that supports webpack-style loaders (Rspack, Webpack, etc.). The loader rewrites JSX syntax inside the template into the interpolation-friendly form that `@knighted/jsx` expects, so you can embed JSX snippets anywhere you can use template literals—such as inside Lit components.
+Transform ` jsx`` ` and ` reactJsx`` ` tagged template literals inside any bundler that supports webpack-style loaders (Rspack, Webpack, etc.). The loader rewrites JSX syntax that lives in template literals so the runtime helpers can execute it later—ideal when you want JSX inside Lit components, custom elements, or shared utilities without adding a `.tsx` transpilation step.
 
 ## Installation
 
@@ -8,35 +8,15 @@ Transform `jsx` tagged template literals in any bundler that supports webpack-st
 npm install @knighted/jsx
 ```
 
-No extra peer dependency is required; the loader ships with the package.
+The loader ships with the package; no extra peer dependency is required.
 
 ## Basic usage
 
-Configure your bundler so `.ts`/`.js` files pass through the loader. In Rspack:
-
-`````ts
-// rspack.config.ts
-import type { Configuration } from '@rspack/core'
-
-````markdown
-# `@knighted/jsx` Loader
-
-Transform `jsx` tagged template literals in any bundler that supports webpack-style loaders (Rspack, Webpack, etc.). The loader rewrites JSX syntax inside the template into the interpolation-friendly form that `@knighted/jsx` expects, so you can embed JSX snippets anywhere you can use template literals—such as inside Lit components.
-
-## Installation
-
-```sh
-npm install @knighted/jsx
-`````
-
-No extra peer dependency is required; the loader ships with the package.
-
-## Basic usage
-
-Configure your bundler so `.ts`/`.js` files pass through the loader. In Rspack:
+Run your source files through the loader. Example Rspack config:
 
 ```ts
 // rspack.config.ts
+import path from 'node:path'
 import type { Configuration } from '@rspack/core'
 
 const config: Configuration = {
@@ -44,12 +24,12 @@ const config: Configuration = {
     rules: [
       {
         test: /\.[cm]?[jt]sx?$/,
+        include: path.resolve(__dirname, 'src'),
         use: [
           {
             loader: '@knighted/jsx/loader',
             options: {
-              // Optional: rename the tagged template function.
-              tag: 'jsx',
+              // Customize loader behavior here
             },
           },
         ],
@@ -61,14 +41,26 @@ const config: Configuration = {
 export default config
 ```
 
-> `tag` defaults to `jsx`. Set it when you wrap the helper (e.g., `const htmlx = jsx`) and want the loader to transform `htmlx`...` instead.
+By default the loader transforms both ` jsx`` ` (DOM runtime) and `  reactJsx`` ` (React runtime) calls.
+
+### Loader options
+
+| Option | Type       | Default               | Description                                                                                                 |
+| ------ | ---------- | --------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `tags` | `string[]` | `['jsx', 'reactJsx']` | Names of tagged template helpers to transform. Add aliases if you re-export the helpers under custom names. |
+| `tag`  | `string`   | `undefined`           | Legacy single-tag option. Prefer `tags`, but this remains for backward compatibility.                       |
 
 ## Writing templates
 
 ```ts
 import { jsx } from '@knighted/jsx'
 
-const FancyButton = ({ label }) => jsx`<button>{${label}}</button>`
+const FancyButton = ({ label }: { label: string }) =>
+  jsx`
+    <button>
+      {${label}}
+    </button>
+  `
 
 class Widget extends HTMLElement {
   render() {
@@ -83,40 +75,30 @@ class Widget extends HTMLElement {
 }
 ```
 
-During the build the loader rewrites the inner tag:
+During the build the loader rewrites everything inside `${jsx``}` so each dynamic chunk becomes a regular `${expression}` in the output template literal. Keep writing JSX exactly as you would in `.tsx` files: wrap dynamic bits with braces (`className={value}`, `{children}`, spread props, etc.). At runtime `@knighted/jsx` turns the transformed template back into live DOM nodes (or React elements when using `reactJsx`).
 
-```ts
-${jsx`
-  <${FancyButton} label={${'Launch'}} />
-`}
-```
+## Limitations & notes
 
-Your source can stay idiomatic JSX—just remember everything dynamic still lives inside braces (`label={labelText}`) exactly like React. The transformed output feeds `@knighted/jsx` at runtime, which returns DOM nodes you can insert into Lit templates, vanilla DOM APIs, etc.
-
-## Limitations
-
-- Only works on tagged template literals that use the configured `tag`. Regular JSX files still need the usual JSX transformer.
-- Template literal `${expr}` segments that sit outside JSX braces are wrapped automatically, so destructured props and children count as “used” without helper code. (You can still write `{expr}` manually if you prefer.)
-- Async transforms are not supported; the loader runs synchronously as part of the bundler pipeline.
+- Only tagged template literals that use the configured names are transformed; normal `.tsx` files still need your existing JSX transformer.
+- Template literal `${expr}` segments that sit outside JSX braces are wrapped automatically so destructured props, inline values, and children remain live without extra boilerplate.
+- The loader runs synchronously—avoid work that needs async I/O.
+- When targeting the React runtime, ensure `react`/`react-dom` are bundled so `reactJsx` can call `React.createElement`.
 
 ## Tips
 
-- Pair this loader with Lit by emitting `${jsx`...`}` inside `html``...`` blocks. The Lit template sees a `DocumentFragment`or DOM node returned by`jsx` and inserts it like any other value.
-- Use the `lite` entry (`import { jsx } from '@knighted/jsx/lite'`) if you want the smallest runtime inside your bundle—the loader output stays the same.
+- Import from `@knighted/jsx/lite` when you want the smallest runtime bundle—the loader output stays the same.
+- Lit templates can safely embed ` jsx`` ` inside ` html`` ` blocks; the runtime returns DOM nodes or `DocumentFragment` instances that Lit inserts like any other value.
+- Frameworks such as Next.js or Remix should add the loader as a post-loader so SWC/Babel execute first and the tagged template literals are rewritten afterward.
 
 ## End-to-end demo bundle
 
-The repository also ships a complete Rspack + Lit + React example at `test/fixtures/rspack-app/`. The Vitest integration test (`test/loader.e2e.test.ts`) compiles that fixture, stubs the WASM binding, and confirms the loader works inside a real bundler.
+The repository ships a Rspack + Lit + React fixture under `test/fixtures/rspack-app/`. The Vitest integration test (`test/loader.e2e.test.ts`) builds that fixture, stubs the parser WASM binding, and verifies the loader pipeline inside a real bundler.
 
-To preview it manually:
+Manual preview steps:
 
-1. Build the library once (`npm run build`) so the ESM/CJS loader artifacts exist under `dist/`.
-2. Ensure the wasm binding is available (`npm run setup:wasm` downloads `@oxc-parser/binding-wasm32-wasi` once). If you deliberately want the no-op stub, pass `-- --use-stub` to the build step later.
-3. Run `npm run build:fixture` (writes `test/fixtures/rspack-app/dist/bundle.js` using Rspack and the published loader). Alternatively, execute the e2e test or point Rspack at the fixture entry yourself.
-4. Serve the fixture directory (`npx http-server test/fixtures/rspack-app -p 8080 -o` or any static server) and open `http://127.0.0.1:8080/index.html`. It loads `./dist/bundle.js`, registers `<hybrid-element>`, and renders the Lit template that embeds JSX alongside a React-generated badge.
+1. Build the library (`npm run build`) so the loader artifacts exist under `dist/`.
+2. Install the parser WASM binding (`npm run setup:wasm`) to enable JSX parsing outside Node. Pass `-- --use-stub` to `npm run build:fixture` only if you deliberately want the no-op parser stub.
+3. Run `npm run build:fixture` to emit `test/fixtures/rspack-app/dist/bundle.js` via Rspack.
+4. Serve the fixture folder (`npx http-server test/fixtures/rspack-app -p 8080`) and open it in a browser. You will see a Lit component that embeds DOM returned by `jsx` alongside a React badge rendered through `reactJsx`.
 
-The e2e test normally writes to a temporary directory and deletes it, so you only get a persistent bundle when you explicitly target the fixture’s `dist/` folder. The HTML file is a convenient viewer for manual verification once the bundle exists. If you pass `--use-stub`, the bundle will still run but throws when the parser is invoked—the real wasm binding is required for interactive usage.
-
-```
-
-```
+The e2e test normally writes to a temporary directory and cleans up afterward. Use the steps above when you need a persistent bundle for manual inspection—the real WASM binding is required for interactive parsing; the stub exists strictly for loader smoke tests.

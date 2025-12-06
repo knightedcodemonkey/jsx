@@ -13,3 +13,7 @@ examples/browser/dist/
 coverage/
 coverage-v8/
 coverage/vitest/
+
+# fixture build output
+test/fixtures/next-app/.next/
+test/fixtures/next-app/out/

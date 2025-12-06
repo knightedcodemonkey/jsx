@@ -1,15 +1,18 @@
 {
   "name": "@knighted/jsx",
-  "version": "1.2.0-rc.0",
-  "description": "A simple JSX transpiler that runs in node.js or the browser.",
+  "version": "1.2.0-rc.1",
+  "description": "Runtime JSX tagged template that renders DOM or React trees anywhere without a build step.",
   "keywords": [
-    "jsx browser transform",
-    "jsx transpiler",
-    "jsx compiler",
-    "jsx parser",
     "jsx runtime",
-    "jsx node",
-    "jsx"
+    "jsx template literal",
+    "tagged template",
+    "no-build jsx",
+    "dom runtime",
+    "react runtime",
+    "ssr",
+    "lit",
+    "webpack loader",
+    "oxc parser"
   ],
   "type": "module",
   "main": "./dist/index.js",
@@ -29,6 +32,16 @@
       "types": "./dist/react/index.d.ts",
       "import": "./dist/react/index.js",
       "default": "./dist/react/index.js"
+    },
+    "./node": {
+      "types": "./dist/node/index.d.ts",
+      "import": "./dist/node/index.js",
+      "default": "./dist/node/index.js"
+    },
+    "./node/react": {
+      "types": "./dist/node/react/index.d.ts",
+      "import": "./dist/node/react/index.js",
+      "default": "./dist/node/react/index.js"
     },
     "./loader": {
       "import": "./dist/loader/jsx.js",
@@ -51,6 +64,7 @@
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "build:fixture": "node scripts/build-rspack-fixture.mjs",
+    "demo:node-ssr": "node test/fixtures/node-ssr/render.mjs",
     "dev": "vite dev --config vite.config.ts",
     "build:demo": "vite build --config vite.config.ts",
     "preview": "vite preview --config vite.config.ts",
@@ -61,15 +75,19 @@
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@knighted/duel": "^2.1.6",
+    "@types/node": "^22.10.1",
     "@rspack/core": "^1.0.5",
     "@types/jsdom": "^27.0.0",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitest/coverage-v8": "^4.0.14",
     "eslint": "^9.39.1",
+    "eslint-plugin-n": "^17.10.3",
+    "@oxc-project/types": "^0.99.0",
     "http-server": "^14.1.1",
     "jsdom": "^27.2.0",
     "lit": "^3.2.1",
+    "next": "^16.0.0",
     "prettier": "^3.7.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -85,10 +103,18 @@
     "oxc-parser": "^0.99.0"
   },
   "peerDependencies": {
-    "react": ">=18"
+    "react": ">=18",
+    "jsdom": "*",
+    "linkedom": "*"
   },
   "peerDependenciesMeta": {
     "react": {
+      "optional": true
+    },
+    "jsdom": {
+      "optional": true
+    },
+    "linkedom": {
       "optional": true
     }
   },

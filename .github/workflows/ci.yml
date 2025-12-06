@@ -10,15 +10,21 @@ on:
 
 jobs:
   ci:
-    name: CI
+    name: CI (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version:
+          - '22'
+          - '24.11.1'
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
       - name: Setup Node
         uses: actions/setup-node@v4.3.0
         with:
-          node-version: '24.11.1'
+          node-version: ${{ matrix.node-version }}
       - name: Install Dependencies
         run: npm ci
       - name: Save error log
