@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 
 import loader from '../src/loader/jsx'
 
-const runLoader = (source: string, options?: { tag?: string; tags?: string[] }) =>
+const runLoader = (source: string, options?: Record<string, unknown>) =>
   new Promise<string>((resolve, reject) => {
     const context = {
       resourcePath: '/virtual/file.tsx',
@@ -205,5 +205,266 @@ describe('jsx loader', () => {
     ].join('\n')
 
     await expect(runLoader(source)).rejects.toThrow('Expected attribute quote')
+  })
+
+  it('compiles tagged templates to React helpers when mode is react', async () => {
+    const source = [
+      "const title = 'Launch'",
+      'const view = jsx`',
+      '  <button className="cta">{title}</button>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+
+    expect(transformed).toContain('__jsxReact("button", { "className": "cta" }, title)')
+    expect(transformed).toContain(
+      'const __jsxReactMergeProps = (...sources) => Object.assign({}, ...sources)',
+    )
+  })
+
+  it('honors per-tag react overrides via tagModes', async () => {
+    const source = [
+      "const label = 'Ready'",
+      'const runtimeView = jsx`<span>${label}</span>`',
+      'const reactView = reactJsx`<button>${label}</button>`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, {
+      tagModes: {
+        reactJsx: 'react',
+      },
+    })
+
+    expect(transformed).toContain('const runtimeView = jsx`<span>{${label}}</span>`')
+    expect(transformed).toContain('const reactView = __jsxReact("button", null, label)')
+    expect(transformed.match(/const __jsxReactMergeProps/g)?.length).toBe(1)
+  })
+
+  it('interpolates JSX member expression component names', async () => {
+    const source = [
+      'const view = jsx`',
+      '  <ui.Card.Section title="Launch">',
+      '    Ready',
+      '  </ui.Card.Section>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source)
+    expect(transformed).toContain('<${ui.Card.Section} title="Launch">')
+    expect(transformed).toContain('</${ui.Card.Section}>')
+  })
+
+  it('keeps namespaced tag names literal', async () => {
+    const source = ['const view = jsx`<svg:foreignObject role="note" />`'].join('\n')
+    const transformed = await runLoader(source)
+    expect(transformed).toContain('<svg:foreignObject role="note" />')
+  })
+
+  it('ignores JSX empty expression containers', async () => {
+    const source = [
+      'const view = jsx`',
+      '  <div>',
+      '    {/* comment only */}',
+      '  </div>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source)
+    expect(transformed).toContain('{/* comment only */}')
+  })
+
+  it('respects manually interpolated spread children', async () => {
+    const source = [
+      'const children = []',
+      'const view = jsx`',
+      '  <>',
+      '    {...${children}}',
+      '  </>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source)
+    expect(transformed).toContain('{...${children}}')
+  })
+
+  it('throws when a JSX template cannot be parsed', async () => {
+    const source = ['const view = jsx`', '  <div>', '`'].join('\n')
+
+    await expect(runLoader(source)).rejects.toThrow('[jsx-loader]')
+  })
+
+  it('throws when a react template cannot be parsed', async () => {
+    const source = ['const view = reactJsx`', '  <section>', '`'].join('\n')
+
+    await expect(runLoader(source, { mode: 'react' })).rejects.toThrow('[jsx-loader]')
+  })
+
+  it('requires a JSX root when compiling react templates', async () => {
+    const source = ['const view = reactJsx`', '  ', '`'].join('\n')
+
+    await expect(runLoader(source, { mode: 'react' })).rejects.toThrow(
+      'single JSX root node',
+    )
+  })
+
+  it('normalizes multiline text nodes in react mode', async () => {
+    const source = [
+      'const view = reactJsx`',
+      '  <p>',
+      '    Hello',
+      '      world',
+      '  </p>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain('__jsxReact("p", null, "Hello world")')
+  })
+
+  it('falls back to runtime mode when options.mode is invalid', async () => {
+    const source = [
+      "const label = 'text'",
+      'const view = jsx`<span>${label}</span>`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'invalid' })
+    expect(transformed).toContain('const view = jsx`<span>{${label}}</span>`')
+  })
+
+  it('emits component identifiers when compiling to react mode', async () => {
+    const source = ['const view = jsx`', '  <Banner />', '`'].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain('__jsxReact(Banner, null)')
+  })
+
+  it('supports member expression components in react mode', async () => {
+    const source = ['const view = jsx`', '  <ui.Card.Section />', '`'].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain('__jsxReact("ui".Card.Section, null)')
+  })
+
+  it('stringifies namespaced tags in react mode', async () => {
+    const source = ['const view = jsx`', '  <svg:foreignObject />', '`'].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain('__jsxReact("svg:foreignObject", null)')
+  })
+
+  it('throws when react mode encounters complex expressions', async () => {
+    const source = [
+      'const view = jsx`',
+      '  <div>{items.map(item => <span>{item}</span>)}</div>',
+      '`',
+    ].join('\n')
+
+    await expect(runLoader(source, { mode: 'react' })).rejects.toThrow(
+      'Unable to inline complex expressions in react mode.',
+    )
+  })
+
+  it('compiles interpolated tag expressions in react mode', async () => {
+    const source = ['const tag = Button', 'const view = jsx`', '  <${tag} />', '`'].join(
+      '\n',
+    )
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain('__jsxReact(tag, null)')
+  })
+
+  it('supports inline JSX expressions inside react children', async () => {
+    const source = [
+      'const view = jsx`',
+      '  <section>{<span>Label</span>}</section>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain('__jsxReact("span", null, "Label")')
+  })
+
+  it('surfaces parser label details for mismatched JSX tags', async () => {
+    const source = ['const view = jsx`', '  <div></span>', '`'].join('\n')
+
+    await expect(runLoader(source)).rejects.toThrow('Expected `</div>`')
+  })
+
+  it('merges static props and spreads in react mode', async () => {
+    const source = [
+      'const propsA = { role: "presentation" }',
+      'const propsB = { tabIndex: 0 }',
+      'const view = jsx`',
+      '  <button type="button" {...propsA} data-ready="yes" {...propsB}>',
+      '    Demo',
+      '  </button>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain(
+      '__jsxReactMergeProps({ "type": "button" }, propsA, { "data-ready": "yes" }, propsB)',
+    )
+  })
+
+  it('stringifies namespaced attributes when compiling to react', async () => {
+    const source = [
+      'const view = jsx`',
+      '  <svg:foreignObject xml:lang="fr" />',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain('__jsxReact("svg:foreignObject", { "xml:lang": "fr" })')
+  })
+
+  it('compiles fragments in react mode', async () => {
+    const source = [
+      'const view = jsx`',
+      '  <>',
+      '    <span>Hello</span>',
+      '  </>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain('__jsxReact(React.Fragment, null')
+    expect(transformed).toContain('__jsxReact("span", null, "Hello")')
+  })
+
+  it('treats boolean attributes as true in react mode', async () => {
+    const source = ['const view = jsx`', '  <button disabled />', '`'].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain('{ "disabled": true }')
+  })
+
+  it('evaluates attribute expression containers in react mode', async () => {
+    const source = [
+      "const label = 'Launch'",
+      'const view = jsx`',
+      '  <button data-label={${label}} />',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain('{ "data-label": label }')
+  })
+
+  it('ignores invalid tagModes overrides', async () => {
+    const source = [
+      "const label = 'demo'",
+      'const view = jsx`<button>${label}</button>`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, {
+      tags: ['jsx'],
+      tagModes: {
+        jsx: 'invalid',
+      } as Record<string, string>,
+    })
+
+    expect(transformed).toContain('<button>{${label}}</button>')
   })
 })

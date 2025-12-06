@@ -1,7 +1,7 @@
 import { LitElement, html } from 'lit'
 import { jsx, type JsxRenderable } from '@knighted/jsx'
 import { reactJsx, type ReactJsxComponent } from '@knighted/jsx/react'
-import { useState, type ReactElement } from 'react'
+import { useState, type ReactElement, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 
 type ReactBadgeProps = {
@@ -23,6 +23,22 @@ const ReactBadge: ReactJsxComponent<ReactBadgeProps> = ({ label }: ReactBadgePro
     </button>
   )
 }
+
+type ReactTreeChildren = {
+  children?: ReactNode
+}
+
+const ReactTreeGroup: ReactJsxComponent<ReactTreeChildren> = ({
+  children,
+}: ReactTreeChildren) => <section className="react-tree-group">{children}</section>
+
+const ReactTreeInner: ReactJsxComponent<ReactTreeChildren> = ({
+  children,
+}: ReactTreeChildren) => <div className="react-tree-inner">{children}</div>
+
+const ReactTreeAside: ReactJsxComponent<ReactTreeChildren> = ({
+  children,
+}: ReactTreeChildren) => <aside className="react-tree-aside">{children}</aside>
 
 type HybridCardProps = {
   title: string
@@ -77,8 +93,15 @@ class HybridElement extends LitElement {
     const label = 'Hybrid ready'
     const reactTree = reactJsx`
       <>
-        <${ReactBadge} label={${label}} />
-        <p data-kind="react-status">Rendered with reactJsx</p>
+        <${ReactTreeGroup}>
+          <${ReactTreeInner}>
+            <${ReactBadge} label={${label}} />
+            <p data-kind="react-status">Rendered with reactJsx</p>
+          </${ReactTreeInner}>
+        </${ReactTreeGroup}>
+        <${ReactTreeAside}>
+          <p data-kind="react-companion">Sibling dynamic tag rendered next to group</p>
+        </${ReactTreeAside}>
       </>
     `
     const reactNode = this.renderReactTree(reactTree)

@@ -127,14 +127,14 @@ npm run setup:wasm
 npm run build:fixture
 ```
 
-Then point a static server at the fixture root (which serves `index.html` and the bundled `dist/bundle.js`) to see it in a browser:
+Then point a static server at the fixture root (which serves `index.html` plus the bundled `dist/hybrid.js` and `dist/reactMode.js`) to see it in a browser:
 
 ```sh
 # Serve the rspack fixture from the repo root
 npx http-server test/fixtures/rspack-app -p 4173
 ```
 
-Visit `http://localhost:4173` (or whichever port you pick) to interact with the Lit + React demo.
+Visit `http://localhost:4173` (or whichever port you pick) to interact with both the Lit + React hybrid demo and the React-mode bundle.
 
 ## Node / SSR usage
 

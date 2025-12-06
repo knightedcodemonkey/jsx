@@ -38,20 +38,26 @@
   <body>
     <main>
       <header>
-        <h1>Lit + React Hybrid (Loader E2E)</h1>
-        <p>This page loads the bundle produced by the Rspack integration fixture.</p>
+        <h1>Lit + React Hybrid + React Mode (Loader E2E)</h1>
+        <p>This page loads the bundles produced by the Rspack integration fixture.</p>
         <p>
           Run <code>npm run build</code> first so the loader code is compiled, then run
           <code>npm run setup:wasm</code> once so the real parser binding is available,
           followed by <code>npm run build:fixture</code> to emit
-          <code>dist/bundle.js</code> next to this HTML file (the Vitest e2e test also
-          builds it, but into a temp directory). Serve this folder with any static server
-          to view the demo.
+          <code>dist/hybrid.js</code> and <code>dist/reactMode.js</code> next to this HTML
+          file (the Vitest e2e test also builds them into a temp directory). Serve this
+          folder with any static server to view the demo.
         </p>
       </header>
 
       <section>
+        <h2>Lit + React hybrid bundle</h2>
         <hybrid-element></hybrid-element>
+      </section>
+
+      <section>
+        <h2>React-mode bundle</h2>
+        <react-mode-element></react-mode-element>
       </section>
 
       <pre>
@@ -62,6 +68,7 @@
       </pre>
     </main>
 
-    <script type="module" src="./dist/bundle.js"></script>
+    <script type="module" src="./dist/hybrid.js"></script>
+    <script type="module" src="./dist/reactMode.js"></script>
   </body>
 </html>
