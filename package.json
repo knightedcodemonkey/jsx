@@ -70,12 +70,14 @@
   "engineStrict": true,
   "scripts": {
     "build": "duel && npm run build:lite",
+    "prepare": "husky",
     "precheck-types": "npm run build",
     "check-types": "npm run check-types:lib && npm run check-types:demo",
     "check-types:lib": "tsc --noEmit --project tsconfig.json",
     "check-types:demo": "tsc --noEmit --project examples/browser/tsconfig.json",
     "lint": "eslint src test",
     "prettier": "prettier -w .",
+    "prettier:check": "prettier --check .",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "test:e2e": "npm run build && npm run setup:wasm && npm run build:fixture && playwright test",
@@ -103,7 +105,9 @@
     "eslint-plugin-n": "^17.10.3",
     "eslint-plugin-playwright": "^2.4.0",
     "http-server": "^14.1.1",
+    "husky": "^9.1.7",
     "jsdom": "^27.2.0",
+    "lint-staged": "^16.2.7",
     "lit": "^3.2.1",
     "next": "^16.0.0",
     "prettier": "^3.7.3",
@@ -158,5 +162,9 @@
     "printWidth": 90,
     "semi": false,
     "singleQuote": true
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,mjs,cjs,cts,mts}": "eslint --max-warnings=0",
+    "*.{js,jsx,ts,tsx,mjs,cjs,cts,mts,json,md,css,scss,html}": "prettier --check"
   }
 }
