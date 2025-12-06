@@ -320,13 +320,16 @@ Prefer the manual route? You can still run `npm_config_ignore_platform=true npm 
 
 ### Lite bundle entry
 
-If you already run this package through your own bundler you can trim a few extra kilobytes by importing the minified entry:
+If you already run this package through your own bundler you can trim a few extra kilobytes by importing the minified entries:
 
 ```ts
 import { jsx } from '@knighted/jsx/lite'
+import { reactJsx } from '@knighted/jsx/react/lite'
+import { jsx as nodeJsx } from '@knighted/jsx/node/lite'
+import { reactJsx as nodeReactJsx } from '@knighted/jsx/node/react/lite'
 ```
 
-The `lite` export ships the exact same API as the default entry but is pre-minified via `tsup`, so bundlers have less work to do and browsers download ~10% less code. No functionality is removed—you can freely swap between the standard and lite imports.
+Each lite subpath ships the same API as its standard counterpart but is pre-minified and scoped to just that runtime (DOM, React, Node DOM, or Node React). Swap them in when you want the smallest possible bundles; otherwise the default exports keep working as-is.
 
 ## Testing
 

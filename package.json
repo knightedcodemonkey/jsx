@@ -1,6 +1,6 @@
 {
   "name": "@knighted/jsx",
-  "version": "1.2.0-rc.3",
+  "version": "1.2.0-rc.4",
   "description": "Runtime JSX tagged template that renders DOM or React trees anywhere without a build step.",
   "keywords": [
     "jsx runtime",
@@ -33,15 +33,30 @@
       "import": "./dist/react/index.js",
       "default": "./dist/react/index.js"
     },
+    "./react/lite": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/lite/react/index.js",
+      "default": "./dist/lite/react/index.js"
+    },
     "./node": {
       "types": "./dist/node/index.d.ts",
       "import": "./dist/node/index.js",
       "default": "./dist/node/index.js"
     },
+    "./node/lite": {
+      "types": "./dist/node/index.d.ts",
+      "import": "./dist/lite/node/index.js",
+      "default": "./dist/lite/node/index.js"
+    },
     "./node/react": {
       "types": "./dist/node/react/index.d.ts",
       "import": "./dist/node/react/index.js",
       "default": "./dist/node/react/index.js"
+    },
+    "./node/react/lite": {
+      "types": "./dist/node/react/index.d.ts",
+      "import": "./dist/lite/node/react/index.js",
+      "default": "./dist/lite/node/react/index.js"
     },
     "./loader": {
       "import": "./dist/loader/jsx.js",

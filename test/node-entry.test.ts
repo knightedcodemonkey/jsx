@@ -1,64 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const GLOBAL_KEYS = [
-  'window',
-  'self',
-  'document',
-  'HTMLElement',
-  'Element',
-  'Node',
-  'DocumentFragment',
-  'customElements',
-  'Text',
-  'Comment',
-  'MutationObserver',
-  'navigator',
-] as const
-
-type GlobalKey = (typeof GLOBAL_KEYS)[number]
-type SnapshotEntry = { exists: boolean; value: unknown }
-
-type Snapshot = Map<GlobalKey, SnapshotEntry>
-
-const snapshotGlobals = (): Snapshot => {
-  const target = globalThis as Record<string, unknown>
-  const snapshot = new Map<GlobalKey, SnapshotEntry>()
-
-  GLOBAL_KEYS.forEach(key => {
-    snapshot.set(key, {
-      exists: Object.prototype.hasOwnProperty.call(target, key),
-      value: target[key],
-    })
-  })
-
-  return snapshot
-}
-
-const removeGlobals = () => {
-  const target = globalThis as Record<string, unknown>
-  GLOBAL_KEYS.forEach(key => {
-    target[key] = undefined
-  })
-}
-
-const restoreGlobals = (snapshot: Snapshot) => {
-  const target = globalThis as Record<string, unknown>
-
-  GLOBAL_KEYS.forEach(key => {
-    const entry = snapshot.get(key)
-    if (!entry) {
-      delete target[key]
-      return
-    }
-
-    if (!entry.exists) {
-      delete target[key]
-      return
-    }
-
-    target[key] = entry.value
-  })
-}
+import { removeGlobals, restoreGlobals, snapshotGlobals } from './helpers/node-globals.js'
 
 describe('node entry', () => {
   beforeEach(() => {
