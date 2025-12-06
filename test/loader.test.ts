@@ -419,6 +419,43 @@ describe('jsx loader', () => {
     expect(transformed).toContain('__jsxReact("svg:foreignObject", { "xml:lang": "fr" })')
   })
 
+  it('compiles fragments in react mode', async () => {
+    const source = [
+      'const view = jsx`',
+      '  <>',
+      '    <span>Hello</span>',
+      '  </>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain('__jsxReact(React.Fragment, null')
+    expect(transformed).toContain('__jsxReact("span", null, "Hello")')
+  })
+
+  it('treats boolean attributes as true in react mode', async () => {
+    const source = [
+      'const view = jsx`',
+      '  <button disabled />',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain('{ "disabled": true }')
+  })
+
+  it('evaluates attribute expression containers in react mode', async () => {
+    const source = [
+      "const label = 'Launch'",
+      'const view = jsx`',
+      '  <button data-label={${label}} />',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain('{ "data-label": label }')
+  })
+
   it('ignores invalid tagModes overrides', async () => {
     const source = [
       "const label = 'demo'",

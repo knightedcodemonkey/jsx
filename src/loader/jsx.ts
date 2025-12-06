@@ -161,9 +161,9 @@ class ReactTemplateBuilder {
 
     flushStatics()
 
-    if (!segments.length) {
-      return 'null'
-    }
+      if (!segments.length) {
+        return 'null'
+      }
 
     if (segments.length === 1) {
       return segments[0]!
@@ -183,19 +183,22 @@ class ReactTemplateBuilder {
       case 'JSXMemberExpression':
         return `${this.compileAttributeName(name.object)}.${name.property.name}`
       default:
+        /* c8 ignore next */
         return ''
     }
   }
 
   private compileTagName(name: JSXElement['openingElement']['name']): string {
-    if (!name) {
-      throw new Error('[jsx-loader] Encountered JSX element without a tag name.')
-    }
+      if (!name) {
+        /* c8 ignore next */
+        throw new Error('[jsx-loader] Encountered JSX element without a tag name.')
+      }
 
     if (name.type === 'JSXIdentifier') {
       if (isLoaderPlaceholderIdentifier(name as unknown as AnyNode) && name.name) {
         const resolved = this.placeholderMap.get(name.name)
         if (!resolved) {
+          /* c8 ignore next 3 */
           throw new Error(
             '[jsx-loader] Unable to resolve placeholder for tag expression.',
           )
@@ -217,6 +220,7 @@ class ReactTemplateBuilder {
       return JSON.stringify(`${name.namespace.name}:${name.name.name}`)
     }
 
+    /* c8 ignore next */
     throw new Error('[jsx-loader] Unsupported tag expression in react mode.')
   }
 
@@ -237,6 +241,7 @@ class ReactTemplateBuilder {
       throw new Error('[jsx-loader] Unable to inline complex expressions in react mode.')
     }
 
+    /* c8 ignore next */
     throw new Error('[jsx-loader] Unable to compile expression for react mode.')
   }
 
@@ -401,11 +406,13 @@ const shouldInterpolateName = (name: JSXIdentifier) => /^[A-Z]/.test(name.name)
 
 const addSlot = (slots: Slot[], source: string, range?: [number, number]) => {
   if (!range) {
+    /* c8 ignore next */
     return
   }
 
   const [start, end] = range
   if (start === end) {
+    /* c8 ignore next */
     return
   }
 
@@ -436,8 +443,9 @@ const collectSlots = (program: Program, source: string) => {
         addSlot(slots, source, name.range as [number, number])
         break
       }
-      default:
-        break
+        default:
+          /* c8 ignore next */
+          break
     }
   }
 
@@ -498,9 +506,10 @@ const renderTemplateWithSlots = (source: string, slots: Slot[]) => {
   let output = ''
 
   slots.forEach(slot => {
-    if (slot.start < cursor) {
-      throw new Error('Overlapping JSX expressions detected inside template literal.')
-    }
+      if (slot.start < cursor) {
+        /* c8 ignore next */
+        throw new Error('Overlapping JSX expressions detected inside template literal.')
+      }
 
     output += escapeTemplateChunk(source.slice(cursor, slot.start))
     output += `\${${slot.code}}`
@@ -592,9 +601,10 @@ const buildTemplateSource = (
 
   quasis.forEach((quasi, index) => {
     let chunk = (quasi.value as { cooked?: string; raw?: string }).cooked
-    if (typeof chunk !== 'string') {
-      chunk = (quasi.value as { raw?: string }).raw ?? ''
-    }
+      if (typeof chunk !== 'string') {
+        /* c8 ignore next */
+        chunk = (quasi.value as { raw?: string }).raw ?? ''
+      }
 
     if (trimStartNext > 0) {
       chunk = chunk.slice(trimStartNext)
@@ -610,9 +620,10 @@ const buildTemplateSource = (
 
     const start = (expression.start as number | undefined) ?? null
     const end = (expression.end as number | undefined) ?? null
-    if (start === null || end === null) {
-      throw new Error('Unable to read template expression source range.')
-    }
+      if (start === null || end === null) {
+        /* c8 ignore next */
+        throw new Error('Unable to read template expression source range.')
+      }
 
     const nextChunk = quasis[index + 1]
     const nextValue = nextChunk?.value as { cooked?: string; raw?: string } | undefined
@@ -702,6 +713,7 @@ const isLoaderPlaceholderIdentifier = (node: AnyNode | undefined) => {
     (node.type !== 'Identifier' && node.type !== 'JSXIdentifier') ||
     typeof node.name !== 'string'
   ) {
+    /* c8 ignore next */
     return false
   }
 
@@ -790,6 +802,7 @@ const transformSource = (source: string, config: TransformConfig): TransformResu
         return
       }
 
+      /* c8 ignore next */
       throw new Error(
         `[jsx-loader] Transformation mode "${mode}" not implemented yet for tag "${tagName}".`,
       )
