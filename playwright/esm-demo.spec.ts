@@ -1,16 +1,16 @@
 import { test, expect } from '@playwright/test'
 
-const deepTreeSelectors = {
-  section: '#deep-demo',
-  groups: '#deep-demo .feature-group',
-}
-
 const hybridSelectors = {
   reactRuntimeButton: '#react-runtime-demo .react-panel button',
   reactRuntimeCounter: '#react-runtime-demo .react-panel p',
   litHost: 'lit-hosts-react',
   litReactBadge: 'lit-hosts-react .hybrid-react-badge',
-  liteSavings: '.lite-savings-list li',
+  liteMetrics: '#lite-entrypaths .lite-metric',
+}
+
+const overviewSelectors = {
+  card: '.overview-card',
+  capabilityItems: '.overview-card .capability-item',
 }
 
 test.describe('esm demo via esm.sh', () => {
@@ -26,15 +26,12 @@ test.describe('esm demo via esm.sh', () => {
     await counterButton.click()
     await expect(counterLabel).toHaveText('2')
 
-    const deepTreeSection = page.locator(deepTreeSelectors.section)
-    await expect(deepTreeSection).toBeVisible()
-    const deepTreeGroups = page.locator(deepTreeSelectors.groups)
-    await expect(deepTreeGroups).toHaveCount(3)
-    for (let index = 0; index < 3; index += 1) {
-      await expect(
-        page.locator(`${deepTreeSelectors.groups}:nth-child(${index + 1}) .feature-row`),
-      ).toHaveCount(3)
-    }
+    const overviewCard = page.locator(overviewSelectors.card)
+    await expect(overviewCard).toBeVisible()
+    await expect(page.locator(overviewSelectors.capabilityItems)).toHaveCount(5)
+    await expect(page.locator(overviewSelectors.capabilityItems).first()).toContainText(
+      'DOM template tag',
+    )
   })
 
   test('bridges lite tree with React + Lit hybrid widget', async ({ page }) => {
@@ -54,6 +51,6 @@ test.describe('esm demo via esm.sh', () => {
     await expect(
       page.locator(`${hybridSelectors.litReactBadge} header strong`),
     ).toHaveText(/Connected|Paused/)
-    await expect(page.locator(hybridSelectors.liteSavings)).toHaveCount(3)
+    await expect(page.locator(hybridSelectors.liteMetrics)).toHaveCount(4)
   })
 })

@@ -84,18 +84,6 @@
         font-weight: 700;
       }
 
-      .deep-tree {
-        background: white;
-        border-radius: 1.25rem;
-        padding: 1.75rem;
-        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.12);
-        border: 1px solid rgba(15, 23, 42, 0.05);
-      }
-
-      .deep-tree header {
-        margin-bottom: 1.25rem;
-      }
-
       .eyebrow {
         font-size: 0.75rem;
         letter-spacing: 0.35em;
@@ -104,54 +92,48 @@
         margin: 0 0 0.5rem;
       }
 
-      .feature-list {
+      .overview-card {
+        border-left: 4px solid #6366f1;
+        background-image: linear-gradient(
+          120deg,
+          rgba(99, 102, 241, 0.08),
+          rgba(14, 165, 233, 0.08)
+        );
+      }
+
+      .capability-list {
         list-style: none;
         margin: 0;
         padding: 0;
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       }
 
-      .feature-group {
+      .capability-item {
         border-radius: 1rem;
+        border: 1px solid rgba(15, 23, 42, 0.08);
         padding: 1rem;
         background: #f9fafb;
-        border: 1px solid rgba(15, 23, 42, 0.06);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
       }
 
-      .feature-group h3 {
-        margin: 0 0 0.75rem;
-        font-size: 1.05rem;
+      .capability-item strong {
+        display: block;
+        font-size: 0.9rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #1d4ed8;
+        margin-bottom: 0.35rem;
       }
 
-      .feature-grid {
-        list-style: none;
+      .capability-item p {
         margin: 0;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 0.6rem;
-      }
-
-      .feature-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.6rem 0.75rem;
-        border-radius: 0.85rem;
-        background: hsla(var(--badge-hue, 210), 80%, 60%, 0.12);
-        border: 1px solid hsla(var(--badge-hue, 210), 70%, 60%, 0.25);
-      }
-
-      .feature-label {
-        color: #111827;
-        font-weight: 600;
-      }
-
-      .feature-value {
-        font-weight: 700;
         color: #1f2937;
+      }
+
+      .dom-card {
+        border-left: 4px solid #16a34a;
       }
 
       .demo-link {
@@ -164,44 +146,137 @@
         text-decoration: underline;
       }
 
-      .deep-tree footer {
+      .lite-metric-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         margin-top: 1.5rem;
       }
 
-      .lite-savings-list {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 0.85rem;
-      }
-
-      .lite-savings-list li {
-        border-radius: 0.9rem;
-        border: 1px solid rgba(37, 99, 235, 0.25);
+      .lite-metric {
+        border-radius: 1rem;
+        border: 1px solid rgba(37, 99, 235, 0.2);
         background: linear-gradient(
           135deg,
-          rgba(37, 99, 235, 0.08),
+          rgba(37, 99, 235, 0.06),
           rgba(14, 165, 233, 0.08)
         );
-        padding: 0.85rem;
-        color: #0f172a;
-        font-weight: 600;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        padding: 1rem;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
       }
 
-      .lite-savings-list strong {
-        display: block;
-        font-size: 0.75rem;
+      .lite-metric header {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        margin-bottom: 0.4rem;
+      }
+
+      .lite-metric header strong {
+        font-size: 0.9rem;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        color: #2563eb;
-        margin-bottom: 0.35rem;
+        color: #1d4ed8;
       }
 
-      .lite-savings-list span {
-        font-size: 1.25rem;
+      .lite-metric header span {
+        font-size: 0.95rem;
+        color: #0f172a;
+      }
+
+      .lite-metric-size {
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin: 0 0 0.35rem;
+        color: #111827;
+      }
+
+      .lite-metric-note {
+        margin: 0;
+        color: #1f2937;
+      }
+
+      .source-panel {
+        margin-top: 1rem;
+        border-radius: 0.9rem;
+        border: 1px solid rgba(15, 23, 42, 0.12);
+        background: #f9fafb;
+        overflow: hidden;
+      }
+
+      .source-panel summary {
+        cursor: pointer;
+        padding: 0.75rem 1.25rem;
+        font-weight: 600;
+        color: #1d4ed8;
+        list-style: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+      }
+
+      .source-panel summary span {
+        text-decoration: underline;
+      }
+
+      .source-panel summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .source-panel summary::after {
+        content: '↴';
+        font-size: 1.15rem;
+        transition: transform 0.25s ease;
+      }
+
+      .source-panel[open] summary::after {
+        transform: rotate(180deg);
+      }
+
+      .source-panel-body {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.35s ease;
+        border-top: 1px solid rgba(15, 23, 42, 0.08);
+        background: #fff;
+      }
+
+      .source-panel[open] .source-panel-body {
+        max-height: 640px;
+      }
+
+      .source-panel pre {
+        margin: 0;
+        padding: 1rem 1.25rem;
+        background: transparent;
+      }
+
+      .source-code {
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        font-size: 0.85rem;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      @media (max-width: 640px) {
+        .lite-metric header {
+          gap: 0.35rem;
+        }
+
+        .lite-metric header strong {
+          word-break: break-word;
+          font-size: 0.85rem;
+        }
+
+        .lite-metric-size {
+          font-size: 0.95rem;
+        }
+
+        .source-panel pre {
+          font-size: 0.8rem;
+        }
       }
 
       .react-card {
@@ -256,16 +331,18 @@
 
       .react-metrics {
         display: flex;
-        gap: 1rem;
+        gap: 0.6rem;
         flex-wrap: wrap;
         font-weight: 600;
+        margin: 0.35rem 0 0.85rem;
       }
 
       .react-metrics span {
-        padding: 0.4rem 0.75rem;
+        padding: 0.3rem 0.65rem;
         border-radius: 999px;
-        background: rgba(37, 99, 235, 0.15);
-        border: 1px solid rgba(37, 99, 235, 0.3);
+        background: rgba(37, 99, 235, 0.12);
+        color: #1d4ed8;
+        font-size: 0.85rem;
       }
 
       .hybrid-card {
@@ -331,16 +408,9 @@
     <main id="app">
       <header>
         <h1>@knighted/jsx + esm.sh</h1>
-        <p>Use @knighted/jsx directly in the browser with native modules.</p>
         <p>
-          View this source on GitHub:
-          <a
-            href="https://github.com/knightedcodemonkey/jsx/blob/main/examples/esm-demo.html"
-            target="_blank"
-            rel="noreferrer"
-          >
-            examples/esm-demo.html
-          </a>
+          Use @knighted/jsx in any modern runtime—browser, Node, or CDN—without a build
+          step.
         </p>
       </header>
       <section id="demo-loading" class="card loading-card" aria-live="polite">
@@ -361,6 +431,152 @@
 
       const app = document.getElementById('app')
       const loadingCard = document.getElementById('demo-loading')
+      const capabilityHighlights = [
+        {
+          label: 'DOM template tag',
+          detail:
+            'Render real DOM nodes anywhere the browser runs, no transpilation required.',
+        },
+        {
+          label: 'React runtime',
+          detail:
+            'Call reactJsx to emit React elements with full hook + hydration support.',
+        },
+        {
+          label: 'Node + SSR',
+          detail:
+            'Use @knighted/jsx/node to bootstrap linkedom/jsdom and reuse templates on the server.',
+        },
+        {
+          label: 'Bundler + loader',
+          detail:
+            'Drop @knighted/jsx/loader into Rspack/Webpack to rewrite template literals at build time.',
+        },
+        {
+          label: 'Lite entrypaths',
+          detail:
+            'Ship pre-minified helpers scoped to DOM, React, or Node by importing the /lite variants.',
+        },
+      ]
+      const liteEntryMetrics = [
+        {
+          entry: '@knighted/jsx/lite',
+          context: 'DOM runtime helpers',
+          raw: '~5.7 kB raw',
+          gzip: '~2.5 kB min+gzip',
+          note: 'Great for browser demos or DOM-like shims without bundlers.',
+        },
+        {
+          entry: '@knighted/jsx/react/lite',
+          context: 'React runtime helpers',
+          raw: '~4.1 kB raw',
+          gzip: '~1.9 kB min+gzip',
+          note: 'Emits React elements so hooks and React 19 streaming just work.',
+        },
+        {
+          entry: '@knighted/jsx/node/lite',
+          context: 'Node DOM entry',
+          raw: '~6.9 kB raw',
+          gzip: '~3.0 kB min+gzip',
+          note: 'Bundles the DOM shim bootstrap for headless SSR scripts.',
+        },
+        {
+          entry: '@knighted/jsx/node/react/lite',
+          context: 'Node React entry',
+          raw: '~4.1 kB raw',
+          gzip: '~1.9 kB min+gzip',
+          note: 'Combines React + DOM shim for hybrid SSR pipelines.',
+        },
+      ]
+      const counterSource = [
+        'const Counter = ({ start = 0 }) => {',
+        '  let value = start',
+        '  const valueLabel = jsx`<span class="counter-value">{${value}}</span>`',
+        '',
+        '  const increment = () => {',
+        '    value += 1',
+        '    valueLabel.textContent = String(value)',
+        '  }',
+        '',
+        '  return jsx`',
+        '    <section class="card dom-card">',
+        '      <p>Current total: {${valueLabel}}</p>',
+        '      <button onClick={${increment}}>Increment</button>',
+        '    </section>',
+        '  `',
+        '}',
+      ].join('\n')
+      const reactRuntimeSource = [
+        'const ReactRuntimePanel = () => {',
+        '  const [clicks, setClicks] = useState(0)',
+        '',
+        '  return reactJsx`',
+        '    <div className="react-panel">',
+        '      <p className="eyebrow">React runtime</p>',
+        '      <h3>reactJsx + React 19</h3>',
+        '      <div className="react-metrics">',
+        '        {reactMetrics.map(label => reactJsx`<span key={${label}}>{${label}}</span>`)}',
+        '      </div>',
+        '      <p>Button clicks: {${clicks}}</p>',
+        '      <button onClick={() => setClicks(value => value + 1)}>',
+        '        Trigger React state',
+        '      </button>',
+        '    </div>',
+        '  `',
+        '}',
+      ].join('\n')
+      const litHostsSource = [
+        'class LitHostsReactElement extends LitElement {',
+        '  render() {',
+        '    const reactTree = reactJsx`',
+        '      <div className="hybrid-react-cluster">',
+        '        <${HybridReactBadge} label={${this.title}} />',
+        '      </div>',
+        '    `',
+        '',
+        '    return html`',
+        '      <article class="hybrid-shell">',
+        '        <div class="react-slot">${this.renderReactTree(reactTree)}</div>',
+        '        <div class="nested-slot">${jsx`<p>Lit renders DOM helpers here.</p>`}</div>',
+        '      </article>',
+        '    `',
+        '  }',
+        '}',
+      ].join('\n')
+      const litBridgeSource = [
+        'const LitReactBridgePanel = () => {',
+        '  const [syncCount, setSyncCount] = useState(2)',
+        '  const meterRef = useRef(null)',
+        '',
+        '  useEffect(() => {',
+        '    if (!meterRef.current) {',
+        '      return',
+        '    }',
+        '    meterRef.current.count = syncCount',
+        "    meterRef.current.status = syncCount % 2 === 0 ? 'Even handshake' : 'Odd handshake'",
+        '  }, [syncCount])',
+        '',
+        '  return reactJsx`',
+        '    <div className="react-panel">',
+        '      <lit-react-meter ref={${meterRef}} />',
+        '      <button onClick={() => setSyncCount(value => value + 1)}>',
+        '        Sync Lit with React state',
+        '      </button>',
+        '    </div>',
+        '  `',
+        '}',
+      ].join('\n')
+      const renderSourcePanel = ({ label, code }) =>
+        jsx`
+          <details class="source-panel">
+            <summary>
+              <span>View source{${' '}} · {${' '}}{${label}}</span>
+            </summary>
+            <div class="source-panel-body">
+              <pre class="source-code">{${code}}</pre>
+            </div>
+          </details>
+        `
       const Counter = ({ start = 0 }) => {
         let value = start
         const valueLabel = jsx`<span class="counter-value">{${value}}</span>`
@@ -370,64 +586,28 @@
         }
 
         return jsx`
-          <section class="card">
+          <section class="card dom-card">
             <header>
-              <h2>Counter</h2>
+              <p class="eyebrow">DOM helper</p>
+              <h2>Stateful counter rendered with jsx</h2>
             </header>
+            <p>{${'No React, no framework—just the DOM API and the jsx tag.'}}</p>
             <p>Current total: {' '}{${valueLabel}}</p>
             <button class="counter-button" onClick={${increment}}>
               Increment
             </button>
+            {${renderSourcePanel({
+              label: 'DOM counter (jsx)',
+              code: counterSource,
+            })}}
           </section>
         `
       }
-
-      const milestones = ['hydrate DOM', 'wire events', 'ship 🚀']
-      const featureMatrix = [
-        {
-          title: 'Component props',
-          tone: 'accent',
-          live: 'polite',
-          items: [
-            { label: 'Function props', count: 2, hue: 160 },
-            { label: 'Boolean props', count: 4, hue: 120, emphasized: true },
-            { label: 'Style objects', count: 3, hue: 210 },
-          ],
-        },
-        {
-          title: 'DOM attributes',
-          tone: 'primary',
-          live: 'assertive',
-          items: [
-            { label: 'Data attributes', count: 6, hue: 30 },
-            { label: 'Aria tags', count: 5, hue: 10 },
-            { label: 'Event handlers', count: 3, hue: 280 },
-          ],
-        },
-        {
-          title: 'Children rendering',
-          tone: 'muted',
-          live: 'polite',
-          items: [
-            { label: 'Nested fragments', count: 4, hue: 320 },
-            { label: 'Iterables', count: 7, hue: 200 },
-            { label: 'Text nodes', count: 2, hue: 45 },
-          ],
-        },
-      ]
-      const liteHighlights = [
-        { label: 'gzip footprint', detail: '~2.5 kB' },
-        { label: 'Entry URL', detail: 'esm.sh/@knighted/jsx/lite' },
-        { label: 'What you get', detail: 'JSX runtime helpers only' },
-      ]
-
-      const reactMetrics = ['Hooks ready', 'Fragments inline', 'React 19 friendly']
-
+      const reactMetrics = ['Hooks ready', 'Fragments inline', 'Suspense friendly']
       const ReactBadge = ({ label }) =>
         reactJsx`
           <span>{${label}}</span>
         `
-
       const HybridReactBadge = ({ label }) => {
         const [handshakes, setHandshakes] = useState(1)
         const [connected, setConnected] = useState(true)
@@ -641,14 +821,14 @@
           <div className="react-panel">
             <p className="eyebrow">React runtime</p>
             <h3>reactJsx + React 19</h3>
-            <p>
-              Button clicks:{' '}<strong>{${clicks}}</strong>
-            </p>
             <div className="react-metrics">
               {${reactMetrics.map(
                 label => reactJsx`<${ReactBadge} key={${label}} label={${label}} />`,
               )}}
             </div>
+            <p>
+              Button clicks:{' '}<strong>{${clicks}}</strong>
+            </p>
             <button type="button" onClick={${() => setClicks(value => value + 1)}}>
               Trigger React state
             </button>
@@ -685,7 +865,6 @@
           </div>
         `
       }
-
       const mountReactRuntimeDemo = host => {
         if (!host) {
           return null
@@ -698,7 +877,6 @@
         )
         return root
       }
-
       const mountLitReactBridgeDemo = host => {
         if (!host) {
           return null
@@ -711,99 +889,55 @@
         )
         return root
       }
-      const DeepTree = ({ heading, footerLink }) => {
-        const groups = featureMatrix.map(
-          group =>
-            jsx`
-            <li
-              class="feature-group"
-              data-tone={${group.tone}}
-              aria-live={${group.live}}
-            >
-              <h3>{${group.title}}</h3>
-              <ul class="feature-grid">
-                {${group.items.map(
-                  item =>
-                    jsx`
-                    <li
-                      class="feature-row"
-                      data-count={${item.count}}
-                      aria-hidden={${item.hidden ?? false}}
-                      aria-pressed={${item.emphasized ?? false}}
-                      style={${{ '--badge-hue': String(item.hue) }}}
-                    >
-                      <span class="feature-label">{${item.label}}</span>
-                      <span class="feature-value">{${item.count}}</span>
-                    </li>
-                  `,
-                )}}
-              </ul>
-            </li>
-          `,
-        )
-
-        return jsx`
-          <section id="deep-demo" class="deep-tree" data-groups={${groups.length}}>
-            <header>
-              <p class="eyebrow">{${'Deep JSX verification'}}</p>
-              <h2>{${heading}}</h2>
-              <p>
-                {${'This mirrors the Vite demo and still runs entirely through the lite entrypoint.'}}
-              </p>
-            </header>
-            <ul class="feature-list">{${groups}}</ul>
-            <footer>
-              <a class="demo-link" href={${footerLink}} target="_blank" rel="noreferrer">
-                Inspect repo on GitHub ↗
-              </a>
-            </footer>
-          </section>
-        `
-      }
       const LiteSavings = () =>
         jsx`
-          <section class="card lite-savings">
+          <section class="card lite-savings" id="lite-entrypaths">
             <header>
-              <h2>Lite build savings</h2>
+              <p class="eyebrow">Lite entrypaths</p>
+              <h2>Pick the runtime that matches your target</h2>
               <p>
-                {${'Skip the full parser bundle and ship only the runtime helpers you need for template-tagged JSX.'}}
+                {${'Each subpath ships a pre-minified helper so you can import exactly what you need from npm or esm.sh.'}}
               </p>
             </header>
-            <ul class="lite-savings-list">
-              {${liteHighlights.map(
-                stat =>
-                  jsx`<li>
-                    <strong>{${stat.label}}</strong>
-                    <span>{${stat.detail}}</span>
-                  </li>`,
+            <div class="lite-metric-grid">
+              {${liteEntryMetrics.map(
+                metric =>
+                  jsx`<article class="lite-metric">
+                    <header>
+                      <strong>{${metric.entry}}</strong>
+                      <span>{${metric.context}}</span>
+                    </header>
+                    <p class="lite-metric-size">{${metric.raw}} • {${metric.gzip}}</p>
+                    <p class="lite-metric-note">{${metric.note}}</p>
+                  </article>`,
               )}}
-            </ul>
+            </div>
           </section>
         `
       const demo = jsx`
         <>
-          <section class="card">
+          <section class="card overview-card">
             <header>
-              <h2>Dynamic JSX without a bundler</h2>
-              <h3>Bend JSX literals to your will.</h3>
+              <p class="eyebrow">Runtime overview</p>
+              <h2>All the ways to use @knighted/jsx</h2>
+              <p>
+                {${'Share one tagged template workflow across DOM nodes, React trees, SSR, and bundler builds.'}}
+              </p>
             </header>
-            <p>
-              Everything you see below was generated with the{' '}
-              <code>jsx</code>{' '}template tag running directly in the browser via{' '}
-              <code>esm.sh/@knighted/jsx/lite</code>.
-            </p>
-            <ul class="list">
-              {${milestones.map(item => jsx`<li>{${item}}</li>`)} }
+            <ul class="capability-list">
+              {${capabilityHighlights.map(
+                capability =>
+                  jsx`<li class="capability-item">
+                    <strong>{${capability.label}}</strong>
+                    <p>{${capability.detail}}</p>
+                  </li>`,
+              )}}
             </ul>
             <p>
-              <a class="demo-link" href="#deep-demo">Jump to the nested JSX example ↴</a>
+              <a class="demo-link" href="#lite-entrypaths">Jump to the lite entrypaths ↴</a>
             </p>
           </section>
           <${Counter} start={${0}} />
-          <${DeepTree}
-            heading={${'Nested JSX stress test'}}
-            footerLink={${'https://github.com/knightedcodemonkey/jsx'}}
-          />
           <section class="card react-card">
             <header>
               <h2>Try the React runtime</h2>
@@ -818,13 +952,14 @@
             <p>
               {${'No bundler needed—both the DOM and React runtimes run straight from CDN imports.'}}
             </p>
+            {${renderSourcePanel({
+              label: 'React runtime panel',
+              code: reactRuntimeSource,
+            })}}
           </section>
           <section class="card hybrid-card">
             <header>
               <h2>Lit renders React via reactJsx</h2>
-              <p>
-                {${'This mirrors the rspack-app fixture where a Lit parent instantiates a React tree authored with the reactJsx helper.'}}
-              </p>
             </header>
             <p>
               {${'The custom element below registers on load, mounts React with createRoot, and drops the Node back into the Lit template.'}}
@@ -841,6 +976,10 @@
                 test/fixtures/rspack-app
               </a>
             </p>
+            {${renderSourcePanel({
+              label: 'Lit hosts React element',
+              code: litHostsSource,
+            })}}
           </section>
           <section class="card react-card lit-react-card">
             <header>
@@ -856,6 +995,10 @@
             <p>
               {${'Click the sync button to watch React hooks update the Lit meter in real time.'}}
             </p>
+            {${renderSourcePanel({
+              label: 'Lit + React bridge',
+              code: litBridgeSource,
+            })}}
           </section>
           <${LiteSavings} />
         </>
