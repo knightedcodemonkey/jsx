@@ -240,4 +240,154 @@ describe('jsx loader', () => {
     expect(transformed).toContain('const reactView = __jsxReact("button", null, label)')
     expect(transformed.match(/const __jsxReactMergeProps/g)?.length).toBe(1)
   })
+
+  it('interpolates JSX member expression component names', async () => {
+    const source = [
+      'const view = jsx`',
+      '  <ui.Card.Section title="Launch">',
+      '    Ready',
+      '  </ui.Card.Section>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source)
+    expect(transformed).toContain('<${ui.Card.Section} title="Launch">')
+    expect(transformed).toContain('</${ui.Card.Section}>')
+  })
+
+  it('keeps namespaced tag names literal', async () => {
+    const source = ['const view = jsx`<svg:foreignObject role="note" />`'].join('\n')
+    const transformed = await runLoader(source)
+    expect(transformed).toContain('<svg:foreignObject role="note" />')
+  })
+
+  it('ignores JSX empty expression containers', async () => {
+    const source = [
+      'const view = jsx`',
+      '  <div>',
+      '    {/* comment only */}',
+      '  </div>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source)
+    expect(transformed).toContain('{/* comment only */}')
+  })
+
+  it('respects manually interpolated spread children', async () => {
+    const source = [
+      'const children = []',
+      'const view = jsx`',
+      '  <>',
+      '    {...${children}}',
+      '  </>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source)
+    expect(transformed).toContain('{...${children}}')
+  })
+
+  it('throws when a JSX template cannot be parsed', async () => {
+    const source = ['const view = jsx`', '  <div>', '`'].join('\n')
+
+    await expect(runLoader(source)).rejects.toThrow('[jsx-loader]')
+  })
+
+  it('throws when a react template cannot be parsed', async () => {
+    const source = ['const view = reactJsx`', '  <section>', '`'].join('\n')
+
+    await expect(runLoader(source, { mode: 'react' })).rejects.toThrow('[jsx-loader]')
+  })
+
+  it('requires a JSX root when compiling react templates', async () => {
+    const source = ['const view = reactJsx`', '  ', '`'].join('\n')
+
+    await expect(runLoader(source, { mode: 'react' })).rejects.toThrow(
+      'single JSX root node',
+    )
+  })
+
+  it('normalizes multiline text nodes in react mode', async () => {
+    const source = [
+      'const view = reactJsx`',
+      '  <p>',
+      '    Hello',
+      '      world',
+      '  </p>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain('__jsxReact("p", null, "Hello world")')
+  })
+
+  it('falls back to runtime mode when options.mode is invalid', async () => {
+    const source = [
+      "const label = 'text'",
+      'const view = jsx`<span>${label}</span>`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'invalid' })
+    expect(transformed).toContain('const view = jsx`<span>{${label}}</span>`')
+  })
+
+  it('emits component identifiers when compiling to react mode', async () => {
+    const source = ['const view = jsx`', '  <Banner />', '`'].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain('__jsxReact(Banner, null)')
+  })
+
+  it('supports member expression components in react mode', async () => {
+    const source = ['const view = jsx`', '  <ui.Card.Section />', '`'].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain('__jsxReact("ui".Card.Section, null)')
+  })
+
+  it('stringifies namespaced tags in react mode', async () => {
+    const source = ['const view = jsx`', '  <svg:foreignObject />', '`'].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain('__jsxReact("svg:foreignObject", null)')
+  })
+
+  it('throws when react mode encounters complex expressions', async () => {
+    const source = [
+      'const view = jsx`',
+      '  <div>{items.map(item => <span>{item}</span>)}</div>',
+      '`',
+    ].join('\n')
+
+    await expect(runLoader(source, { mode: 'react' })).rejects.toThrow(
+      'Unable to inline complex expressions in react mode.',
+    )
+  })
+
+  it('compiles interpolated tag expressions in react mode', async () => {
+    const source = ['const tag = Button', 'const view = jsx`', '  <${tag} />', '`'].join(
+      '\n',
+    )
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain('__jsxReact(tag, null)')
+  })
+
+  it('supports inline JSX expressions inside react children', async () => {
+    const source = [
+      'const view = jsx`',
+      '  <section>{<span>Label</span>}</section>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain('__jsxReact("span", null, "Label")')
+  })
+
+  it('surfaces parser label details for mismatched JSX tags', async () => {
+    const source = ['const view = jsx`', '  <div></span>', '`'].join('\n')
+
+    await expect(runLoader(source)).rejects.toThrow('Expected `</div>`')
+  })
 })
