@@ -161,9 +161,9 @@ class ReactTemplateBuilder {
 
     flushStatics()
 
-      if (!segments.length) {
-        return 'null'
-      }
+    if (!segments.length) {
+      return 'null'
+    }
 
     if (segments.length === 1) {
       return segments[0]!
@@ -189,10 +189,10 @@ class ReactTemplateBuilder {
   }
 
   private compileTagName(name: JSXElement['openingElement']['name']): string {
-      if (!name) {
-        /* c8 ignore next */
-        throw new Error('[jsx-loader] Encountered JSX element without a tag name.')
-      }
+    if (!name) {
+      /* c8 ignore next */
+      throw new Error('[jsx-loader] Encountered JSX element without a tag name.')
+    }
 
     if (name.type === 'JSXIdentifier') {
       if (isLoaderPlaceholderIdentifier(name as unknown as AnyNode) && name.name) {
@@ -443,9 +443,9 @@ const collectSlots = (program: Program, source: string) => {
         addSlot(slots, source, name.range as [number, number])
         break
       }
-        default:
-          /* c8 ignore next */
-          break
+      default:
+        /* c8 ignore next */
+        break
     }
   }
 
@@ -506,10 +506,10 @@ const renderTemplateWithSlots = (source: string, slots: Slot[]) => {
   let output = ''
 
   slots.forEach(slot => {
-      if (slot.start < cursor) {
-        /* c8 ignore next */
-        throw new Error('Overlapping JSX expressions detected inside template literal.')
-      }
+    if (slot.start < cursor) {
+      /* c8 ignore next */
+      throw new Error('Overlapping JSX expressions detected inside template literal.')
+    }
 
     output += escapeTemplateChunk(source.slice(cursor, slot.start))
     output += `\${${slot.code}}`
@@ -601,10 +601,10 @@ const buildTemplateSource = (
 
   quasis.forEach((quasi, index) => {
     let chunk = (quasi.value as { cooked?: string; raw?: string }).cooked
-      if (typeof chunk !== 'string') {
-        /* c8 ignore next */
-        chunk = (quasi.value as { raw?: string }).raw ?? ''
-      }
+    if (typeof chunk !== 'string') {
+      /* c8 ignore next */
+      chunk = (quasi.value as { raw?: string }).raw ?? ''
+    }
 
     if (trimStartNext > 0) {
       chunk = chunk.slice(trimStartNext)
@@ -620,10 +620,10 @@ const buildTemplateSource = (
 
     const start = (expression.start as number | undefined) ?? null
     const end = (expression.end as number | undefined) ?? null
-      if (start === null || end === null) {
-        /* c8 ignore next */
-        throw new Error('Unable to read template expression source range.')
-      }
+    if (start === null || end === null) {
+      /* c8 ignore next */
+      throw new Error('Unable to read template expression source range.')
+    }
 
     const nextChunk = quasis[index + 1]
     const nextValue = nextChunk?.value as { cooked?: string; raw?: string } | undefined

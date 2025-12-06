@@ -434,11 +434,7 @@ describe('jsx loader', () => {
   })
 
   it('treats boolean attributes as true in react mode', async () => {
-    const source = [
-      'const view = jsx`',
-      '  <button disabled />',
-      '`',
-    ].join('\n')
+    const source = ['const view = jsx`', '  <button disabled />', '`'].join('\n')
 
     const transformed = await runLoader(source, { mode: 'react' })
     expect(transformed).toContain('{ "disabled": true }')
