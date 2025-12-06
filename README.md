@@ -4,7 +4,23 @@
 [![codecov](https://codecov.io/gh/knightedcodemonkey/jsx/graph/badge.svg?token=tjxuFwcwkr)](https://codecov.io/gh/knightedcodemonkey/jsx)
 [![NPM version](https://img.shields.io/npm/v/@knighted/jsx.svg)](https://www.npmjs.com/package/@knighted/jsx)
 
-A runtime JSX template tag backed by the [`oxc-parser`](https://github.com/oxc-project/oxc) WebAssembly build. Use real JSX syntax directly inside template literals and turn the result into live DOM nodes (or values returned from your own components) without running a bundler.
+A runtime JSX template tag backed by the [`oxc-parser`](https://github.com/oxc-project/oxc) WebAssembly build. Use real JSX syntax directly inside template literals and turn the result into live DOM nodes (or values returned from your own components) without running a bundler. One syntax works everywhere—browser scripts, SSR utilities, and bundler pipelines—no separate transpilation step required.
+
+## Key features
+
+- **Parse true JSX with no build step** – template literals go through `oxc-parser`, so fragments, spreads, and SVG namespaces all work as expected.
+- **DOM + React runtimes** – choose `jsx` for DOM nodes or `reactJsx` for React elements, and mix them freely (even on the server).
+- **Loader + SSR support** – ship tagged templates through Webpack/Rspack, Next.js, or plain Node by using the loader and the `@knighted/jsx/node` entry.
+
+## Quick links
+
+- [Usage](#usage)
+- [React runtime](#react-runtime-reactjsx)
+- [Loader integration](#loader-integration)
+- [Node / SSR usage](#node--ssr-usage)
+- [Next.js integration](#nextjs-integration)
+- [Browser usage](#browser-usage)
+- [Testing & demos](#testing)
 
 ## Installation
 
@@ -350,7 +366,7 @@ Tradeoffs to keep in mind:
 - **Parser vs tokenizer** – `htm` performs lightweight string tokenization, while `@knighted/jsx` pays a higher one-time parse cost but gains the full JSX grammar (fragments, spread children, nested namespaces) without heuristics. For large or deeply nested templates the WASM-backed parser is typically faster and more accurate than string slicing.
 - **DOM-first rendering** – this runtime builds DOM nodes directly, so the cost after parsing is mostly attribute assignment and child insertion. `htm` usually feeds a virtual DOM/hyperscript factory (e.g., Preact’s `h`), which may add an extra abstraction layer before hitting the DOM.
 - **Bundle size** – including the parser and WASM binding is heavier than `htm`’s ~1 kB tokenizer. If you just need hyperscript sugar, `htm` stays leaner; if you value real JSX semantics without a build step, the extra kilobytes buy you correctness and speed on complex trees.
-  - **Actual size** – the default `dist/jsx.js` bundle is ~13.9 kB raw / ~3.6 kB min+gzip, while the new `@knighted/jsx/lite` entry is ~5.7 kB raw / ~2.5 kB min+gzip. `htm` weighs in at roughly 0.7 kB min+gzip, so the lite entry narrows the gap to ~1.8 kB for production payloads.
+  - **Actual size** – as of `v1.2.0-rc.1` the default `dist/jsx.js` bundle is ~9.0 kB raw / ~2.3 kB min+gzip, while the `@knighted/jsx/lite` entry stays ~5.7 kB raw / ~2.5 kB min+gzip. `htm` weighs in at roughly 0.7 kB min+gzip, so the lite entry narrows the gap to ~1.8 kB for production payloads.
 
 In short, `@knighted/jsx` trades a slightly larger runtime for the ability to parse genuine JSX with native performance, whereas `htm` favors minimal footprint and hyperscript integration. Pick the tool that aligns with your rendering stack and performance envelope.
 
