@@ -8,7 +8,6 @@ npm-debug.log*
 # build artifacts
 dist/
 examples/browser/dist/
-examples/vendor/
 
 # coverage output
 coverage/

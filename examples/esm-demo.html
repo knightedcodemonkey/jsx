@@ -431,165 +431,151 @@
     </main>
 
     <script type="module">
-      import { jsx as remoteJsx } from 'https://esm.sh/@knighted/jsx@next/lite'
-      import { reactJsx as remoteReactJsx } from 'https://esm.sh/@knighted/jsx@next/react'
+      import { jsx } from 'https://esm.sh/@knighted/jsx@next/lite'
+      import { reactJsx } from 'https://esm.sh/@knighted/jsx@next/react'
       import { useEffect, useRef, useState } from 'https://esm.sh/react@19'
       import { createRoot } from 'https://esm.sh/react-dom@19/client'
       import { LitElement, css, html } from 'https://esm.sh/lit@3'
-      ;(async () => {
-        const searchParams = new URLSearchParams(window.location.search)
-        const useLocalRuntime = searchParams.has('local')
-        let jsx = remoteJsx
-        let reactJsx = remoteReactJsx
 
-        if (useLocalRuntime) {
-          const [{ jsx: localJsx }, { reactJsx: localReactJsx }] = await Promise.all([
-            import('./vendor/@knighted/jsx/lite/index.js'),
-            import('./vendor/@knighted/jsx/react/index.js'),
-          ])
-          jsx = localJsx
-          reactJsx = localReactJsx
-        }
-
-        const app = document.getElementById('app')
-        const loadingCard = document.getElementById('demo-loading')
-        const capabilityHighlights = [
-          {
-            label: 'DOM template tag',
-            detail:
-              'Render real DOM nodes anywhere the browser runs, no transpilation required.',
-          },
-          {
-            label: 'React runtime',
-            detail:
-              'Call reactJsx to emit React elements with full hook + hydration support.',
-          },
-          {
-            label: 'Node + SSR',
-            detail:
-              'Use @knighted/jsx/node to bootstrap linkedom/jsdom and reuse templates on the server.',
-          },
-          {
-            label: 'Bundler + loader',
-            detail:
-              'Drop @knighted/jsx/loader into Rspack/Webpack to rewrite template literals at build time.',
-          },
-          {
-            label: 'Lite entrypaths',
-            detail:
-              'Ship pre-minified helpers scoped to DOM, React, or Node by importing the /lite variants.',
-          },
-        ]
-        const liteEntryMetrics = [
-          {
-            entry: '@knighted/jsx/lite',
-            context: 'DOM runtime helpers',
-            raw: '~5.7 kB raw',
-            gzip: '~2.5 kB min+gzip',
-            note: 'Great for browser demos or DOM-like shims without bundlers.',
-          },
-          {
-            entry: '@knighted/jsx/react/lite',
-            context: 'React runtime helpers',
-            raw: '~4.1 kB raw',
-            gzip: '~1.9 kB min+gzip',
-            note: 'Emits React elements so hooks and React 19 streaming just work.',
-          },
-          {
-            entry: '@knighted/jsx/node/lite',
-            context: 'Node DOM entry',
-            raw: '~6.9 kB raw',
-            gzip: '~3.0 kB min+gzip',
-            note: 'Bundles the DOM shim bootstrap for headless SSR scripts.',
-          },
-          {
-            entry: '@knighted/jsx/node/react/lite',
-            context: 'Node React entry',
-            raw: '~4.1 kB raw',
-            gzip: '~1.9 kB min+gzip',
-            note: 'Combines React + DOM shim for hybrid SSR pipelines.',
-          },
-        ]
-        const counterSource = [
-          'const Counter = ({ start = 0 }) => {',
-          '  let value = start',
-          '  const valueLabel = jsx`<span class="counter-value">${value}</span>`',
-          '',
-          '  const increment = () => {',
-          '    value += 1',
-          '    valueLabel.textContent = String(value)',
-          '  }',
-          '',
-          '  return jsx`',
-          '    <section class="card dom-card">',
-          '      <p>Current total: ${valueLabel}</p>',
-          '      <button onClick={${increment}}>Increment</button>',
-          '    </section>',
-          '  `',
-          '}',
-        ].join('\n')
-        const reactRuntimeSource = [
-          'const ReactRuntimePanel = () => {',
-          '  const [clicks, setClicks] = useState(0)',
-          '',
-          '  return reactJsx`',
-          '    <div className="react-panel">',
-          '      <p className="eyebrow">React runtime</p>',
-          '      <h3>reactJsx + React 19</h3>',
-          '      <div className="react-metrics">',
-          '        {reactMetrics.map(label => reactJsx`<span key={${label}}>${label}</span>`)}',
-          '      </div>',
-          "      <p>Button clicks:{' '}${clicks}</p>",
-          '      <button onClick={() => setClicks(value => value + 1)}>',
-          '        Trigger React state',
-          '      </button>',
-          '    </div>',
-          '  `',
-          '}',
-        ].join('\n')
-        const litHostsSource = [
-          'class LitHostsReactElement extends LitElement {',
-          '  render() {',
-          '    const reactTree = reactJsx`',
-          '      <div className="hybrid-react-cluster">',
-          '        <${HybridReactBadge} label={${this.title}} />',
-          '      </div>',
-          '    `',
-          '',
-          '    return html`',
-          '      <article class="hybrid-shell">',
-          '        <div class="react-slot">${this.renderReactTree(reactTree)}</div>',
-          '        <div class="nested-slot">${jsx`<p>Lit renders DOM helpers here.</p>`}</div>',
-          '      </article>',
-          '    `',
-          '  }',
-          '}',
-        ].join('\n')
-        const litBridgeSource = [
-          'const LitReactBridgePanel = () => {',
-          '  const [syncCount, setSyncCount] = useState(2)',
-          '  const meterRef = useRef(null)',
-          '',
-          '  useEffect(() => {',
-          '    if (!meterRef.current) {',
-          '      return',
-          '    }',
-          '    meterRef.current.count = syncCount',
-          "    meterRef.current.status = syncCount % 2 === 0 ? 'Even handshake' : 'Odd handshake'",
-          '  }, [syncCount])',
-          '',
-          '  return reactJsx`',
-          '    <div className="react-panel">',
-          '      <lit-react-meter ref={${meterRef}} />',
-          '      <button onClick={() => setSyncCount(value => value + 1)}>',
-          '        Sync Lit with React state',
-          '      </button>',
-          '    </div>',
-          '  `',
-          '}',
-        ].join('\n')
-        const renderSourcePanel = ({ label, code }) =>
-          jsx`
+      const app = document.getElementById('app')
+      const loadingCard = document.getElementById('demo-loading')
+      const capabilityHighlights = [
+        {
+          label: 'DOM template tag',
+          detail:
+            'Render real DOM nodes anywhere the browser runs, no transpilation required.',
+        },
+        {
+          label: 'React runtime',
+          detail:
+            'Call reactJsx to emit React elements with full hook + hydration support.',
+        },
+        {
+          label: 'Node + SSR',
+          detail:
+            'Use @knighted/jsx/node to bootstrap linkedom/jsdom and reuse templates on the server.',
+        },
+        {
+          label: 'Bundler + loader',
+          detail:
+            'Drop @knighted/jsx/loader into Rspack/Webpack to rewrite template literals at build time.',
+        },
+        {
+          label: 'Lite entrypaths',
+          detail:
+            'Ship pre-minified helpers scoped to DOM, React, or Node by importing the /lite variants.',
+        },
+      ]
+      const liteEntryMetrics = [
+        {
+          entry: '@knighted/jsx/lite',
+          context: 'DOM runtime helpers',
+          raw: '~5.7 kB raw',
+          gzip: '~2.5 kB min+gzip',
+          note: 'Great for browser demos or DOM-like shims without bundlers.',
+        },
+        {
+          entry: '@knighted/jsx/react/lite',
+          context: 'React runtime helpers',
+          raw: '~4.1 kB raw',
+          gzip: '~1.9 kB min+gzip',
+          note: 'Emits React elements so hooks and React 19 streaming just work.',
+        },
+        {
+          entry: '@knighted/jsx/node/lite',
+          context: 'Node DOM entry',
+          raw: '~6.9 kB raw',
+          gzip: '~3.0 kB min+gzip',
+          note: 'Bundles the DOM shim bootstrap for headless SSR scripts.',
+        },
+        {
+          entry: '@knighted/jsx/node/react/lite',
+          context: 'Node React entry',
+          raw: '~4.1 kB raw',
+          gzip: '~1.9 kB min+gzip',
+          note: 'Combines React + DOM shim for hybrid SSR pipelines.',
+        },
+      ]
+      const counterSource = [
+        'const Counter = ({ start = 0 }) => {',
+        '  let value = start',
+        '  const valueLabel = jsx`<span class="counter-value">${value}</span>`',
+        '',
+        '  const increment = () => {',
+        '    value += 1',
+        '    valueLabel.textContent = String(value)',
+        '  }',
+        '',
+        '  return jsx`',
+        '    <section class="card dom-card">',
+        '      <p>Current total: ${valueLabel}</p>',
+        '      <button onClick={${increment}}>Increment</button>',
+        '    </section>',
+        '  `',
+        '}',
+      ].join('\n')
+      const reactRuntimeSource = [
+        'const ReactRuntimePanel = () => {',
+        '  const [clicks, setClicks] = useState(0)',
+        '',
+        '  return reactJsx`',
+        '    <div className="react-panel">',
+        '      <p className="eyebrow">React runtime</p>',
+        '      <h3>reactJsx + React 19</h3>',
+        '      <div className="react-metrics">',
+        '        {reactMetrics.map(label => reactJsx`<span key={${label}}>${label}</span>`)}',
+        '      </div>',
+        "      <p>Button clicks:{' '}${clicks}</p>",
+        '      <button onClick={() => setClicks(value => value + 1)}>',
+        '        Trigger React state',
+        '      </button>',
+        '    </div>',
+        '  `',
+        '}',
+      ].join('\n')
+      const litHostsSource = [
+        'class LitHostsReactElement extends LitElement {',
+        '  render() {',
+        '    const reactTree = reactJsx`',
+        '      <div className="hybrid-react-cluster">',
+        '        <${HybridReactBadge} label={${this.title}} />',
+        '      </div>',
+        '    `',
+        '',
+        '    return html`',
+        '      <article class="hybrid-shell">',
+        '        <div class="react-slot">${this.renderReactTree(reactTree)}</div>',
+        '        <div class="nested-slot">${jsx`<p>Lit renders DOM helpers here.</p>`}</div>',
+        '      </article>',
+        '    `',
+        '  }',
+        '}',
+      ].join('\n')
+      const litBridgeSource = [
+        'const LitReactBridgePanel = () => {',
+        '  const [syncCount, setSyncCount] = useState(2)',
+        '  const meterRef = useRef(null)',
+        '',
+        '  useEffect(() => {',
+        '    if (!meterRef.current) {',
+        '      return',
+        '    }',
+        '    meterRef.current.count = syncCount',
+        "    meterRef.current.status = syncCount % 2 === 0 ? 'Even handshake' : 'Odd handshake'",
+        '  }, [syncCount])',
+        '',
+        '  return reactJsx`',
+        '    <div className="react-panel">',
+        '      <lit-react-meter ref={${meterRef}} />',
+        '      <button onClick={() => setSyncCount(value => value + 1)}>',
+        '        Sync Lit with React state',
+        '      </button>',
+        '    </div>',
+        '  `',
+        '}',
+      ].join('\n')
+      const renderSourcePanel = ({ label, code }) =>
+        jsx`
           <details class="source-panel">
             <summary>
               <span>View source · ${label}</span>
@@ -599,15 +585,15 @@
             </div>
           </details>
         `
-        const Counter = ({ start = 0 }) => {
-          let value = start
-          const valueLabel = jsx`<span class="counter-value">${value}</span>`
-          const increment = () => {
-            value += 1
-            valueLabel.textContent = String(value)
-          }
+      const Counter = ({ start = 0 }) => {
+        let value = start
+        const valueLabel = jsx`<span class="counter-value">${value}</span>`
+        const increment = () => {
+          value += 1
+          valueLabel.textContent = String(value)
+        }
 
-          return jsx`
+        return jsx`
           <section class="card dom-card">
             <header>
               <p class="eyebrow">DOM helper</p>
@@ -624,21 +610,21 @@
             })}}
           </section>
         `
-        }
-        const reactMetrics = ['Hooks ready', 'Fragments inline', 'Suspense friendly']
-        const ReactBadge = ({ label }) =>
-          reactJsx`
+      }
+      const reactMetrics = ['Hooks ready', 'Fragments inline', 'Suspense friendly']
+      const ReactBadge = ({ label }) =>
+        reactJsx`
           <span>${label}</span>
         `
-        const HybridReactBadge = ({ label }) => {
-          const [handshakes, setHandshakes] = useState(1)
-          const [connected, setConnected] = useState(true)
-          const toggleConnection = () => {
-            setHandshakes(value => value + 1)
-            setConnected(value => !value)
-          }
+      const HybridReactBadge = ({ label }) => {
+        const [handshakes, setHandshakes] = useState(1)
+        const [connected, setConnected] = useState(true)
+        const toggleConnection = () => {
+          setHandshakes(value => value + 1)
+          setConnected(value => !value)
+        }
 
-          return reactJsx`
+        return reactJsx`
           <div className="hybrid-react-badge" data-connected={${String(connected)}}>
             <header>
               <p className="eyebrow">React child</p>
@@ -651,193 +637,193 @@
             </button>
           </div>
         `
+      }
+
+      class LitReactMeter extends LitElement {
+        static properties = {
+          count: { type: Number },
+          status: { type: String },
         }
 
-        class LitReactMeter extends LitElement {
-          static properties = {
-            count: { type: Number },
-            status: { type: String },
+        static styles = css`
+          :host {
+            display: block;
+            border-radius: 1rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            padding: 1rem 1.25rem;
+            background: white;
+            box-shadow: 0 15px 40px rgba(15, 23, 42, 0.08);
           }
 
-          static styles = css`
-            :host {
-              display: block;
-              border-radius: 1rem;
-              border: 1px solid rgba(15, 23, 42, 0.08);
-              padding: 1rem 1.25rem;
-              background: white;
-              box-shadow: 0 15px 40px rgba(15, 23, 42, 0.08);
-            }
+          .meter-status {
+            font-size: 0.75rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: #fb923c;
+            margin: 0 0 0.4rem;
+          }
 
-            .meter-status {
-              font-size: 0.75rem;
-              letter-spacing: 0.2em;
-              text-transform: uppercase;
-              color: #fb923c;
-              margin: 0 0 0.4rem;
-            }
+          .meter-count {
+            font-size: 2.25rem;
+            font-weight: 700;
+            margin: 0 0 0.5rem;
+            color: #111827;
+          }
 
-            .meter-count {
-              font-size: 2.25rem;
-              font-weight: 700;
-              margin: 0 0 0.5rem;
-              color: #111827;
-            }
+          .meter-subtext {
+            font-size: 0.95rem;
+            margin: 0;
+            color: #4b5563;
+          }
+        `
 
-            .meter-subtext {
-              font-size: 0.95rem;
-              margin: 0;
-              color: #4b5563;
-            }
+        constructor() {
+          super()
+          this.count = 0
+          this.status = 'Bridge idle'
+        }
+
+        render() {
+          return html`
+            <p class="meter-status">${this.status}</p>
+            <p class="meter-count">${this.count}</p>
+            <p class="meter-subtext">
+              <slot></slot>
+            </p>
           `
+        }
+      }
 
-          constructor() {
-            super()
-            this.count = 0
-            this.status = 'Bridge idle'
-          }
+      if (!customElements.get('lit-react-meter')) {
+        customElements.define('lit-react-meter', LitReactMeter)
+      }
 
-          render() {
-            return html`
-              <p class="meter-status">${this.status}</p>
-              <p class="meter-count">${this.count}</p>
-              <p class="meter-subtext">
-                <slot></slot>
-              </p>
-            `
-          }
+      class LitHostsReactElement extends LitElement {
+        static properties = {
+          title: { type: String },
+          subtitle: { type: String },
         }
 
-        if (!customElements.get('lit-react-meter')) {
-          customElements.define('lit-react-meter', LitReactMeter)
+        static styles = css`
+          :host {
+            display: block;
+          }
+
+          .hybrid-shell {
+            border-radius: 1.25rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            padding: 1.5rem;
+            background: white;
+            box-shadow: 0 15px 45px rgba(15, 23, 42, 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+          }
+
+          .hybrid-shell header h3 {
+            margin: 0.25rem 0 0;
+          }
+
+          .react-slot {
+            padding: 1rem;
+            border-radius: 1rem;
+            background: rgba(37, 99, 235, 0.08);
+            border: 1px dashed rgba(37, 99, 235, 0.35);
+          }
+
+          .react-slot :is(button, span) {
+            font-weight: 600;
+            border-radius: 999px;
+            padding: 0.4rem 0.9rem;
+            border: none;
+            background: white;
+          }
+
+          .nested-slot {
+            border-radius: 0.85rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            padding: 1rem;
+            background: #f9fafb;
+          }
+
+          .nested-slot ul {
+            margin: 0;
+          }
+
+          .hybrid-shell footer {
+            font-size: 0.9rem;
+            color: #4b5563;
+            margin: 0;
+          }
+        `
+
+        constructor() {
+          super()
+          this.title = 'Lit hosts React'
+          this.subtitle = 'reactJsx renders the React subtree while Lit owns the shell.'
+          this.reactRoot = null
+          this.reactHost = null
         }
 
-        class LitHostsReactElement extends LitElement {
-          static properties = {
-            title: { type: String },
-            subtitle: { type: String },
+        renderReactTree(tree) {
+          if (!this.reactHost) {
+            this.reactHost = document.createElement('div')
           }
 
-          static styles = css`
-            :host {
-              display: block;
-            }
-
-            .hybrid-shell {
-              border-radius: 1.25rem;
-              border: 1px solid rgba(15, 23, 42, 0.08);
-              padding: 1.5rem;
-              background: white;
-              box-shadow: 0 15px 45px rgba(15, 23, 42, 0.1);
-              display: flex;
-              flex-direction: column;
-              gap: 1.25rem;
-            }
-
-            .hybrid-shell header h3 {
-              margin: 0.25rem 0 0;
-            }
-
-            .react-slot {
-              padding: 1rem;
-              border-radius: 1rem;
-              background: rgba(37, 99, 235, 0.08);
-              border: 1px dashed rgba(37, 99, 235, 0.35);
-            }
-
-            .react-slot :is(button, span) {
-              font-weight: 600;
-              border-radius: 999px;
-              padding: 0.4rem 0.9rem;
-              border: none;
-              background: white;
-            }
-
-            .nested-slot {
-              border-radius: 0.85rem;
-              border: 1px solid rgba(15, 23, 42, 0.08);
-              padding: 1rem;
-              background: #f9fafb;
-            }
-
-            .nested-slot ul {
-              margin: 0;
-            }
-
-            .hybrid-shell footer {
-              font-size: 0.9rem;
-              color: #4b5563;
-              margin: 0;
-            }
-          `
-
-          constructor() {
-            super()
-            this.title = 'Lit hosts React'
-            this.subtitle = 'reactJsx renders the React subtree while Lit owns the shell.'
-            this.reactRoot = null
-            this.reactHost = null
+          if (!this.reactRoot && this.reactHost) {
+            this.reactRoot = createRoot(this.reactHost)
           }
 
-          renderReactTree(tree) {
-            if (!this.reactHost) {
-              this.reactHost = document.createElement('div')
-            }
+          this.reactRoot?.render(tree)
+          return this.reactHost
+        }
 
-            if (!this.reactRoot && this.reactHost) {
-              this.reactRoot = createRoot(this.reactHost)
-            }
+        disconnectedCallback() {
+          this.reactRoot?.unmount()
+          this.reactRoot = null
+          this.reactHost = null
+          super.disconnectedCallback()
+        }
 
-            this.reactRoot?.render(tree)
-            return this.reactHost
-          }
-
-          disconnectedCallback() {
-            this.reactRoot?.unmount()
-            this.reactRoot = null
-            this.reactHost = null
-            super.disconnectedCallback()
-          }
-
-          render() {
-            const reactTree = reactJsx`
+        render() {
+          const reactTree = reactJsx`
             <div className="hybrid-react-cluster">
               <${HybridReactBadge} label={${this.title}} />
               <p className="react-status">Rendered with reactJsx</p>
             </div>
           `
-            const reactNode = this.renderReactTree(reactTree)
+          const reactNode = this.renderReactTree(reactTree)
 
-            return html`
-              <article class="hybrid-shell">
-                <header>
-                  <p class="eyebrow">Lit parent</p>
-                  <h3>${this.title}</h3>
-                  <p>${this.subtitle}</p>
-                </header>
-                <div class="react-slot">${reactNode}</div>
-                <div class="nested-slot">
-                  ${jsx`
+          return html`
+            <article class="hybrid-shell">
+              <header>
+                <p class="eyebrow">Lit parent</p>
+                <h3>${this.title}</h3>
+                <p>${this.subtitle}</p>
+              </header>
+              <div class="react-slot">${reactNode}</div>
+              <div class="nested-slot">
+                ${jsx`
                   <ul class="list">
                     <li>Lit renders DOM nodes via the jsx helper.</li>
                     <li>The React subtree above mounts with reactJsx.</li>
                   </ul>
                 `}
-                </div>
-                <footer>React output lives inside the Lit template.</footer>
-              </article>
-            `
-          }
+              </div>
+              <footer>React output lives inside the Lit template.</footer>
+            </article>
+          `
         }
+      }
 
-        if (!customElements.get('lit-hosts-react')) {
-          customElements.define('lit-hosts-react', LitHostsReactElement)
-        }
+      if (!customElements.get('lit-hosts-react')) {
+        customElements.define('lit-hosts-react', LitHostsReactElement)
+      }
 
-        const ReactRuntimePanel = () => {
-          const [clicks, setClicks] = useState(0)
+      const ReactRuntimePanel = () => {
+        const [clicks, setClicks] = useState(0)
 
-          return reactJsx`
+        return reactJsx`
           <div className="react-panel">
             <p className="eyebrow">React runtime</p>
             <h3>reactJsx + React 19</h3>
@@ -854,22 +840,22 @@
             </button>
           </div>
         `
-        }
+      }
 
-        const LitReactBridgePanel = () => {
-          const [syncCount, setSyncCount] = useState(2)
-          const meterRef = useRef(null)
+      const LitReactBridgePanel = () => {
+        const [syncCount, setSyncCount] = useState(2)
+        const meterRef = useRef(null)
 
-          useEffect(() => {
-            if (!meterRef.current) {
-              return
-            }
-            meterRef.current.count = syncCount
-            meterRef.current.status =
-              syncCount % 2 === 0 ? 'Even handshake' : 'Odd handshake'
-          }, [syncCount])
+        useEffect(() => {
+          if (!meterRef.current) {
+            return
+          }
+          meterRef.current.count = syncCount
+          meterRef.current.status =
+            syncCount % 2 === 0 ? 'Even handshake' : 'Odd handshake'
+        }, [syncCount])
 
-          return reactJsx`
+        return reactJsx`
           <div className="react-panel">
             <p className="eyebrow">React + Lit</p>
             <h3>Share React state with Lit</h3>
@@ -884,33 +870,33 @@
             </button>
           </div>
         `
+      }
+      const mountReactRuntimeDemo = host => {
+        if (!host) {
+          return null
         }
-        const mountReactRuntimeDemo = host => {
-          if (!host) {
-            return null
-          }
-          const root = createRoot(host)
-          root.render(
-            reactJsx`
+        const root = createRoot(host)
+        root.render(
+          reactJsx`
             <${ReactRuntimePanel} />
           `,
-          )
-          return root
+        )
+        return root
+      }
+      const mountLitReactBridgeDemo = host => {
+        if (!host) {
+          return null
         }
-        const mountLitReactBridgeDemo = host => {
-          if (!host) {
-            return null
-          }
-          const root = createRoot(host)
-          root.render(
-            reactJsx`
+        const root = createRoot(host)
+        root.render(
+          reactJsx`
             <${LitReactBridgePanel} />
           `,
-          )
-          return root
-        }
-        const LiteSavings = () =>
-          jsx`
+        )
+        return root
+      }
+      const LiteSavings = () =>
+        jsx`
           <section class="card lite-savings" id="lite-entrypaths">
             <header>
               <p class="eyebrow">Lite entrypaths</p>
@@ -935,7 +921,7 @@
             </div>
           </section>
         `
-        const demo = jsx`
+      const demo = jsx`
         <>
           <section class="card overview-card">
             <header>
@@ -1025,30 +1011,13 @@
         </>
       `
 
-        if (loadingCard) {
-          loadingCard.replaceWith(demo)
-        } else {
-          app?.append(demo)
-        }
-        mountReactRuntimeDemo(document.getElementById('react-runtime-demo'))
-        mountLitReactBridgeDemo(document.getElementById('lit-react-bridge-demo'))
-      })().catch(error => {
-        console.error('[esm-demo]', error)
-        const loadingCard = document.getElementById('demo-loading')
-        if (!loadingCard) {
-          return
-        }
-        const headline = loadingCard.querySelector('strong')
-        if (headline) {
-          headline.textContent = 'Demo failed to load'
-        }
-        const detail = loadingCard.querySelector('p:last-of-type')
-        if (detail) {
-          const message =
-            error instanceof Error ? error.message : String(error ?? 'Unknown error')
-          detail.textContent = message || 'Check the console for more details.'
-        }
-      })
+      if (loadingCard) {
+        loadingCard.replaceWith(demo)
+      } else {
+        app?.append(demo)
+      }
+      mountReactRuntimeDemo(document.getElementById('react-runtime-demo'))
+      mountLitReactBridgeDemo(document.getElementById('lit-react-bridge-demo'))
     </script>
   </body>
 </html>
