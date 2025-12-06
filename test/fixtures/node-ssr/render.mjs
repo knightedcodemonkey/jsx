@@ -31,7 +31,7 @@ const run = async () => {
   const ReactBadge = ({ label }) =>
     reactJsx`
         <button className="react-badge" type="button">
-          React badge: {${label}}
+          React badge: ${label}
         </button>
       `
 
@@ -52,7 +52,7 @@ const run = async () => {
         </header>
         <section className="react-fragment" dangerouslySetInnerHTML={${{ __html: reactMarkup }}}></section>
         <footer>
-          <small>{${new Date().toISOString()}}</small>
+          <small>${new Date().toISOString()}</small>
         </footer>
       </article>
     `

@@ -18,7 +18,7 @@ describe('jsx template tag', () => {
         data-count={${count}}
         onClick={${handleClick}}
       >
-        Count is {' '}{${count}}
+        Count is{' '}${count}
       </button>
     ` as HTMLButtonElement
 
@@ -30,6 +30,20 @@ describe('jsx template tag', () => {
     expect(button.className).toBe('primary pill')
     expect(button.dataset.count).toBe(String(count))
     expect(button.textContent).toBe('Count is 3')
+  })
+
+  it('inlines dynamic text expressions without extra braces', () => {
+    const strong = document.createElement('strong')
+    strong.textContent = 'bold'
+
+    const paragraph = jsx`
+      <p>
+        Hello ${'world'} and ${strong}!
+      </p>
+    ` as HTMLParagraphElement
+
+    expect(paragraph.textContent).toBe('Hello world and bold!')
+    expect(paragraph.querySelector('strong')?.textContent).toBe('bold')
   })
 
   it('supports custom components with props and children', () => {

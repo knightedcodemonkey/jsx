@@ -59,7 +59,7 @@ const ReactOnlyCard: ReactJsxComponent<ReactOnlyCardProps> = ({ heading }) => {
         <p data-kind="react">Compiled through reactJsx (react mode)</p>
       </header>
       <button type="button" onClick={${() => setClicks(value => value + 1)}}>
-        Clicked${' '}${clicks}${' '}times
+        Clicked{' '}${clicks}{' '}times
       </button>
     </article>
   `

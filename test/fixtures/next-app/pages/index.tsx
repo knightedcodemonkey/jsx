@@ -11,7 +11,7 @@ const ReactBadge = () => {
       type="button"
       onClick={${() => setClicks(value => value + 1)}}
     >
-      React badge clicks: {${clicks}}
+      React badge clicks: ${clicks}
     </button>
   `
 }
@@ -27,7 +27,7 @@ export default function HomePage() {
         <h2>DOM runtime</h2>
         <p>This block is rendered via the jsx helper after hydration.</p>
         <ul>
-          {${['alpha', 'beta', 'gamma'].map(label => jsx`<li data-item={${label}}>{${label}}</li>`)} }
+          {${['alpha', 'beta', 'gamma'].map(label => jsx`<li data-item={${label}}>${label}</li>`)} }
         </ul>
       </section>
     ` as HTMLElement

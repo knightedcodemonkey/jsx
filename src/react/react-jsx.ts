@@ -13,7 +13,7 @@ import {
   extractRootNode,
   formatParserError,
   getIdentifierName,
-  normalizeJsxText,
+  normalizeJsxTextSegments,
   parserOptions,
   type TemplateContext,
 } from '../runtime/shared.js'
@@ -127,10 +127,8 @@ const evaluateReactJsxChildren = (children: JSXChild[], ctx: ReactJsxContext) =>
   children.forEach(child => {
     switch (child.type) {
       case 'JSXText': {
-        const text = normalizeJsxText(child.value)
-        if (text) {
-          resolved.push(text)
-        }
+        const segments = normalizeJsxTextSegments(child.value, ctx.placeholders)
+        segments.forEach(segment => appendReactChild(resolved, segment))
         break
       }
       case 'JSXExpressionContainer': {
