@@ -32,8 +32,11 @@ npm_config_ignore_platform=true npm install @oxc-parser/binding-wasm32-wasi
 ```ts
 import { jsx } from '@knighted/jsx'
 
-const count = 3
-const handleClick = () => console.log('clicked!')
+let count = 3
+const handleClick = () => {
+  count += 1
+  console.log(`Count is now ${count}`)
+}
 
 const button = jsx`
   <button className={${`counter-${count}`}} onClick={${handleClick}}>
@@ -49,17 +52,25 @@ document.body.append(button)
 Need to compose React elements instead of DOM nodes? Import the dedicated helper from the `@knighted/jsx/react` subpath (React 18+ and `react-dom` are still required to mount the tree):
 
 ```ts
+import { useState } from 'react'
 import { reactJsx } from '@knighted/jsx/react'
 import { createRoot } from 'react-dom/client'
 
-const view = reactJsx`
-  <section className="react-demo">
-    <h2>Hello from React</h2>
-    <button onClick={${() => console.log('clicked!')}}>Tap me</button>
-  </section>
-`
+const App = () => {
+  const [count, setCount] = useState(0)
 
-createRoot(document.getElementById('root')!).render(view)
+  return reactJsx`
+    <section className="react-demo">
+      <h2>Hello from React</h2>
+      <p>Count is {${count}}</p>
+      <button onClick={${() => setCount(value => value + 1)}}>
+        Increment
+      </button>
+    </section>
+  `
+}
+
+createRoot(document.getElementById('root')!).render(reactJsx`<${App} />`)
 ```
 
 The React runtime shares the same template semantics as `jsx`, except it returns React elements (via `React.createElement`) so you can embed other React components with `<${MyComponent} />` and use hooks/state as usual. The helper lives in a separate subpath so DOM-only consumers never pay the React dependency cost.
@@ -108,6 +119,118 @@ npx http-server test/fixtures/rspack-app -p 4173
 ```
 
 Visit `http://localhost:4173` (or whichever port you pick) to interact with the Lit + React demo.
+
+## Node / SSR usage
+
+Import the dedicated Node entry (`@knighted/jsx/node`) when you want to run the template tag inside bare Node.js. It automatically bootstraps a DOM shim by loading either `linkedom` or `jsdom` (install one of them to opt in) and then re-exports the usual helpers so you can keep authoring JSX in the same way:
+
+```ts
+import { jsx } from '@knighted/jsx/node'
+import { reactJsx } from '@knighted/jsx/node/react'
+import { renderToString } from 'react-dom/server'
+
+const Badge = ({ label }: { label: string }) =>
+  reactJsx`
+    <button type="button">React says: {${label}}</button>
+  `
+
+const reactMarkup = renderToString(
+  reactJsx`
+    <${Badge} label={${'Server-only'}} />
+  `,
+)
+
+const shell = jsx`
+  <main>
+    <section dangerouslySetInnerHTML={${{ __html: reactMarkup }}}></section>
+  </main>
+`
+
+console.log(shell.outerHTML)
+```
+
+> [!NOTE]
+> The Node entry tries `linkedom` first and falls back to `jsdom`. Install whichever shim you prefer (both are optional peer dependencies) and, if needed, set `KNIGHTED_JSX_NODE_SHIM=jsdom` or `linkedom` to force a specific one.
+
+This repository ships a ready-to-run fixture under `test/fixtures/node-ssr` that uses the Node entry to render a Lit shell plus a React subtree through `ReactDOMServer.renderToString`. Run `npm run build` once to emit `dist/`, then execute `npm run demo:node-ssr` to log the generated markup.
+
+## Next.js integration
+
+> [!IMPORTANT]
+> Next already compiles `.tsx/.jsx` files, so you do not need this helper to author regular components. The loader only adds value when you want to reuse the tagged template runtime during SSR—mixing DOM nodes built by `jsx` with React markup, rendering shared utilities on the server, or processing tagged templates outside the usual component pipeline.
+
+Next (and Remix/other Webpack-based SSR stacks) can run the loader by adding a post-loader to the framework config so the template tags are rewritten after SWC/Babel transpilation. The fixture under `test/fixtures/next-app` ships a complete example that mixes DOM and React helpers during SSR so you can pre-render DOM snippets (for emails, HTML streams, CMS content, etc.) while still returning React components from your pages. The important bits live in `next.config.mjs`:
+
+```js
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const repoRoot = path.resolve(__dirname, '../../..')
+const distDir = path.join(repoRoot, 'dist')
+
+export default {
+  output: 'export',
+  webpack(config) {
+    config.resolve.alias = {
+      ...(config.resolve.alias ?? {}),
+      '@knighted/jsx': path.join(distDir, 'index.js'),
+      '@knighted/jsx/react': path.join(distDir, 'react/index.js'),
+    }
+
+    config.module.rules.push({
+      test: /\.[jt]sx?$/,
+      include: path.join(__dirname, 'pages'),
+      enforce: 'post',
+      use: [{ loader: path.join(distDir, 'loader/jsx.js') }],
+    })
+
+    return config
+  },
+}
+```
+
+Inside `pages/index.tsx` you can freely mix the helpers. The snippet below uses `jsx` on the server to prebuild a DOM fragment and then injects that HTML alongside a normal React component on the client:
+
+```ts
+import type { GetServerSideProps } from 'next'
+import { jsx } from '@knighted/jsx'
+import { reactJsx } from '@knighted/jsx/react'
+
+const buildDomShell = () =>
+  jsx`
+    <section data-kind="dom-runtime">
+      <h2>DOM runtime</h2>
+      <p>Rendered as static HTML on the server</p>
+    </section>
+  `
+
+export const getServerSideProps: GetServerSideProps = async () => {
+  return {
+    props: {
+      domShell: buildDomShell().outerHTML,
+    },
+  }
+}
+
+const ReactBadge = () =>
+  reactJsx`
+    <button type="button">React badge</button>
+  `
+
+type PageProps = { domShell: string }
+
+export default function Page({ domShell }: PageProps) {
+  return reactJsx`
+    <main>
+      <${ReactBadge} />
+      <div dangerouslySetInnerHTML={${{ __html: domShell }}}></div>
+    </main>
+  `
+}
+```
+
+Build the fixture locally with `npx next build test/fixtures/next-app` (or run `npx vitest run test/next-fixture.test.ts`) to verify the integration end to end. You can adapt the same pattern in `app/` routes, API handlers, or server actions whenever you need DOM output generated by the tagged template runtime.
 
 ### Interpolations
 
