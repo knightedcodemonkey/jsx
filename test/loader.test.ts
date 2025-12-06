@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 
 import loader from '../src/loader/jsx'
 
-const runLoader = (source: string, options?: { tag?: string; tags?: string[] }) =>
+const runLoader = (source: string, options?: Record<string, unknown>) =>
   new Promise<string>((resolve, reject) => {
     const context = {
       resourcePath: '/virtual/file.tsx',
@@ -205,5 +205,39 @@ describe('jsx loader', () => {
     ].join('\n')
 
     await expect(runLoader(source)).rejects.toThrow('Expected attribute quote')
+  })
+
+  it('compiles tagged templates to React helpers when mode is react', async () => {
+    const source = [
+      "const title = 'Launch'",
+      'const view = jsx`',
+      '  <button className="cta">{title}</button>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+
+    expect(transformed).toContain('__jsxReact("button", { "className": "cta" }, title)')
+    expect(transformed).toContain(
+      'const __jsxReactMergeProps = (...sources) => Object.assign({}, ...sources)',
+    )
+  })
+
+  it('honors per-tag react overrides via tagModes', async () => {
+    const source = [
+      "const label = 'Ready'",
+      'const runtimeView = jsx`<span>${label}</span>`',
+      'const reactView = reactJsx`<button>${label}</button>`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, {
+      tagModes: {
+        reactJsx: 'react',
+      },
+    })
+
+    expect(transformed).toContain('const runtimeView = jsx`<span>{${label}}</span>`')
+    expect(transformed).toContain('const reactView = __jsxReact("button", null, label)')
+    expect(transformed.match(/const __jsxReactMergeProps/g)?.length).toBe(1)
   })
 })

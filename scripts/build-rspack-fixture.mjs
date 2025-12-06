@@ -8,7 +8,10 @@ import { rspack } from '@rspack/core'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, '..')
 const fixtureDir = path.join(rootDir, 'test/fixtures/rspack-app')
-const fixtureEntry = path.join(fixtureDir, 'src/index.tsx')
+const fixtureEntries = {
+  hybrid: path.join(fixtureDir, 'src/index.tsx'),
+  reactMode: path.join(fixtureDir, 'src/react-mode.tsx'),
+}
 const outputDir = path.join(fixtureDir, 'dist')
 const loaderPath = path.join(rootDir, 'dist/loader/jsx.js')
 const runtimePath = path.join(rootDir, 'dist/index.js')
@@ -69,15 +72,20 @@ try {
 
   await runCompiler({
     context: fixtureDir,
-    entry: fixtureEntry,
+    entry: fixtureEntries,
     mode: 'production',
     devtool: false,
     target: 'web',
     output: {
       path: outputDir,
-      filename: 'bundle.js',
+      filename: '[name].js',
       clean: true,
     },
+    plugins: [
+      new rspack.ProvidePlugin({
+        React: ['react'],
+      }),
+    ],
     resolve: {
       extensions: ['.ts', '.tsx', '.js', '.jsx'],
       alias: {
@@ -110,6 +118,11 @@ try {
             },
             {
               loader: loaderPath,
+              options: {
+                tagModes: {
+                  reactJsx: 'react',
+                },
+              },
             },
           ],
         },
@@ -117,11 +130,13 @@ try {
     },
   })
 
-  const target = path.relative(rootDir, path.join(outputDir, 'bundle.js'))
+  const outputs = ['hybrid.js', 'reactMode.js']
+    .map(file => path.relative(rootDir, path.join(outputDir, file)))
+    .join(', ')
   const bindingMessage = useStub
     ? 'using wasm stub (no real parser)'
     : 'using real wasm binding'
-  console.log(`[build-rspack-fixture] Bundle written to ${target} (${bindingMessage})`)
+  console.log(`[build-rspack-fixture] Bundles written to ${outputs} (${bindingMessage})`)
 } catch (error) {
   console.error('[build-rspack-fixture] Failed to build fixture bundle')
   console.error(error instanceof Error ? error.message : error)

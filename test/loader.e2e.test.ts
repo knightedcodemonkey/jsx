@@ -9,7 +9,10 @@ import { describe, it, expect } from 'vitest'
 const rootDir = path.resolve(__dirname, '..')
 const loaderSource = path.resolve(rootDir, 'src/loader/jsx.ts')
 const fixtureDir = path.resolve(rootDir, 'test/fixtures/rspack-app')
-const fixtureEntry = path.join(fixtureDir, 'src/index.tsx')
+const fixtures = {
+  hybrid: path.join(fixtureDir, 'src/index.tsx'),
+  reactMode: path.join(fixtureDir, 'src/react-mode.tsx'),
+}
 
 const buildLoaderArtifact = async (tempDir: string) => {
   const compiledPath = path.join(tempDir, 'loader.cjs')
@@ -76,13 +79,16 @@ describe('jsx loader integration', () => {
 
       await runCompiler({
         context: fixtureDir,
-        entry: fixtureEntry,
+        entry: {
+          hybrid: fixtures.hybrid,
+          reactMode: fixtures.reactMode,
+        },
         mode: 'production',
         devtool: false,
         target: 'web',
         output: {
           path: outputPath,
-          filename: 'bundle.js',
+          filename: '[name].js',
         },
         resolve: {
           extensions: ['.ts', '.tsx', '.js', '.jsx'],
@@ -119,6 +125,11 @@ describe('jsx loader integration', () => {
                 },
                 {
                   loader: loaderPath,
+                  options: {
+                    tagModes: {
+                      reactJsx: 'react',
+                    },
+                  },
                 },
               ],
             },
@@ -126,10 +137,23 @@ describe('jsx loader integration', () => {
         },
       })
 
-      const bundle = await fsPromises.readFile(path.join(outputPath, 'bundle.js'), 'utf8')
-      expect(bundle).toContain('hybrid-element')
-      expect(bundle).toContain('Hybrid ready')
-      expect(bundle).toContain('Works with Lit + React')
+      const hybridBundle = await fsPromises.readFile(
+        path.join(outputPath, 'hybrid.js'),
+        'utf8',
+      )
+      expect(hybridBundle).toContain('hybrid-element')
+      expect(hybridBundle).toContain('Hybrid ready')
+      expect(hybridBundle).toContain('Works with Lit + React')
+      expect(hybridBundle).not.toContain('__JSX_LOADER_TAG_EXPR_')
+      expect(hybridBundle).not.toContain('reactJsx`')
+
+      const reactModeBundle = await fsPromises.readFile(
+        path.join(outputPath, 'reactMode.js'),
+        'utf8',
+      )
+      expect(reactModeBundle).toContain('react-mode-element')
+      expect(reactModeBundle).toContain('React mode ready')
+      expect(reactModeBundle).not.toContain('__JSX_LOADER_TAG_EXPR_')
     } finally {
       await fsPromises.rm(tempDir, { recursive: true, force: true })
     }

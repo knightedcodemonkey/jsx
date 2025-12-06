@@ -45,10 +45,12 @@ By default the loader transforms both ` jsx`` ` (DOM runtime) and `  reactJsx`` 
 
 ### Loader options
 
-| Option | Type       | Default               | Description                                                                                                 |
-| ------ | ---------- | --------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `tags` | `string[]` | `['jsx', 'reactJsx']` | Names of tagged template helpers to transform. Add aliases if you re-export the helpers under custom names. |
-| `tag`  | `string`   | `undefined`           | Legacy single-tag option. Prefer `tags`, but this remains for backward compatibility.                       |
+| Option     | Type                                   | Default               | Description                                                                                                 |
+| ---------- | -------------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `tags`     | `string[]`                             | `['jsx', 'reactJsx']` | Names of tagged template helpers to transform. Add aliases if you re-export the helpers under custom names. |
+| `mode`     | `'runtime' \| 'react'`                 | `'runtime'`           | Sets the default transformation target for every tag (`jsx` runtime vs React createElement output).         |
+| `tagModes` | `Record<string, 'runtime' \| 'react'>` | `undefined`           | Per-tag override of `mode`. Use this when some tags should emit DOM helpers and others should emit React.   |
+| `tag`      | `string`                               | `undefined`           | Legacy single-tag option. Prefer `tags`, but this remains for backward compatibility.                       |
 
 ## Writing templates
 
