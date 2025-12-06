@@ -44,6 +44,30 @@ describe('reactJsx template tag', () => {
     })
   })
 
+  it('allows inline text expressions without JSX braces', () => {
+    const Accent = reactJsx`<strong>bold</strong>`
+
+    const tree = reactJsx`
+      <p>
+        Hello ${'react'} and ${Accent}!
+      </p>
+    `
+
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+
+    act(() => {
+      root.render(tree)
+    })
+
+    expect(container.textContent).toBe('Hello react and bold!')
+
+    act(() => {
+      root.unmount()
+    })
+  })
+
   it('supports fragments, spread children, and nested reactJsx nodes', () => {
     const items = ['alpha', 'beta', 'gamma']
 

@@ -93,10 +93,14 @@ class ReactTemplateBuilder {
     children.forEach(child => {
       switch (child.type) {
         case 'JSXText': {
-          const text = normalizeJsxTextValue(child.value)
-          if (text) {
-            compiled.push(JSON.stringify(text))
-          }
+          const segments = normalizeJsxTextSegments(child.value, this.placeholderMap)
+          segments.forEach(segment => {
+            if (segment.kind === 'text') {
+              compiled.push(JSON.stringify(segment.value))
+              return
+            }
+            compiled.push(segment.value)
+          })
           break
         }
         case 'JSXExpressionContainer': {
@@ -237,6 +241,10 @@ class ReactTemplateBuilder {
       return node.name as string
     }
 
+    if (node.type === 'Literal') {
+      return JSON.stringify((node as { value: unknown }).value)
+    }
+
     if ('range' in node && Array.isArray(node.range)) {
       throw new Error('[jsx-loader] Unable to inline complex expressions in react mode.')
     }
@@ -262,6 +270,10 @@ type TemplateExpressionContext =
   | { type: 'attributeUnquoted' }
   | { type: 'childExisting' }
   | { type: 'childText' }
+
+type JsxTextSegment =
+  | { kind: 'text'; value: string }
+  | { kind: 'expression'; value: string }
 
 const stripTrailingWhitespace = (value: string) => value.replace(/\s+$/g, '')
 const stripLeadingWhitespace = (value: string) => value.replace(/^\s+/g, '')
@@ -318,6 +330,10 @@ type TransformResult = {
 }
 
 const TEMPLATE_EXPR_PLACEHOLDER_PREFIX = '__JSX_LOADER_TEMPLATE_EXPR_'
+const TEMPLATE_EXPR_PLACEHOLDER_PATTERN = new RegExp(
+  `${TEMPLATE_EXPR_PLACEHOLDER_PREFIX}\\d+__`,
+  'g',
+)
 
 const MODULE_PARSER_OPTIONS: ParserOptions = {
   lang: 'tsx',
@@ -561,10 +577,57 @@ const extractJsxRoot = (program: Program): JSXElement | JSXFragment => {
   throw new Error('[jsx-loader] Expected the template to contain a single JSX root node.')
 }
 
-const normalizeJsxTextValue = (value: string) => {
+const normalizeJsxTextSegments = (
+  value: string,
+  placeholders: Map<string, string>,
+): JsxTextSegment[] => {
   const collapsed = value.replace(/\r/g, '').replace(/\n\s+/g, ' ')
-  const trimmed = collapsed.trim()
-  return trimmed.length > 0 ? trimmed : ''
+  const leadingWhitespace = value.match(/^\s*/)?.[0] ?? ''
+  const trailingWhitespace = value.match(/\s*$/)?.[0] ?? ''
+  const trimStart = /\n/.test(leadingWhitespace)
+  const trimEnd = /\n/.test(trailingWhitespace)
+
+  let normalized = collapsed
+  if (trimStart) {
+    normalized = normalized.replace(/^\s+/, '')
+  }
+  if (trimEnd) {
+    normalized = normalized.replace(/\s+$/, '')
+  }
+
+  if (normalized.length === 0 || normalized.trim().length === 0) {
+    return [] as JsxTextSegment[]
+  }
+
+  const segments: JsxTextSegment[] = []
+  TEMPLATE_EXPR_PLACEHOLDER_PATTERN.lastIndex = 0
+  let cursor = 0
+  let match: RegExpExecArray | null
+
+  while ((match = TEMPLATE_EXPR_PLACEHOLDER_PATTERN.exec(normalized))) {
+    const index = match.index
+    const slice = normalized.slice(cursor, index)
+    if (slice) {
+      segments.push({ kind: 'text', value: slice })
+    }
+
+    const marker = match[0]
+    const expression = placeholders.get(marker)
+    if (expression) {
+      segments.push({ kind: 'expression', value: expression })
+    } else {
+      segments.push({ kind: 'text', value: marker })
+    }
+
+    cursor = index + marker.length
+  }
+
+  const remainder = normalized.slice(cursor)
+  if (remainder) {
+    segments.push({ kind: 'text', value: remainder })
+  }
+
+  return segments
 }
 
 const TAG_PLACEHOLDER_PREFIX = '__JSX_LOADER_TAG_EXPR_'

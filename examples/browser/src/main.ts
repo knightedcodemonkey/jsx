@@ -5,9 +5,9 @@ const Tagline: JsxComponent<{ accent?: string }> = ({ children, accent = 'soft' 
   const tone = accent === 'soft' ? 'Bend JSX literals to your will.' : accent
   return jsx`
     <p>
-      <strong>{${tone}}</strong>
+      <strong>${tone}</strong>
       <br />
-      {${children}}
+      ${children}
     </p>
   `
 }
@@ -29,8 +29,8 @@ const Counter: JsxComponent = (() => {
 const Card: JsxComponent<{ title: string }> = ({ title, children }) =>
   jsx`
     <article className="demo-card">
-      <h1>{${title}}</h1>
-      <div className="stack">{${children}}</div>
+      <h1>${title}</h1>
+      <div className="stack">${children}</div>
     </article>
   `
 
@@ -93,7 +93,7 @@ const DeepTree: JsxComponent<{ heading: string; footerLink: string }> = ({
         data-tone={${group.tone}}
         aria-live={${group.live}}
       >
-        <h3>{${group.title}}</h3>
+        <h3>${group.title}</h3>
         <ul className="feature-grid">
           {${group.items.map(
             item =>
@@ -106,8 +106,8 @@ const DeepTree: JsxComponent<{ heading: string; footerLink: string }> = ({
                 aria-pressed={${item.emphasized ?? false}}
                 style={${{ '--badge-hue': `${item.hue}` }}}
               >
-                <span className="feature-label">{${item.label}}</span>
-                <span className="feature-value">{${item.count}}</span>
+                <span className="feature-label">${item.label}</span>
+                <span className="feature-value">${item.count}</span>
               </li>
             `,
           )}}
@@ -119,10 +119,10 @@ const DeepTree: JsxComponent<{ heading: string; footerLink: string }> = ({
   return jsx`
     <section id="deep-demo" className="deep-tree" data-groups={${badges.length}}>
       <header>
-        <p className="eyebrow">{${'Deep JSX verification'}}</p>
-        <h2>{${heading}}</h2>
+        <p className="eyebrow">Deep JSX verification</p>
+        <h2>${heading}</h2>
         <p>
-          {${'This tree renders multiple nested fragments, dynamic attributes, and array children.'}}
+          This tree renders multiple nested fragments, dynamic attributes, and array children.
         </p>
       </header>
       <ul className="feature-list">{${badges}}</ul>
@@ -139,11 +139,11 @@ const view = jsx`
   <>
     <${Card} title={${'Live demo'}}>
       <${Tagline}>
-        {${'Use @knighted/jsx directly in the browser with native modules.'}}
+        ${'Use @knighted/jsx directly in the browser with native modules.'}
       </${Tagline}>
       <${Counter} />
       <a className="demo-link" href="#deep-demo">
-        {${'Jump to the deeply nested JSX example'}}
+        ${'Jump to the deeply nested JSX example'}
       </a>
     </${Card}>
     <${DeepTree} heading={${'Nested JSX stress test'}} footerLink={${'https://github.com/knightedcodemonkey/jsx'}} />

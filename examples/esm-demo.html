@@ -491,7 +491,7 @@
       const counterSource = [
         'const Counter = ({ start = 0 }) => {',
         '  let value = start',
-        '  const valueLabel = jsx`<span class="counter-value">{${value}}</span>`',
+        '  const valueLabel = jsx`<span class="counter-value">${value}</span>`',
         '',
         '  const increment = () => {',
         '    value += 1',
@@ -500,7 +500,7 @@
         '',
         '  return jsx`',
         '    <section class="card dom-card">',
-        '      <p>Current total: {${valueLabel}}</p>',
+        '      <p>Current total: ${valueLabel}</p>',
         '      <button onClick={${increment}}>Increment</button>',
         '    </section>',
         '  `',
@@ -515,9 +515,9 @@
         '      <p className="eyebrow">React runtime</p>',
         '      <h3>reactJsx + React 19</h3>',
         '      <div className="react-metrics">',
-        '        {reactMetrics.map(label => reactJsx`<span key={${label}}>{${label}}</span>`)}',
+        '        {reactMetrics.map(label => reactJsx`<span key={${label}}>${label}</span>`)}',
         '      </div>',
-        '      <p>Button clicks: {${clicks}}</p>',
+        "      <p>Button clicks:{' '}${clicks}</p>",
         '      <button onClick={() => setClicks(value => value + 1)}>',
         '        Trigger React state',
         '      </button>',
@@ -570,7 +570,7 @@
         jsx`
           <details class="source-panel">
             <summary>
-              <span>View source{${' '}} · {${' '}}{${label}}</span>
+              <span>View source · ${label}</span>
             </summary>
             <div class="source-panel-body">
               <pre class="source-code">{${code}}</pre>
@@ -579,7 +579,7 @@
         `
       const Counter = ({ start = 0 }) => {
         let value = start
-        const valueLabel = jsx`<span class="counter-value">{${value}}</span>`
+        const valueLabel = jsx`<span class="counter-value">${value}</span>`
         const increment = () => {
           value += 1
           valueLabel.textContent = String(value)
@@ -591,8 +591,8 @@
               <p class="eyebrow">DOM helper</p>
               <h2>Stateful counter rendered with jsx</h2>
             </header>
-            <p>{${'No React, no framework—just the DOM API and the jsx tag.'}}</p>
-            <p>Current total: {' '}{${valueLabel}}</p>
+            <p>No React, no framework—just the DOM API and the jsx tag.</p>
+            <p>Current total: ${valueLabel}</p>
             <button class="counter-button" onClick={${increment}}>
               Increment
             </button>
@@ -606,7 +606,7 @@
       const reactMetrics = ['Hooks ready', 'Fragments inline', 'Suspense friendly']
       const ReactBadge = ({ label }) =>
         reactJsx`
-          <span>{${label}}</span>
+          <span>${label}</span>
         `
       const HybridReactBadge = ({ label }) => {
         const [handshakes, setHandshakes] = useState(1)
@@ -620,14 +620,12 @@
           <div className="hybrid-react-badge" data-connected={${String(connected)}}>
             <header>
               <p className="eyebrow">React child</p>
-              <strong>{${connected ? 'Connected' : 'Paused'}}</strong>
+              <strong>${connected ? 'Connected' : 'Paused'}</strong>
             </header>
-            <p className="handshake-count">{${handshakes}}</p>
-            <p>
-              {${'Handshakes with the Lit parent since mount.'}}
-            </p>
+            <p className="handshake-count">${handshakes}</p>
+            <p>Handshakes with the Lit parent since mount.</p>
             <button type="button" onClick={${toggleConnection}}>
-              {${connected ? 'Pause bridge' : 'Resume bridge'}}
+              ${connected ? 'Pause bridge' : 'Resume bridge'}
             </button>
           </div>
         `
@@ -827,7 +825,7 @@
               )}}
             </div>
             <p>
-              Button clicks:{' '}<strong>{${clicks}}</strong>
+              Button clicks:{' '}<strong>${clicks}</strong>
             </p>
             <button type="button" onClick={${() => setClicks(value => value + 1)}}>
               Trigger React state
@@ -854,10 +852,10 @@
             <p className="eyebrow">React + Lit</p>
             <h3>Share React state with Lit</h3>
             <p>
-              {${'React hooks update a Lit web component below using plain custom element refs.'}}
+              React hooks update a Lit web component below using plain custom element refs.
             </p>
             <lit-react-meter ref={${meterRef}}>
-              <span>{${'Lit renders this meter while React drives the data flow.'}}</span>
+              <span>Lit renders this meter while React drives the data flow.</span>
             </lit-react-meter>
             <button type="button" onClick={${() => setSyncCount(value => value + 1)}}>
               Sync Lit with React state
@@ -896,7 +894,8 @@
               <p class="eyebrow">Lite entrypaths</p>
               <h2>Pick the runtime that matches your target</h2>
               <p>
-                {${'Each subpath ships a pre-minified helper so you can import exactly what you need from npm or esm.sh.'}}
+                Each subpath ships a pre-minified helper so you can import exactly what you need from
+                npm or esm.sh.
               </p>
             </header>
             <div class="lite-metric-grid">
@@ -904,11 +903,11 @@
                 metric =>
                   jsx`<article class="lite-metric">
                     <header>
-                      <strong>{${metric.entry}}</strong>
-                      <span>{${metric.context}}</span>
+                      <strong>${metric.entry}</strong>
+                      <span>${metric.context}</span>
                     </header>
-                    <p class="lite-metric-size">{${metric.raw}} • {${metric.gzip}}</p>
-                    <p class="lite-metric-note">{${metric.note}}</p>
+                    <p class="lite-metric-size">${metric.raw} • ${metric.gzip}</p>
+                    <p class="lite-metric-note">${metric.note}</p>
                   </article>`,
               )}}
             </div>
@@ -921,15 +920,15 @@
               <p class="eyebrow">Runtime overview</p>
               <h2>All the ways to use @knighted/jsx</h2>
               <p>
-                {${'Share one tagged template workflow across DOM nodes, React trees, SSR, and bundler builds.'}}
+                Share one tagged template workflow across DOM nodes, React trees, SSR, and bundler builds.
               </p>
             </header>
             <ul class="capability-list">
               {${capabilityHighlights.map(
                 capability =>
                   jsx`<li class="capability-item">
-                    <strong>{${capability.label}}</strong>
-                    <p>{${capability.detail}}</p>
+                    <strong>${capability.label}</strong>
+                    <p>${capability.detail}</p>
                   </li>`,
               )}}
             </ul>

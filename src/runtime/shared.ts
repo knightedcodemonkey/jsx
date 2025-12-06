@@ -11,7 +11,8 @@ import type { OxcError, ParserOptions } from 'oxc-parser'
 
 const OPEN_TAG_RE = /<\s*$/
 const CLOSE_TAG_RE = /<\/\s*$/
-const PLACEHOLDER_PREFIX = '__KX_EXPR__'
+export const PLACEHOLDER_PREFIX = '__KX_EXPR__'
+export const placeholderPattern = new RegExp(`${PLACEHOLDER_PREFIX}\\d+_\\d+__`, 'g')
 
 let invocationCounter = 0
 
@@ -128,11 +129,56 @@ export const walkAst = (node: unknown, visitor: (target: AnyOxcNode) => void) =>
   })
 }
 
-export const normalizeJsxText = (value: string) => {
+export const normalizeJsxTextSegments = (
+  value: string,
+  placeholders: Map<string, unknown>,
+) => {
   const collapsed = value.replace(/\r/g, '').replace(/\n\s+/g, ' ')
-  const trimmed = collapsed.trim()
+  const leadingWhitespace = value.match(/^\s*/)?.[0] ?? ''
+  const trailingWhitespace = value.match(/\s*$/)?.[0] ?? ''
+  const trimStart = /\n/.test(leadingWhitespace)
+  const trimEnd = /\n/.test(trailingWhitespace)
 
-  return trimmed.length > 0 ? trimmed : ''
+  let normalized = collapsed
+  if (trimStart) {
+    normalized = normalized.replace(/^\s+/, '')
+  }
+  if (trimEnd) {
+    normalized = normalized.replace(/\s+$/, '')
+  }
+
+  if (normalized.length === 0 || normalized.trim().length === 0) {
+    return [] as Array<string | unknown>
+  }
+
+  const segments: Array<string | unknown> = []
+  placeholderPattern.lastIndex = 0
+  let cursor = 0
+  let match: RegExpExecArray | null
+
+  while ((match = placeholderPattern.exec(normalized))) {
+    const index = match.index
+    const slice = normalized.slice(cursor, index)
+    if (slice) {
+      segments.push(slice)
+    }
+
+    const token = match[0]
+    if (placeholders.has(token)) {
+      segments.push(placeholders.get(token)!)
+    } else {
+      segments.push(token)
+    }
+
+    cursor = index + token.length
+  }
+
+  const remainder = normalized.slice(cursor)
+  if (remainder) {
+    segments.push(remainder)
+  }
+
+  return segments
 }
 
 export const collectPlaceholderNames = <TComponent extends TemplateComponent>(

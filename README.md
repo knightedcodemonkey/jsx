@@ -56,7 +56,7 @@ const handleClick = () => {
 
 const button = jsx`
   <button className={${`counter-${count}`}} onClick={${handleClick}}>
-    Count is {${count}}
+    Count is ${count}
   </button>
 `
 
@@ -78,7 +78,7 @@ const App = () => {
   return reactJsx`
     <section className="react-demo">
       <h2>Hello from React</h2>
-      <p>Count is {${count}}</p>
+      <p>Count is ${count}</p>
       <button onClick={${() => setCount(value => value + 1)}}>
         Increment
       </button>
@@ -147,7 +147,7 @@ import { renderToString } from 'react-dom/server'
 
 const Badge = ({ label }: { label: string }) =>
   reactJsx`
-    <button type="button">React says: {${label}}</button>
+    <button type="button">React says: ${label}</button>
   `
 
 const reactMarkup = renderToString(
@@ -250,7 +250,7 @@ Build the fixture locally with `npx next build test/fixtures/next-app` (or run `
 
 ### Interpolations
 
-- All dynamic values are provided through standard template literal expressions (`${...}`) and map to JSX exactly where they appear. Wrap the emitted placeholders with JSX braces whenever they render as children (`<p>{${value}}</p>`), because the template builder injects placeholder tokens before parsing. You still use the usual braces for props and spreads (`className={${value}}`, `{...props}`, etc.).
+- All dynamic values are provided through standard template literal expressions (`${...}`) and map to JSX exactly where they appear. Interpolations used as text children no longer need an extra `{...}` wrapper—the runtime automatically recognizes placeholders inside text segments (so `Count is ${value}` just works). Use the usual JSX braces when the syntax requires them (`className={${value}}`, `{...props}`, conditionals, etc.).
 - Every expression can be any JavaScript value: primitives, arrays/iterables, DOM nodes, functions, other `jsx` results, or custom component references.
 - Async values (Promises) are not supported. Resolve them before passing into the template.
 
@@ -271,7 +271,7 @@ const label = 'Tap me'
 const view = jsx`
   <section>
     <${Button} variant="ghost">
-      {${label}}
+      ${label}
     </${Button}>
   </section>
 `

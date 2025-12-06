@@ -146,7 +146,7 @@
       const app = document.getElementById('app')
       const Counter = ({ start = 0 }) => {
         let value = start
-        const valueLabel = jsx`<span class="counter-value">{${value}}</span>`
+        const valueLabel = jsx`<span class="counter-value">${value}</span>`
 
         const increment = () => {
           value += 1
@@ -159,8 +159,7 @@
               <h2>Lite counter</h2>
             </header>
             <p>
-              Current total:{' '}
-              {${valueLabel}}
+              Current total: ${valueLabel}
             </p>
             <button class="counter-button" onClick={${increment}}>
               Increment
@@ -206,7 +205,7 @@
           group =>
             jsx`
             <li class="feature-group" data-tone={${group.tone}} aria-live={${group.live}}>
-              <h3>{${group.title}}</h3>
+              <h3>${group.title}</h3>
               <ul class="feature-grid">
                 {${group.items.map(
                   item =>
@@ -218,8 +217,8 @@
                       aria-pressed={${item.emphasized ?? false}}
                       style={${{ '--badge-hue': String(item.hue) }}}
                     >
-                      <span class="feature-label">{${item.label}}</span>
-                      <span class="feature-value">{${item.count}}</span>
+                      <span class="feature-label">${item.label}</span>
+                      <span class="feature-value">${item.count}</span>
                     </li>
                   `,
                 )}}
@@ -231,10 +230,10 @@
         return jsx`
           <section id="deep-lite" class="deep-tree" data-groups={${groups.length}}>
             <header>
-              <p class="eyebrow">{${'Lite entry verification'}}</p>
-              <h2>{${heading}}</h2>
+              <p class="eyebrow">Lite entry verification</p>
+              <h2>${heading}</h2>
               <p>
-                {${'All of these nodes were produced through the @knighted/jsx/lite entry without bundling.'}}
+                All of these nodes were produced through the @knighted/jsx/lite entry without bundling.
               </p>
             </header>
             <ul class="feature-list">{${groups}}</ul>
@@ -253,11 +252,11 @@
               <h2>Dynamic JSX via @knighted/jsx/lite</h2>
             </header>
             <p>
-              Import directly from{' '}
-              <code>esm.sh/@knighted/jsx/lite</code>{' '}to exercise the minified runtime with no build tools.
+              Import directly from <code>esm.sh/@knighted/jsx/lite</code> to exercise the minified runtime with no
+              build tools.
             </p>
             <ul class="list">
-              {${milestones.map(item => jsx`<li>{${item}}</li>`)} }
+              {${milestones.map(item => jsx`<li>${item}</li>`)} }
             </ul>
             <p>
               <a class="demo-link" href="#deep-lite">Jump to the lite stress test ↴</a>
