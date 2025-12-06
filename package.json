@@ -1,6 +1,6 @@
 {
   "name": "@knighted/jsx",
-  "version": "1.2.0-rc.2",
+  "version": "1.2.0-rc.3",
   "description": "Runtime JSX tagged template that renders DOM or React trees anywhere without a build step.",
   "keywords": [
     "jsx runtime",
@@ -63,6 +63,7 @@
     "prettier": "prettier -w .",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
+    "test:e2e": "npm run build && npm run setup:wasm && npm run build:fixture && playwright test",
     "build:fixture": "node scripts/build-rspack-fixture.mjs",
     "demo:node-ssr": "node test/fixtures/node-ssr/render.mjs",
     "dev": "vite dev --config vite.config.ts",
@@ -75,15 +76,17 @@
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@knighted/duel": "^2.1.6",
-    "@types/node": "^22.10.1",
+    "@oxc-project/types": "^0.99.0",
+    "@playwright/test": "^1.57.0",
     "@rspack/core": "^1.0.5",
     "@types/jsdom": "^27.0.0",
+    "@types/node": "^22.10.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitest/coverage-v8": "^4.0.14",
     "eslint": "^9.39.1",
     "eslint-plugin-n": "^17.10.3",
-    "@oxc-project/types": "^0.99.0",
+    "eslint-plugin-playwright": "^2.4.0",
     "http-server": "^14.1.1",
     "jsdom": "^27.2.0",
     "lit": "^3.2.1",
@@ -103,9 +106,9 @@
     "oxc-parser": "^0.99.0"
   },
   "peerDependencies": {
-    "react": ">=18",
     "jsdom": "*",
-    "linkedom": "*"
+    "linkedom": "*",
+    "react": ">=18"
   },
   "peerDependenciesMeta": {
     "react": {

@@ -17,3 +17,8 @@ coverage/vitest/
 # fixture build output
 test/fixtures/next-app/.next/
 test/fixtures/next-app/out/
+
+# playwright artifacts
+playwright-report/
+test-results/
+blob-report/
