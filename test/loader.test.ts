@@ -390,4 +390,48 @@ describe('jsx loader', () => {
 
     await expect(runLoader(source)).rejects.toThrow('Expected `</div>`')
   })
+
+  it('merges static props and spreads in react mode', async () => {
+    const source = [
+      'const propsA = { role: "presentation" }',
+      'const propsB = { tabIndex: 0 }',
+      'const view = jsx`',
+      '  <button type="button" {...propsA} data-ready="yes" {...propsB}>',
+      '    Demo',
+      '  </button>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain(
+      '__jsxReactMergeProps({ "type": "button" }, propsA, { "data-ready": "yes" }, propsB)',
+    )
+  })
+
+  it('stringifies namespaced attributes when compiling to react', async () => {
+    const source = [
+      'const view = jsx`',
+      '  <svg:foreignObject xml:lang="fr" />',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain('__jsxReact("svg:foreignObject", { "xml:lang": "fr" })')
+  })
+
+  it('ignores invalid tagModes overrides', async () => {
+    const source = [
+      "const label = 'demo'",
+      'const view = jsx`<button>${label}</button>`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, {
+      tags: ['jsx'],
+      tagModes: {
+        jsx: 'invalid',
+      } as Record<string, string>,
+    })
+
+    expect(transformed).toContain('<button>{${label}}</button>')
+  })
 })
