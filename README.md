@@ -338,6 +338,15 @@ npm run test
 
 Tests live in `test/jsx.test.ts` and cover DOM props/events, custom components, fragments, and iterable children so you can see exactly how the template tag is meant to be used.
 
+Need full end-to-end coverage? The Playwright suite boots the CDN demo (`examples/esm-demo.html`) and the loader-backed Rspack fixture to verify nested trees, sibling structures, and interop with Lit/React:
+
+```sh
+npm run test:e2e
+```
+
+> [!NOTE]
+> The e2e script builds the library, installs the WASM parser binding, bundles the loader fixture, and then runs `playwright test`. Make sure Playwright browsers are installed locally (`npx playwright install`).
+
 ## Browser demo / Vite build
 
 This repo ships with a ready-to-run Vite demo under `examples/browser` that bundles the library (make sure you have installed the WASM binding via the command above first). Use it for a full end-to-end verification in a real browser (the demo imports `@knighted/jsx/lite` so you can confirm the lighter entry behaves identically):
