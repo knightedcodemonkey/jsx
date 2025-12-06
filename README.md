@@ -56,7 +56,7 @@ const handleClick = () => {
 
 const button = jsx`
   <button className={${`counter-${count}`}} onClick={${handleClick}}>
-    Count is {${count}}
+    Count is ${count}
   </button>
 `
 
@@ -78,7 +78,7 @@ const App = () => {
   return reactJsx`
     <section className="react-demo">
       <h2>Hello from React</h2>
-      <p>Count is {${count}}</p>
+      <p>Count is ${count}</p>
       <button onClick={${() => setCount(value => value + 1)}}>
         Increment
       </button>
@@ -147,12 +147,12 @@ import { renderToString } from 'react-dom/server'
 
 const Badge = ({ label }: { label: string }) =>
   reactJsx`
-    <button type="button">React says: {${label}}</button>
+    <button type="button">React says: ${label}</button>
   `
 
 const reactMarkup = renderToString(
   reactJsx`
-    <${Badge} label={${'Server-only'}} />
+    <${Badge} label="Server-only" />
   `,
 )
 
@@ -250,7 +250,7 @@ Build the fixture locally with `npx next build test/fixtures/next-app` (or run `
 
 ### Interpolations
 
-- All dynamic values are provided through standard template literal expressions (`${...}`). Wrap them in JSX braces to keep the syntax valid: `className={${value}}`, `{${items}}`, etc.
+- All dynamic values are provided through standard template literal expressions (`${...}`) and map to JSX exactly where they appear. Use JSX braces anywhere the syntax normally requires them (`className={${value}}`, spreads, etc.), but plain text children can interpolate directly, e.g. `Count is ${value}`.
 - Every expression can be any JavaScript value: primitives, arrays/iterables, DOM nodes, functions, other `jsx` results, or custom component references.
 - Async values (Promises) are not supported. Resolve them before passing into the template.
 
@@ -266,10 +266,12 @@ const Button = ({ children, variant = 'primary' }) => {
   return el
 }
 
+const label = 'Tap me'
+
 const view = jsx`
   <section>
-    <${Button} variant={${'ghost'}}>
-      {${'Tap me'}}
+    <${Button} variant="ghost">
+      ${label}
     </${Button}>
   </section>
 `
@@ -356,19 +358,6 @@ For a zero-build verification of the lite bundle, open `examples/esm-demo-lite.h
 - Requires a DOM-like environment (it throws when `document` is missing).
 - JSX identifiers are resolved at runtime through template interpolations; you cannot reference closures directly inside the template without using `${...}`.
 - Promises/async components are not supported.
-
-## Performance notes vs `htm`
-
-[`htm`](https://github.com/developit/htm) popularized tagged template literals for view rendering by tokenizing the template strings on the fly and calling a user-provided hyperscript function. This library takes a different approach: every invocation runs the native `oxc-parser` (compiled to WebAssembly) to build a real JSX AST before constructing DOM nodes.
-
-Tradeoffs to keep in mind:
-
-- **Parser vs tokenizer** – `htm` performs lightweight string tokenization, while `@knighted/jsx` pays a higher one-time parse cost but gains the full JSX grammar (fragments, spread children, nested namespaces) without heuristics. For large or deeply nested templates the WASM-backed parser is typically faster and more accurate than string slicing.
-- **DOM-first rendering** – this runtime builds DOM nodes directly, so the cost after parsing is mostly attribute assignment and child insertion. `htm` usually feeds a virtual DOM/hyperscript factory (e.g., Preact’s `h`), which may add an extra abstraction layer before hitting the DOM.
-- **Bundle size** – including the parser and WASM binding is heavier than `htm`’s ~1 kB tokenizer. If you just need hyperscript sugar, `htm` stays leaner; if you value real JSX semantics without a build step, the extra kilobytes buy you correctness and speed on complex trees.
-  - **Actual size** – as of `v1.2.0-rc.1` the default `dist/jsx.js` bundle is ~9.0 kB raw / ~2.3 kB min+gzip, while the `@knighted/jsx/lite` entry stays ~5.7 kB raw / ~2.5 kB min+gzip. `htm` weighs in at roughly 0.7 kB min+gzip, so the lite entry narrows the gap to ~1.8 kB for production payloads.
-
-In short, `@knighted/jsx` trades a slightly larger runtime for the ability to parse genuine JSX with native performance, whereas `htm` favors minimal footprint and hyperscript integration. Pick the tool that aligns with your rendering stack and performance envelope.
 
 ## License
 
