@@ -1,6 +1,9 @@
 import js from '@eslint/js'
 import pluginN from 'eslint-plugin-n'
+import playwright from 'eslint-plugin-playwright'
 import tseslint from 'typescript-eslint'
+
+const playwrightConfig = playwright.configs['flat/recommended']
 
 export default [
   {
@@ -46,5 +49,9 @@ export default [
     rules: {
       'n/no-missing-import': 'off',
     },
+  },
+  {
+    ...playwrightConfig,
+    files: ['playwright/**/*.{ts,tsx,js}'],
   },
 ]
