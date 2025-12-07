@@ -248,7 +248,8 @@
       }
 
       .source-panel[open] .source-panel-body {
-        max-height: 640px;
+        max-height: 30rem;
+        overflow-y: auto;
       }
 
       .source-panel pre {
@@ -263,6 +264,15 @@
         line-height: 1.5;
         white-space: pre-wrap;
         word-break: break-word;
+      }
+
+      code {
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        font-size: 0.9em;
+        background: rgba(15, 23, 42, 0.08);
+        border-radius: 0.35rem;
+        padding: 0.05rem 0.35rem;
+        color: #0f172a;
       }
 
       @media (max-width: 640px) {
@@ -428,8 +438,8 @@
     </main>
 
     <script type="module">
-      import { jsx } from 'https://esm.sh/@knighted/jsx@1.2.0-rc.5/lite'
-      import { reactJsx } from 'https://esm.sh/@knighted/jsx@1.2.0-rc.5/react'
+      import { jsx } from 'https://esm.sh/@knighted/jsx@latest/lite'
+      import { reactJsx } from 'https://esm.sh/@knighted/jsx@latest/react'
       import { useEffect, useRef, useState } from 'https://esm.sh/react@19'
       import { createRoot } from 'https://esm.sh/react-dom@19/client'
       import { LitElement, css, html } from 'https://esm.sh/lit@3'
@@ -444,8 +454,7 @@
         },
         {
           label: 'React runtime',
-          detail:
-            'Call reactJsx to emit React elements with full hook + hydration support.',
+          detail: jsx`<span>Call <code>reactJsx</code> to emit React elements with full hook + hydration support.</span>`,
         },
         {
           label: 'Node + SSR',
@@ -490,10 +499,12 @@
           context: 'Node React entry',
           raw: '~4.1 kB raw',
           gzip: '~1.9 kB min+gzip',
-          note: 'Combines React + DOM shim for hybrid SSR pipelines.',
+          note: jsx`<span>Combines the <code>reactJsx</code> helper with the DOM shim for hybrid SSR pipelines.</span>`,
         },
       ]
       const counterSource = [
+        "import { jsx } from '@knighted/jsx'",
+        '',
         'const Counter = ({ start = 0 }) => {',
         '  let value = start',
         '  const valueLabel = jsx`<span class="counter-value">${value}</span>`',
@@ -505,6 +516,11 @@
         '',
         '  return jsx`',
         '    <section class="card dom-card">',
+        '      <header>',
+        '        <p class="eyebrow">DOM helper</p>',
+        '        <h2>Stateful counter rendered with <code>jsx</code></h2>',
+        '      </header>',
+        '      <p>No React, no framework—just the DOM API and the <code>jsx</code> tag.</p>',
         '      <p>Current total: ${valueLabel}</p>',
         '      <button onClick={${increment}}>Increment</button>',
         '    </section>',
@@ -512,17 +528,20 @@
         '}',
       ].join('\n')
       const reactRuntimeSource = [
+        "import { reactJsx } from '@knighted/jsx/react'",
+        "import { useState } from 'react'",
+        '',
         'const ReactRuntimePanel = () => {',
         '  const [clicks, setClicks] = useState(0)',
         '',
         '  return reactJsx`',
         '    <div className="react-panel">',
         '      <p className="eyebrow">React runtime</p>',
-        '      <h3>reactJsx + React 19</h3>',
+        '      <h3><code>reactJsx</code> + React 19</h3>',
         '      <div className="react-metrics">',
         '        ${reactMetrics.map(label => reactJsx`<span key={${label}}>${label}</span>`)}',
         '      </div>',
-        "      <p>Button clicks:{' '}${clicks}</p>",
+        "      <p>Button clicks:{' '}<strong>${clicks}</strong></p>",
         '      <button onClick={${() => setClicks(value => value + 1)}}>',
         '        Trigger React state',
         '      </button>',
@@ -531,11 +550,53 @@
         '}',
       ].join('\n')
       const litHostsSource = [
+        "import { jsx } from '@knighted/jsx'",
+        "import { reactJsx } from '@knighted/jsx/react'",
+        "import { useState } from 'react'",
+        "import { createRoot } from 'react-dom/client'",
+        "import { LitElement, html } from 'lit'",
+        '',
+        'const HybridReactBadge = ({ label }) => {',
+        '  const [handshakes, setHandshakes] = useState(1)',
+        '  const [connected, setConnected] = useState(true)',
+        '  const toggleConnection = () => {',
+        '    setHandshakes(value => value + 1)',
+        '    setConnected(value => !value)',
+        '  }',
+        '',
+        '  return reactJsx`',
+        '    <div className="hybrid-react-badge" data-connected={${String(connected)}}>',
+        '      <header>',
+        '        <p className="eyebrow">React child</p>',
+        "        <strong>${connected ? 'Connected' : 'Paused'}</strong>",
+        '      </header>',
+        '      <p className="handshake-count">${handshakes}</p>',
+        '      <button type="button" onClick={${toggleConnection}}>',
+        "        ${connected ? 'Pause bridge' : 'Resume bridge'}",
+        '      </button>',
+        '    </div>',
+        '  `',
+        '}',
+        '',
         'class LitHostsReactElement extends LitElement {',
+        '  renderReactTree(tree) {',
+        '    if (!this.reactHost) {',
+        "      this.reactHost = document.createElement('div')",
+        '    }',
+        '',
+        '    if (!this.reactRoot && this.reactHost) {',
+        '      this.reactRoot = createRoot(this.reactHost)',
+        '    }',
+        '',
+        '    this.reactRoot?.render(tree)',
+        '    return this.reactHost',
+        '  }',
+        '',
         '  render() {',
         '    const reactTree = reactJsx`',
         '      <div className="hybrid-react-cluster">',
         '        <${HybridReactBadge} label={${this.title}} />',
+        '        <p className="react-status">Rendered with <code>reactJsx</code></p>',
         '      </div>',
         '    `',
         '',
@@ -545,8 +606,8 @@
         '        <div class="nested-slot">',
         '          ${jsx`',
         '            <ul class="list">',
-        '              <li>Lit renders DOM nodes via the jsx helper.</li>',
-        '              <li>The React subtree above mounts with reactJsx.</li>',
+        '              <li>Lit renders DOM nodes via the <code>jsx</code> helper.</li>',
+        '              <li>The React subtree above mounts with <code>reactJsx</code>.</li>',
         '            </ul>',
         '          `}',
         '        </div>',
@@ -556,6 +617,9 @@
         '}',
       ].join('\n')
       const litBridgeSource = [
+        "import { reactJsx } from '@knighted/jsx/react'",
+        "import { useEffect, useRef, useState } from 'react'",
+        '',
         'const LitReactBridgePanel = () => {',
         '  const [syncCount, setSyncCount] = useState(2)',
         '  const meterRef = useRef(null)',
@@ -601,15 +665,15 @@
           <section class="card dom-card">
             <header>
               <p class="eyebrow">DOM helper</p>
-              <h2>Stateful counter rendered with jsx</h2>
+              <h2>Stateful counter rendered with <code>jsx</code></h2>
             </header>
-            <p>No React, no framework—just the DOM API and the jsx tag.</p>
+            <p>No React, no framework—just the DOM API and the <code>jsx</code> tag.</p>
             <p>Current total: ${valueLabel}</p>
             <button class="counter-button" onClick={${increment}}>
               Increment
             </button>
             ${renderSourcePanel({
-              label: 'DOM counter (jsx)',
+              label: 'DOM counter',
               code: counterSource,
             })}
           </section>
@@ -764,7 +828,7 @@
         constructor() {
           super()
           this.title = 'Lit hosts React'
-          this.subtitle = 'reactJsx renders the React subtree while Lit owns the shell.'
+          this.subtitle = 'renders the React subtree while Lit owns the shell.'
           this.reactRoot = null
           this.reactHost = null
         }
@@ -793,7 +857,7 @@
           const reactTree = reactJsx`
             <div className="hybrid-react-cluster">
               <${HybridReactBadge} label={${this.title}} />
-              <p className="react-status">Rendered with reactJsx</p>
+              <p className="react-status">Rendered with <code>reactJsx</code></p>
             </div>
           `
           const reactNode = this.renderReactTree(reactTree)
@@ -803,14 +867,14 @@
               <header>
                 <p class="eyebrow">Lit parent</p>
                 <h3>${this.title}</h3>
-                <p>${this.subtitle}</p>
+                <p><code>reactJsx</code> ${this.subtitle}</p>
               </header>
               <div class="react-slot">${reactNode}</div>
               <div class="nested-slot">
                 ${jsx`
                   <ul class="list">
-                    <li>Lit renders DOM nodes via the jsx helper.</li>
-                    <li>The React subtree above mounts with reactJsx.</li>
+                    <li>Lit renders DOM nodes via the <code>jsx</code> helper.</li>
+                    <li>The React subtree above mounts with <code>reactJsx</code>.</li>
                   </ul>
                 `}
               </div>
@@ -830,7 +894,7 @@
         return reactJsx`
           <div className="react-panel">
             <p className="eyebrow">React runtime</p>
-            <h3>reactJsx + React 19</h3>
+            <h3><code>reactJsx</code> + React 19</h3>
             <div className="react-metrics">
               ${reactMetrics.map(
                 label => reactJsx`<${ReactBadge} key={${label}} label={${label}} />`,
@@ -953,7 +1017,7 @@
             <header>
               <h2>Try the React runtime</h2>
               <p>
-                The reactJsx helper builds React elements so you can share a single template style between DOM and React trees.
+                The <code>reactJsx</code> helper builds React elements so you can share a single template style between DOM and React trees.
               </p>
             </header>
             <p>
@@ -970,7 +1034,7 @@
           </section>
           <section class="card hybrid-card">
             <header>
-              <h2>Lit renders React via reactJsx</h2>
+              <h2>Lit renders React via <code>reactJsx</code></h2>
             </header>
             <p>
               The custom element below registers on load, mounts React with createRoot, and drops the Node back into the Lit template.

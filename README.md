@@ -107,8 +107,7 @@ export default {
           {
             loader: '@knighted/jsx/loader',
             options: {
-              // Both optional: restrict or rename the tagged templates.
-              // tag: 'jsx', // single-tag option
+              // Optional: restrict or rename the tagged templates.
               // tags: ['jsx', 'reactJsx'],
             },
           },
@@ -350,7 +349,7 @@ npm run test:e2e
 ```
 
 > [!NOTE]
-> The e2e script builds the library, installs the WASM parser binding, bundles the loader fixture, and then runs `playwright test`. Make sure Playwright browsers are installed locally (`npx playwright install`).
+> The e2e script builds the library, installs the WASM parser binding, bundles the loader fixture, and then runs `playwright test`. Make sure Playwright browsers are installed locally (`npx playwright install --with-deps chromium`).
 
 ## Browser demo / Vite build
 
