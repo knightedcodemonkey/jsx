@@ -85,7 +85,7 @@ import { jsx } from '@knighted/jsx'
 const FancyButton = ({ label }: { label: string }) =>
   jsx`
     <button>
-      {${label}}
+      ${label}
     </button>
   `
 
@@ -94,7 +94,7 @@ class Widget extends HTMLElement {
     return html`
       <div class="card">
         ${jsx`
-          <${FancyButton} label={${'Launch'}} />
+          <${FancyButton} label="Launch" />
         `}
       </div>
     `
