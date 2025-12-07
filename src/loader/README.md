@@ -119,7 +119,7 @@ During the build the loader rewrites everything inside `${jsx``}` so each dynami
 
 ## End-to-end demo bundle
 
-The repository ships a Rspack + Lit + React fixture under `test/fixtures/rspack-app/`. The Vitest integration test (`test/loader.e2e.test.ts`) builds that fixture, stubs the parser WASM binding, and verifies the loader pipeline inside a real bundler.
+The repository ships a Rspack + Lit + React fixture under `test/fixtures/rspack-app/`. The Vitest integration test (`test/loader.e2e.test.ts`) builds that fixture, stubs the parser WASM binding, and verifies the loader pipeline inside a real bundler. Prefer a standalone repo instead? Walk through [morganney/jsx-loader-demo](https://github.com/morganney/jsx-loader-demo) for a minimal bundler-focused project you can clone directly.
 
 Manual preview steps:
 

@@ -118,7 +118,7 @@ export default {
 }
 ```
 
-Pair the loader with your existing TypeScript/JSX transpiler (SWC, Babel, Rspack’s builtin loader, etc.) so regular React components and the tagged templates can live side by side. The demo fixture under `test/fixtures/rspack-app` shows a full setup that mixes Lit and React:
+Pair the loader with your existing TypeScript/JSX transpiler (SWC, Babel, Rspack’s builtin loader, etc.) so regular React components and the tagged templates can live side by side. The demo fixture under `test/fixtures/rspack-app` shows a full setup that mixes Lit and React, and there is also a standalone walkthrough at [morganney/jsx-loader-demo](https://github.com/morganney/jsx-loader-demo):
 
 ```sh
 npm run build
