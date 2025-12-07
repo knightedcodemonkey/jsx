@@ -262,8 +262,22 @@
         font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
         font-size: 0.85rem;
         line-height: 1.5;
-        white-space: pre-wrap;
-        word-break: break-word;
+        white-space: pre;
+        overflow-x: auto;
+        word-break: normal;
+      }
+
+      .source-code.shiki {
+        border-radius: 0;
+        background: transparent;
+      }
+
+      .source-code.shiki code {
+        font-family: inherit;
+        background: none;
+        border-radius: 0;
+        padding: 0;
+        color: inherit;
       }
 
       code {
@@ -443,6 +457,7 @@
       import { useEffect, useRef, useState } from 'https://esm.sh/react@19'
       import { createRoot } from 'https://esm.sh/react-dom@19/client'
       import { LitElement, css, html } from 'https://esm.sh/lit@3'
+      import { codeToHtml } from 'https://esm.sh/shiki@1.1.7'
 
       const app = document.getElementById('app')
       const loadingCard = document.getElementById('demo-loading')
@@ -642,14 +657,14 @@
         '  `',
         '}',
       ].join('\n')
-      const renderSourcePanel = ({ label, code }) =>
+      const renderSourcePanel = ({ label, code, language = 'tsx' }) =>
         jsx`
           <details class="source-panel">
             <summary>
               <span>View source · ${label}</span>
             </summary>
             <div class="source-panel-body">
-              <pre class="source-code">{${code}}</pre>
+              <pre class="source-code" data-lang={${language}}>{${code}}</pre>
             </div>
           </details>
         `
@@ -675,6 +690,7 @@
             ${renderSourcePanel({
               label: 'DOM counter',
               code: counterSource,
+              language: 'tsx',
             })}
           </section>
         `
@@ -760,6 +776,47 @@
             </p>
           `
         }
+      }
+
+      const highlightSourcePanels = async () => {
+        const sourceNodes = document.querySelectorAll('.source-code')
+        if (!sourceNodes.length) {
+          return
+        }
+
+        await Promise.all(
+          Array.from(sourceNodes).map(async node => {
+            const language = node.dataset.lang || 'tsx'
+            const rawSample = node.textContent || ''
+            const codeSample = rawSample.replace(/^\s+/, '')
+            if (!codeSample.trim()) {
+              return
+            }
+
+            try {
+              const highlighted = await codeToHtml(codeSample, {
+                lang: language,
+                theme: 'github-light',
+              })
+              const template = document.createElement('template')
+              template.innerHTML = highlighted
+              const shikiPre = template.content.querySelector('pre')
+              if (!shikiPre) {
+                return
+              }
+
+              node.classList.add('shiki')
+              const shikiStyle = shikiPre.getAttribute('style')
+              if (shikiStyle) {
+                node.setAttribute('style', shikiStyle)
+              }
+              node.innerHTML = shikiPre.innerHTML
+              delete node.dataset.lang
+            } catch (error) {
+              console.warn('Failed to highlight source panel', error)
+            }
+          }),
+        )
       }
 
       if (!customElements.get('lit-react-meter')) {
@@ -1030,6 +1087,7 @@
             ${renderSourcePanel({
               label: 'React runtime panel',
               code: reactRuntimeSource,
+              language: 'tsx',
             })}
           </section>
           <section class="card hybrid-card">
@@ -1054,6 +1112,7 @@
             ${renderSourcePanel({
               label: 'Lit hosts React element',
               code: litHostsSource,
+              language: 'tsx',
             })}
           </section>
           <section class="card react-card lit-react-card">
@@ -1073,6 +1132,7 @@
             ${renderSourcePanel({
               label: 'Lit + React bridge',
               code: litBridgeSource,
+              language: 'tsx',
             })}
           </section>
           <${LiteSavings} />
@@ -1086,6 +1146,9 @@
       }
       mountReactRuntimeDemo(document.getElementById('react-runtime-demo'))
       mountLitReactBridgeDemo(document.getElementById('lit-react-bridge-demo'))
+      highlightSourcePanels().catch(error => {
+        console.warn('Unable to run syntax highlighting', error)
+      })
     </script>
   </body>
 </html>
