@@ -13,6 +13,12 @@ const overviewSelectors = {
   capabilityItems: '.overview-card .capability-item',
 }
 
+/**
+ * Tests the esm.sh demo page to ensure that the published package works as expected.
+ *
+ * NOTE: These tests rely on esm.sh serving the latest published version.
+ * If a new release is pending propagation, expect these checks to fail until the CDN updates.
+ */
 test.describe('esm demo via esm.sh', () => {
   test('renders nested DOM trees and increments counter', async ({ page }) => {
     await page.goto('/esm-demo.html')
