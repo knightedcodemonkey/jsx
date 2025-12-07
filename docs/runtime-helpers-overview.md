@@ -57,6 +57,12 @@ const Counter = () => {
 createRoot(document.getElementById('react-root')!).render(reactJsx`<${Counter} />`)
 ```
 
+## Brace placeholders vs. template slots
+
+- `jsx` never sees JSX-style braces. JavaScript resolves every `${expression}` before parsing, so `{` and `}` in the template become plain text nodes. Whenever you want a dynamic prop, child, or tag you must rely on template literal interpolation (`${...}`) only.
+- `reactJsx` mirrors React's JSX semantics. After JavaScript interpolates `${...}`, the tag still parses `{...}` blocks as runtime expressions, so `className={${css}}` works the same as `className={css}` in real JSX. Use `{...}` whenever you would inside `.jsx/.tsx` files; reach for `${...}` only when you need to inject a value into the surrounding template literal itself (for example, inline callbacks or computed identifiers).
+- Both helpers share the same first-stage template literal behavior, but only `reactJsx` performs the second-stage brace evaluation. Keep that distinction in mind when porting snippets between the two helpers.
+
 ## Parser + WASM considerations
 
 - Browser builds need the WASM binding from `@oxc-parser/binding-wasm32-wasi`. Install it (or rely on CDN bundles that already include it) so the helper can parse JSX outside Node.

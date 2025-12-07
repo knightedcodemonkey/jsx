@@ -136,6 +136,8 @@ npx http-server test/fixtures/rspack-app -p 4173
 
 Visit `http://localhost:4173` (or whichever port you pick) to interact with both the Lit + React hybrid demo and the React-mode bundle.
 
+Need a deeper dive into loader behavior and options? Check out [`src/loader/README.md`](src/loader/README.md) for a full walkthrough.
+
 ## Node / SSR usage
 
 Import the dedicated Node entry (`@knighted/jsx/node`) when you want to run the template tag inside bare Node.js. It automatically bootstraps a DOM shim by loading either `linkedom` or `jsdom` (install one of them to opt in) and then re-exports the usual helpers so you can keep authoring JSX in the same way:

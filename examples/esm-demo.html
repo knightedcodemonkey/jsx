@@ -119,6 +119,10 @@
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
       }
 
+      .capability-item:last-child:nth-child(odd) {
+        grid-column: 1 / -1;
+      }
+
       .capability-item strong {
         display: block;
         font-size: 0.9rem;
@@ -538,7 +542,14 @@
         '    return html`',
         '      <article class="hybrid-shell">',
         '        <div class="react-slot">${this.renderReactTree(reactTree)}</div>',
-        '        <div class="nested-slot">${jsx`<p>Lit renders DOM helpers here.</p>`}</div>',
+        '        <div class="nested-slot">',
+        '          ${jsx`',
+        '            <ul class="list">',
+        '              <li>Lit renders DOM nodes via the jsx helper.</li>',
+        '              <li>The React subtree above mounts with reactJsx.</li>',
+        '            </ul>',
+        '          `}',
+        '        </div>',
         '      </article>',
         '    `',
         '  }',
