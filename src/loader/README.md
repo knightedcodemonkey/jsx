@@ -10,6 +10,31 @@ npm install @knighted/jsx
 
 The loader ships with the package; no extra peer dependency is required.
 
+## Installing the WASM parser for bundlers
+
+When you run the loader inside a browser-targeted bundle (Rspack/Webpack/Vite/etc.), the parser has to fall back to the WebAssembly build. Install the WASM runtime helpers plus the binding itself so JSX inside template literals can still be parsed:
+
+```sh
+# 1. Required runtimes for the WASM binding
+npm install -D @napi-rs/wasm-runtime @emnapi/core @emnapi/runtime
+
+# 2. The parser binding ships with "cpu": ["wasm32"],
+#    so macOS/Linux users must opt into the install explicitly
+npm_config_ignore_platform=true npm install -D @oxc-parser/binding-wasm32-wasi
+```
+
+Prefer to skip `npm_config_ignore_platform` in CI? Vendor the binding the same way this repo's `scripts/setup-wasm.mjs` helper does:
+
+```sh
+npm pack @oxc-parser/binding-wasm32-wasi@0.101.0
+mkdir -p node_modules/@oxc-parser/binding-wasm32-wasi
+tar -xzf oxc-parser-binding-wasm32-wasi-0.101.0.tgz \
+  -C node_modules/@oxc-parser/binding-wasm32-wasi --strip-components=1
+rm oxc-parser-binding-wasm32-wasi-0.101.0.tgz
+```
+
+Those commands pull in the binding plus every runtime dependency, keeping the loader operational across macOS arm64, Linux, and browser builds.
+
 ## Basic usage
 
 Run your source files through the loader. Example Rspack config:
