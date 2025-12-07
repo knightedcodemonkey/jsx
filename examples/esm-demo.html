@@ -56,6 +56,7 @@
         border: 3px solid rgba(37, 99, 235, 0.2);
         border-top-color: #2563eb;
         animation: spinner 1s linear infinite;
+        flex-shrink: 0;
       }
 
       @keyframes spinner {
@@ -423,8 +424,8 @@
     </main>
 
     <script type="module">
-      import { jsx } from 'https://esm.sh/@knighted/jsx@next/lite'
-      import { reactJsx } from 'https://esm.sh/@knighted/jsx@next/react'
+      import { jsx } from 'https://esm.sh/@knighted/jsx@1.2.0-rc.5/lite'
+      import { reactJsx } from 'https://esm.sh/@knighted/jsx@1.2.0-rc.5/react'
       import { useEffect, useRef, useState } from 'https://esm.sh/react@19'
       import { createRoot } from 'https://esm.sh/react-dom@19/client'
       import { LitElement, css, html } from 'https://esm.sh/lit@3'
@@ -515,10 +516,10 @@
         '      <p className="eyebrow">React runtime</p>',
         '      <h3>reactJsx + React 19</h3>',
         '      <div className="react-metrics">',
-        '        {reactMetrics.map(label => reactJsx`<span key={${label}}>${label}</span>`)}',
+        '        ${reactMetrics.map(label => reactJsx`<span key={${label}}>${label}</span>`)}',
         '      </div>',
         "      <p>Button clicks:{' '}${clicks}</p>",
-        '      <button onClick={() => setClicks(value => value + 1)}>',
+        '      <button onClick={${() => setClicks(value => value + 1)}}>',
         '        Trigger React state',
         '      </button>',
         '    </div>',
@@ -559,7 +560,7 @@
         '  return reactJsx`',
         '    <div className="react-panel">',
         '      <lit-react-meter ref={${meterRef}} />',
-        '      <button onClick={() => setSyncCount(value => value + 1)}>',
+        '      <button onClick={${() => setSyncCount(value => value + 1)}}>',
         '        Sync Lit with React state',
         '      </button>',
         '    </div>',
@@ -596,10 +597,10 @@
             <button class="counter-button" onClick={${increment}}>
               Increment
             </button>
-            {${renderSourcePanel({
+            ${renderSourcePanel({
               label: 'DOM counter (jsx)',
               code: counterSource,
-            })}}
+            })}
           </section>
         `
       }
@@ -820,9 +821,9 @@
             <p className="eyebrow">React runtime</p>
             <h3>reactJsx + React 19</h3>
             <div className="react-metrics">
-              {${reactMetrics.map(
+              ${reactMetrics.map(
                 label => reactJsx`<${ReactBadge} key={${label}} label={${label}} />`,
-              )}}
+              )}
             </div>
             <p>
               Button clicks:{' '}<strong>${clicks}</strong>
@@ -899,7 +900,7 @@
               </p>
             </header>
             <div class="lite-metric-grid">
-              {${liteEntryMetrics.map(
+              ${liteEntryMetrics.map(
                 metric =>
                   jsx`<article class="lite-metric">
                     <header>
@@ -909,7 +910,7 @@
                     <p class="lite-metric-size">${metric.raw} • ${metric.gzip}</p>
                     <p class="lite-metric-note">${metric.note}</p>
                   </article>`,
-              )}}
+              )}
             </div>
           </section>
         `
@@ -924,13 +925,13 @@
               </p>
             </header>
             <ul class="capability-list">
-              {${capabilityHighlights.map(
+              ${capabilityHighlights.map(
                 capability =>
                   jsx`<li class="capability-item">
                     <strong>${capability.label}</strong>
                     <p>${capability.detail}</p>
                   </li>`,
-              )}}
+              )}
             </ul>
             <p>
               <a class="demo-link" href="#lite-entrypaths">Jump to the lite entrypaths ↴</a>
@@ -941,31 +942,31 @@
             <header>
               <h2>Try the React runtime</h2>
               <p>
-                {${'The reactJsx helper builds React elements so you can share a single template style between DOM and React trees.'}}
+                The reactJsx helper builds React elements so you can share a single template style between DOM and React trees.
               </p>
             </header>
             <p>
-              {${'The panel below mounts React 19 + react-dom directly from esm.sh and keeps state with hooks.'}}
+              The panel below mounts React 19 + react-dom directly from esm.sh and keeps state with hooks.
             </p>
             <div class="react-mount" id="react-runtime-demo"></div>
             <p>
-              {${'No bundler needed—both the DOM and React runtimes run straight from CDN imports.'}}
+              No bundler needed—both the DOM and React runtimes run straight from CDN imports.
             </p>
-            {${renderSourcePanel({
+            ${renderSourcePanel({
               label: 'React runtime panel',
               code: reactRuntimeSource,
-            })}}
+            })}
           </section>
           <section class="card hybrid-card">
             <header>
               <h2>Lit renders React via reactJsx</h2>
             </header>
             <p>
-              {${'The custom element below registers on load, mounts React with createRoot, and drops the Node back into the Lit template.'}}
+              The custom element below registers on load, mounts React with createRoot, and drops the Node back into the Lit template.
             </p>
             <lit-hosts-react></lit-hosts-react>
             <p>
-              {${'Explore the bundler variant under '}}
+              Explore the bundler variant under${' '}
               <a
                 class="demo-link"
                 href="https://github.com/knightedcodemonkey/jsx/tree/main/test/fixtures/rspack-app"
@@ -975,29 +976,29 @@
                 test/fixtures/rspack-app
               </a>
             </p>
-            {${renderSourcePanel({
+            ${renderSourcePanel({
               label: 'Lit hosts React element',
               code: litHostsSource,
-            })}}
+            })}
           </section>
           <section class="card react-card lit-react-card">
             <header>
               <h2>Combine Lit + React</h2>
               <p>
-                {${'Stream Lit from esm.sh, register a custom element, and let React drive it with shared state.'}}
+                Stream Lit from esm.sh, register a custom element, and let React drive it with shared state.
               </p>
             </header>
             <p>
-              {${'The bridge below mounts a React panel that references a Lit component with nothing but custom element refs.'}}
+              The bridge below mounts a React panel that references a Lit component with nothing but custom element refs.
             </p>
             <div class="react-mount" id="lit-react-bridge-demo"></div>
             <p>
-              {${'Click the sync button to watch React hooks update the Lit meter in real time.'}}
+              Click the sync button to watch React hooks update the Lit meter in real time.
             </p>
-            {${renderSourcePanel({
+            ${renderSourcePanel({
               label: 'Lit + React bridge',
               code: litBridgeSource,
-            })}}
+            })}
           </section>
           <${LiteSavings} />
         </>
