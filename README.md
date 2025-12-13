@@ -21,6 +21,7 @@ A runtime JSX template tag backed by the [`oxc-parser`](https://github.com/oxc-p
 - [Next.js integration](#nextjs-integration)
 - [Browser usage](#browser-usage)
 - [Testing & demos](#testing)
+- [CLI setup](docs/cli.md)
 
 ## Installation
 
@@ -34,11 +35,13 @@ npm install @knighted/jsx
 > [!NOTE]
 > Planning to use the React runtime (`@knighted/jsx/react`)? Install `react@>=18` and `react-dom@>=18` alongside this package so the helper can create elements and render them through ReactDOM.
 
-The parser automatically uses native bindings when it runs in Node.js. To enable the WASM binding for browser builds you also need the `@oxc-parser/binding-wasm32-wasi` package. Because npm enforces the `cpu: ["wasm32"]` flag you must opt into the install explicitly:
+The parser automatically uses native bindings when it runs in Node.js. To enable the WASM binding for browser builds you also need the `@oxc-parser/binding-wasm32-wasi` package. The quickest path is:
 
 ```sh
-npm_config_ignore_platform=true npm install @oxc-parser/binding-wasm32-wasi
+npx @knighted/jsx init
 ```
+
+See [docs/cli.md](docs/cli.md) for flags, dry runs, and package-manager overrides. If you prefer manual install, run `npm_config_ignore_platform=true npm install @oxc-parser/binding-wasm32-wasi`.
 
 > [!TIP]
 > Public CDNs such as `esm.sh` or `jsdelivr` already publish bundles that include the WASM binding, so you can import this package directly from those endpoints in `<script type="module">` blocks without any extra setup.
