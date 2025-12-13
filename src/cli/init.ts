@@ -321,10 +321,28 @@ async function main() {
   if (resolvedPath) log(`- Verified import: ${resolvedPath}`)
 }
 
-main().catch(error => {
-  console.error(
-    'Failed to set up WASM binding:',
-    error instanceof Error ? error.message : error,
-  )
-  process.exitCode = 1
-})
+if (process.env.KNIGHTED_JSX_CLI_TEST !== '1') {
+  main().catch(error => {
+    console.error(
+      'Failed to set up WASM binding:',
+      error instanceof Error ? error.message : error,
+    )
+    process.exitCode = 1
+  })
+}
+
+export {
+  parseArgs,
+  detectPackageManager,
+  ensurePackageJson,
+  runNpmPack,
+  parsePackageName,
+  installBinding,
+  installRuntimeDeps,
+  isDependencyInstalled,
+  persistBindingSpec,
+  verifyBinding,
+  promptYesNo,
+  maybeHandleConfigPrompt,
+  main,
+}
