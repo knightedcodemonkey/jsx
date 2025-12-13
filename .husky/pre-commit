@@ -1,4 +1,5 @@
 #!/usr/bin/env sh
-set -euo pipefail
+set -eu
+if (set -o pipefail) 2>/dev/null; then :; fi
 
 npx lint-staged

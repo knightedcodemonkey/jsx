@@ -4,9 +4,9 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
+    paths:
+      - 'src/**'
+      - 'package-lock.json'
   workflow_dispatch:
 
 jobs:

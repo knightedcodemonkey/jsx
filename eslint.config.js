@@ -45,6 +45,12 @@ export default [
     },
   },
   {
+    files: ['src/cli/**/*', 'scripts/**/*'],
+    rules: {
+      'n/no-process-exit': 'off',
+    },
+  },
+  {
     files: ['test/fixtures/**/*'],
     rules: {
       'n/no-missing-import': 'off',
