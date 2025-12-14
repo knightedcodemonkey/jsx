@@ -57,6 +57,12 @@ export default [
     },
   },
   {
+    files: ['test/cli-init.test.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
+  {
     ...playwrightConfig,
     files: ['playwright/**/*.{ts,tsx,js}'],
   },

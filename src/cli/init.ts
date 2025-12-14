@@ -10,6 +10,22 @@ const DEFAULT_BINDING_SPEC =
   process.env.WASM_BINDING_PACKAGE ?? '@oxc-parser/binding-wasm32-wasi@^0.99.0'
 const RUNTIME_DEPS = ['@napi-rs/wasm-runtime', '@emnapi/runtime', '@emnapi/core']
 const SUPPORTED_PACKAGE_MANAGERS = ['npm', 'pnpm', 'yarn', 'bun'] as const
+// Node emits a noisy ExperimentalWarning whenever the WASI shim loads; silence just that message.
+const WASI_WARNING_SNIPPET = 'WASI is an experimental feature'
+const LOADER_CONFIG_EXAMPLE = [
+  '// Example loader entry to drop into your bundler rules array:',
+  '{',
+  "  loader: '@knighted/jsx/loader',",
+  '  options: {',
+  "    tags: ['jsx', 'reactJsx'],",
+  '    tagModes: {',
+  "      reactJsx: 'react',",
+  '    },',
+  '  },',
+  '}',
+].join('\n')
+
+suppressExperimentalWasiWarning()
 
 type PackageManager = (typeof SUPPORTED_PACKAGE_MANAGERS)[number]
 
@@ -112,11 +128,17 @@ function ensurePackageJson(cwd: string) {
   }
 }
 
-function runNpmPack(spec: string, cwd: string, dryRun: boolean, verbose: boolean) {
+function runNpmPack(
+  spec: string,
+  cwd: string,
+  dryRun: boolean,
+  verbose: boolean,
+  execFn: typeof execFileSync = execFileSync,
+) {
   logVerbose(`> npm pack ${spec}`, verbose)
   if (dryRun) return `${spec.replace(/\W+/g, '_')}.tgz`
 
-  const output = execFileSync('npm', ['pack', spec], {
+  const output = execFn('npm', ['pack', spec], {
     cwd,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'inherit'],
@@ -133,14 +155,22 @@ function parsePackageName(spec: string) {
   return { name, version }
 }
 
+type PackFunction = (
+  spec: string,
+  cwd: string,
+  dryRun: boolean,
+  verbose: boolean,
+) => string
+
 async function installBinding(
   spec: string,
   cwd: string,
   dryRun: boolean,
   verbose: boolean,
+  pack: PackFunction = runNpmPack,
 ): Promise<{ targetDir: string; tarballPath?: string; name: string; version?: string }> {
   const { name, version } = parsePackageName(spec)
-  const tarballName = runNpmPack(spec, cwd, dryRun, verbose)
+  const tarballName = pack(spec, cwd, dryRun, verbose)
   const tarballPath = path.resolve(cwd, tarballName)
   const targetDir = path.resolve(cwd, 'node_modules', ...name.split('/'))
 
@@ -161,6 +191,7 @@ function installRuntimeDeps(
   cwd: string,
   dryRun: boolean,
   verbose: boolean,
+  spawner: typeof spawnSync = spawnSync,
 ) {
   const missing = deps.filter(dep => !isDependencyInstalled(dep, cwd))
   if (missing.length === 0) {
@@ -178,7 +209,7 @@ function installRuntimeDeps(
   const [command, args] = commands[pm]
   logVerbose(`> ${command} ${args.join(' ')}`, verbose)
   if (!dryRun) {
-    const result = spawnSync(command, args, { cwd, stdio: 'inherit' })
+    const result = spawner(command, args, { cwd, stdio: 'inherit' })
     if (result.status !== 0) {
       throw new Error(`Failed to install runtime dependencies with ${pm}`)
     }
@@ -221,16 +252,19 @@ function persistBindingSpec(
   }
 }
 
+type BindingImporter = (specifier: string) => Promise<unknown>
+
 async function verifyBinding(
   name: string,
   cwd: string,
   verbose: boolean,
+  importer: BindingImporter = specifier => import(specifier),
 ): Promise<string> {
   const requireFromCwd = createRequire(path.join(cwd, 'package.json'))
   const resolved = requireFromCwd.resolve(name)
   logVerbose(`> Resolved ${name} to ${resolved}`, verbose)
 
-  const imported = await import(pathToFileURL(resolved).href)
+  const imported = await importer(pathToFileURL(resolved).href)
   if (!imported) {
     throw new Error(`Imported ${name} is empty; verification failed`)
   }
@@ -272,16 +306,42 @@ async function maybeHandleConfigPrompt(skipConfig: boolean, force: boolean) {
   log(
     '> Loader assistance is interactive and not applied automatically yet. See docs at docs/cli.md for next steps.',
   )
+  log('> Example loader config (webpack / rspack):')
+  console.log(LOADER_CONFIG_EXAMPLE)
 }
 
-async function main() {
-  const options = parseArgs(process.argv.slice(2))
-  ensurePackageJson(options.cwd)
+type MainDeps = {
+  parseArgs: typeof parseArgs
+  ensurePackageJson: typeof ensurePackageJson
+  detectPackageManager: typeof detectPackageManager
+  installRuntimeDeps: typeof installRuntimeDeps
+  installBinding: typeof installBinding
+  persistBindingSpec: typeof persistBindingSpec
+  verifyBinding: typeof verifyBinding
+  maybeHandleConfigPrompt: typeof maybeHandleConfigPrompt
+  log: typeof log
+}
 
-  const packageManager = detectPackageManager(options.cwd, options.packageManager)
-  log(`> Using package manager: ${packageManager}`)
+async function main(overrides: Partial<MainDeps> = {}) {
+  const {
+    parseArgs: parseArgsImpl = parseArgs,
+    ensurePackageJson: ensurePackageJsonImpl = ensurePackageJson,
+    detectPackageManager: detectPackageManagerImpl = detectPackageManager,
+    installRuntimeDeps: installRuntimeDepsImpl = installRuntimeDeps,
+    installBinding: installBindingImpl = installBinding,
+    persistBindingSpec: persistBindingSpecImpl = persistBindingSpec,
+    verifyBinding: verifyBindingImpl = verifyBinding,
+    maybeHandleConfigPrompt: maybeHandleConfigPromptImpl = maybeHandleConfigPrompt,
+    log: logImpl = log,
+  } = overrides
 
-  const installedRuntimeDeps = installRuntimeDeps(
+  const options = parseArgsImpl(process.argv.slice(2))
+  ensurePackageJsonImpl(options.cwd)
+
+  const packageManager = detectPackageManagerImpl(options.cwd, options.packageManager)
+  logImpl(`> Using package manager: ${packageManager}`)
+
+  const installedRuntimeDeps = installRuntimeDepsImpl(
     packageManager,
     RUNTIME_DEPS,
     options.cwd,
@@ -289,14 +349,14 @@ async function main() {
     options.verbose,
   )
 
-  const binding = await installBinding(
+  const binding = await installBindingImpl(
     options.wasmPackage,
     options.cwd,
     options.dryRun,
     options.verbose,
   )
 
-  persistBindingSpec(
+  persistBindingSpecImpl(
     options.cwd,
     binding.name,
     binding.version,
@@ -306,19 +366,19 @@ async function main() {
 
   let resolvedPath: string | undefined
   if (!options.dryRun) {
-    resolvedPath = await verifyBinding(binding.name, options.cwd, options.verbose)
-    log(`> Verified ${binding.name} at ${resolvedPath}`)
+    resolvedPath = await verifyBindingImpl(binding.name, options.cwd, options.verbose)
+    logImpl(`> Verified ${binding.name} at ${resolvedPath}`)
   }
 
-  await maybeHandleConfigPrompt(options.skipConfig, options.force)
+  await maybeHandleConfigPromptImpl(options.skipConfig, options.force)
 
-  log('\nDone!')
-  log(`- Binding: ${binding.name}${binding.version ? `@${binding.version}` : ''}`)
-  log(`- Target: ${binding.targetDir}`)
-  log(
+  logImpl('\nDone!')
+  logImpl(`- Binding: ${binding.name}${binding.version ? `@${binding.version}` : ''}`)
+  logImpl(`- Target: ${binding.targetDir}`)
+  logImpl(
     `- Runtime deps installed: ${installedRuntimeDeps.join(', ') || 'none (already present)'}`,
   )
-  if (resolvedPath) log(`- Verified import: ${resolvedPath}`)
+  if (resolvedPath) logImpl(`- Verified import: ${resolvedPath}`)
 }
 
 if (process.env.KNIGHTED_JSX_CLI_TEST !== '1') {
@@ -345,4 +405,23 @@ export {
   promptYesNo,
   maybeHandleConfigPrompt,
   main,
+}
+
+function suppressExperimentalWasiWarning() {
+  const originalEmitWarning = process.emitWarning.bind(process)
+  process.emitWarning = ((warning: string | Error, ...args: unknown[]) => {
+    const [typeMaybe] = args
+    const message = typeof warning === 'string' ? warning : warning.message
+    const name = typeof warning === 'string' ? undefined : warning.name
+    const type = typeof typeMaybe === 'string' ? typeMaybe : undefined
+
+    if (
+      message.includes(WASI_WARNING_SNIPPET) &&
+      (name === 'ExperimentalWarning' || type === 'ExperimentalWarning')
+    ) {
+      return
+    }
+
+    return (originalEmitWarning as (...args: unknown[]) => void)(warning, ...args)
+  }) as typeof process.emitWarning
 }
