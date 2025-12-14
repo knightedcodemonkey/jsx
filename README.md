@@ -168,7 +168,7 @@ export default {
 
 Pair the loader with your existing TypeScript/JSX transpiler (SWC, Babel, Rspack’s builtin loader, etc.) so regular React components and the tagged templates can live side by side.
 
-Need a deeper dive into loader behavior and options? Check out [`src/loader/README.md`](src/loader/README.md) for all the options. There is also a standalone walkthrough at [morganney/jsx-loader-demo](https://github.com/morganney/jsx-loader-demo):
+Need a deeper dive into loader behavior and options? Check out [`src/loader/README.md`](src/loader/README.md). There is also a standalone walkthrough at [morganney/jsx-loader-demo](https://github.com/morganney/jsx-loader-demo).
 
 ## Node / SSR usage
 
