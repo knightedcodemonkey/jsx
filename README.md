@@ -20,6 +20,7 @@ A runtime JSX template tag backed by the [`oxc-parser`](https://github.com/oxc-p
 - [Node / SSR usage](#node--ssr-usage)
 - [Browser usage](#browser-usage)
 - [TypeScript plugin](docs/ts-plugin.md)
+- [TypeScript guide](docs/typescript.md)
 - [Component testing](docs/testing.md)
 - [CLI setup](docs/cli.md)
 
@@ -229,6 +230,7 @@ The [`@knighted/jsx-ts-plugin`](docs/ts-plugin.md) keeps DOM (`jsx`) and React (
 
 - Choose **TypeScript: Select TypeScript Version → Use Workspace Version** in VS Code so the plugin loads from `node_modules`.
 - Run `tsc --noEmit` (or your build step) to surface the same diagnostics your editor shows.
+- Set `jsxImportSource` to `@knighted/jsx` when compiling `.tsx` helpers. The package publishes the `@knighted/jsx/jsx-runtime` module TypeScript expects. The runtime export exists solely for diagnostics and will throw if you call it at execution time—switch back to tagged templates before shipping code.
 - Drop `/* @jsx-dom */` or `/* @jsx-react */` immediately before a tagged template when you need a one-off override.
 - Import the `JsxRenderable` helper type from `@knighted/jsx` whenever you annotate DOM-facing utilities without the plugin:
 
@@ -238,6 +240,9 @@ The [`@knighted/jsx-ts-plugin`](docs/ts-plugin.md) keeps DOM (`jsx`) and React (
   const coerceToDom = (value: unknown): JsxRenderable => value ?? ''
   const view = jsx`<section>${coerceToDom(data)}</section>`
   ```
+
+> [!TIP]
+> Full `tsconfig` examples (single config or split React + DOM helper projects) live in [docs/typescript.md](docs/typescript.md).
 
 Head over to [docs/ts-plugin.md](docs/ts-plugin.md) for deeper guidance, advanced options, and troubleshooting tips.
 
