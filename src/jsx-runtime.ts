@@ -1,0 +1,70 @@
+import type { JsxRenderable } from './jsx.js'
+
+const runtimeModuleId = '@knighted/jsx/jsx-runtime'
+const fragmentSymbolDescription = `${runtimeModuleId}::Fragment`
+
+const runtimeNotAvailable = () => {
+  throw new Error(
+    `The automatic JSX runtime is only published for TypeScript diagnostics. ` +
+      `Render DOM nodes through the jsx tagged template exported by @knighted/jsx instead.`,
+  )
+}
+
+export const Fragment: unique symbol = Symbol.for(fragmentSymbolDescription)
+
+export function jsx(_: unknown, __?: unknown, ___?: unknown): JsxRenderable {
+  return runtimeNotAvailable()
+}
+
+export function jsxs(_: unknown, __?: unknown, ___?: unknown): JsxRenderable {
+  return runtimeNotAvailable()
+}
+
+export function jsxDEV(
+  _: unknown,
+  __?: unknown,
+  ___?: unknown,
+  ____?: boolean,
+  _____?: unknown,
+  ______?: unknown,
+): JsxRenderable {
+  return runtimeNotAvailable()
+}
+
+type DataAttributes = {
+  [K in `data-${string}`]?: string | number | boolean | null | undefined
+}
+
+type AriaAttributes = {
+  [K in `aria-${string}`]?: string | number | boolean | null | undefined
+}
+
+type EventHandlers<T extends EventTarget> = {
+  [K in keyof GlobalEventHandlersEventMap as `on${Capitalize<string & K>}`]?: (
+    event: GlobalEventHandlersEventMap[K],
+  ) => void
+}
+
+type ElementProps<Tag extends keyof HTMLElementTagNameMap> = Partial<
+  HTMLElementTagNameMap[Tag]
+> &
+  EventHandlers<HTMLElementTagNameMap[Tag]> &
+  DataAttributes &
+  AriaAttributes & {
+    class?: string
+    className?: string
+    style?: string | Record<string, string | number>
+    ref?:
+      | ((value: HTMLElementTagNameMap[Tag]) => void)
+      | { current: HTMLElementTagNameMap[Tag] | null }
+    children?: JsxRenderable | JsxRenderable[]
+  }
+
+declare global {
+  namespace JSX {
+    type Element = JsxRenderable
+    type IntrinsicElements = {
+      [Tag in keyof HTMLElementTagNameMap]: ElementProps<Tag>
+    }
+  }
+}

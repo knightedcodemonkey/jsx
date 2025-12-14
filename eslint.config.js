@@ -63,6 +63,13 @@ export default [
     },
   },
   {
+    files: ['src/jsx-runtime.ts'],
+    rules: {
+      '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/no-namespace': 'off',
+    },
+  },
+  {
     ...playwrightConfig,
     files: ['playwright/**/*.{ts,tsx,js}'],
   },

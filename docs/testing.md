@@ -91,5 +91,5 @@ Notes:
 
 ## Troubleshooting
 
-- Missing `jsx-runtime` errors: ensure your TS config maps `@knighted/jsx/jsx-runtime` to the local package (or install typings) when authoring `.tsx` tests. Tagged templates in `.ts` files do not need that mapping.
+- Missing `jsx-runtime` errors: reinstall dependencies (or re-run your package manager) so the `@knighted/jsx/jsx-runtime` entry from this package is available. Tagged templates in `.ts` files do not load that module, but `.tsx` helpers compiled with `jsxImportSource` still expect it to exist.
 - If events fail to fire, verify your environment is `jsdom`/`happy-dom` and that the element was appended to the document (some libraries query `document.body`).
