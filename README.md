@@ -18,10 +18,9 @@ A runtime JSX template tag backed by the [`oxc-parser`](https://github.com/oxc-p
 - [React runtime](#react-runtime-reactjsx)
 - [Loader integration](#loader-integration)
 - [Node / SSR usage](#node--ssr-usage)
-- [Next.js integration](#nextjs-integration)
 - [Browser usage](#browser-usage)
+- [TypeScript plugin](docs/ts-plugin.md)
 - [Component testing](docs/testing.md)
-- [Testing & demos](#testing)
 - [CLI setup](docs/cli.md)
 
 ## Installation
@@ -31,7 +30,7 @@ npm install @knighted/jsx
 ```
 
 > [!IMPORTANT]
-> This package is ESM-only and targets browsers or ESM-aware bundlers. `require()` is not supported; use native `import`/`<script type="module">` and a DOM-like environment.
+> `@knighted/jsx` ships as ESM-only. The dual-mode `.cjs` artifacts we build internally are not published.
 
 > [!NOTE]
 > Planning to use the React runtime (`@knighted/jsx/react`)? Install `react@>=18` and `react-dom@>=18` alongside this package so the helper can create elements and render them through ReactDOM.
@@ -95,6 +94,51 @@ createRoot(document.getElementById('root')!).render(reactJsx`<${App} />`)
 
 The React runtime shares the same template semantics as `jsx`, except it returns React elements (via `React.createElement`) so you can embed other React components with `<${MyComponent} />` and use hooks/state as usual. The helper lives in a separate subpath so DOM-only consumers never pay the React dependency cost.
 
+### DOM-specific props
+
+- `style` accepts either a string or an object. Object values handle CSS custom properties (`--token`) automatically.
+- `class` and `className` both work and can be strings or arrays.
+- Event handlers use the `on<Event>` naming convention (e.g. `onClick`).
+- `ref` supports callback refs as well as mutable `{ current }` objects.
+- `dangerouslySetInnerHTML` expects an object with an `__html` field, mirroring React.
+
+### Fragments & SVG
+
+Use JSX fragments (`<>...</>`) for multi-root templates. SVG trees automatically switch to the `http://www.w3.org/2000/svg` namespace once they enter an `<svg>` tag, and fall back inside `<foreignObject>`.
+
+### Interpolations and components
+
+- `${...}` works exactly like JSX braces: drop expressions anywhere (text, attributes, spreads, conditionals) and the runtime keeps the original syntax. Text nodes do not need extra wrapping—`Count is ${value}` already works.
+- Interpolated values can be primitives, DOM nodes, arrays/iterables, other `jsx` trees, or component functions. Resolve Promises before passing them in.
+- Inline components are just functions/classes you interpolate as the tag name; they receive props plus optional `children` and can return anything `jsx` accepts.
+
+```ts
+const Button = ({ variant = 'primary' }) => {
+  let count = 3
+
+  return jsx`
+    <button
+      data-variant=${variant}
+      onClick=${() => {
+        count += 1
+        console.log(`Count is now ${count}`)
+      }}
+    >
+      Count is ${count}
+    </button>
+  `
+}
+
+const view = jsx`
+  <section>
+    <p>Inline components can manage their own state.</p>
+    <${Button} variant="ghost" />
+  </section>
+`
+
+document.body.append(view)
+```
+
 ## Loader integration
 
 Use the published loader entry (`@knighted/jsx/loader`) when you want your bundler to rewrite tagged template literals at build time. The loader finds every ` jsx`` ` (and, by default, ` reactJsx`` ` ) invocation, rebuilds the template with real JSX semantics, and hands back transformed source that can run in any environment.
@@ -122,24 +166,9 @@ export default {
 }
 ```
 
-Pair the loader with your existing TypeScript/JSX transpiler (SWC, Babel, Rspack’s builtin loader, etc.) so regular React components and the tagged templates can live side by side. The demo fixture under `test/fixtures/rspack-app` shows a full setup that mixes Lit and React, and there is also a standalone walkthrough at [morganney/jsx-loader-demo](https://github.com/morganney/jsx-loader-demo):
+Pair the loader with your existing TypeScript/JSX transpiler (SWC, Babel, Rspack’s builtin loader, etc.) so regular React components and the tagged templates can live side by side.
 
-```sh
-npm run build
-npm run setup:wasm
-npm run build:fixture
-```
-
-Then point a static server at the fixture root (which serves `index.html` plus the bundled `dist/hybrid.js` and `dist/reactMode.js`) to see it in a browser:
-
-```sh
-# Serve the rspack fixture from the repo root
-npx http-server test/fixtures/rspack-app -p 4173
-```
-
-Visit `http://localhost:4173` (or whichever port you pick) to interact with both the Lit + React hybrid demo and the React-mode bundle.
-
-Need a deeper dive into loader behavior and options? Check out [`src/loader/README.md`](src/loader/README.md) for a full walkthrough.
+Need a deeper dive into loader behavior and options? Check out [`src/loader/README.md`](src/loader/README.md). There is also a standalone walkthrough at [morganney/jsx-loader-demo](https://github.com/morganney/jsx-loader-demo).
 
 ## Node / SSR usage
 
@@ -175,126 +204,7 @@ console.log(shell.outerHTML)
 
 This repository ships a ready-to-run fixture under `test/fixtures/node-ssr` that uses the Node entry to render a Lit shell plus a React subtree through `ReactDOMServer.renderToString`. Run `npm run build` once to emit `dist/`, then execute `npm run demo:node-ssr` to log the generated markup.
 
-## Next.js integration
-
-> [!IMPORTANT]
-> Next already compiles `.tsx/.jsx` files, so you do not need this helper to author regular components. The loader only adds value when you want to reuse the tagged template runtime during SSR—mixing DOM nodes built by `jsx` with React markup, rendering shared utilities on the server, or processing tagged templates outside the usual component pipeline.
-
-Next (and Remix/other Webpack-based SSR stacks) can run the loader by adding a post-loader to the framework config so the template tags are rewritten after SWC/Babel transpilation. The fixture under `test/fixtures/next-app` ships a complete example that mixes DOM and React helpers during SSR so you can pre-render DOM snippets (for emails, HTML streams, CMS content, etc.) while still returning React components from your pages. The important bits live in `next.config.mjs`:
-
-```js
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const repoRoot = path.resolve(__dirname, '../../..')
-const distDir = path.join(repoRoot, 'dist')
-
-export default {
-  output: 'export',
-  webpack(config) {
-    config.resolve.alias = {
-      ...(config.resolve.alias ?? {}),
-      '@knighted/jsx': path.join(distDir, 'index.js'),
-      '@knighted/jsx/react': path.join(distDir, 'react/index.js'),
-    }
-
-    config.module.rules.push({
-      test: /\.[jt]sx?$/,
-      include: path.join(__dirname, 'pages'),
-      enforce: 'post',
-      use: [{ loader: path.join(distDir, 'loader/jsx.js') }],
-    })
-
-    return config
-  },
-}
-```
-
-Inside `pages/index.tsx` you can freely mix the helpers. The snippet below uses `jsx` on the server to prebuild a DOM fragment and then injects that HTML alongside a normal React component on the client:
-
-```ts
-import type { GetServerSideProps } from 'next'
-import { jsx } from '@knighted/jsx'
-import { reactJsx } from '@knighted/jsx/react'
-
-const buildDomShell = () =>
-  jsx`
-    <section data-kind="dom-runtime">
-      <h2>DOM runtime</h2>
-      <p>Rendered as static HTML on the server</p>
-    </section>
-  `
-
-export const getServerSideProps: GetServerSideProps = async () => {
-  return {
-    props: {
-      domShell: buildDomShell().outerHTML,
-    },
-  }
-}
-
-const ReactBadge = () =>
-  reactJsx`
-    <button type="button">React badge</button>
-  `
-
-type PageProps = { domShell: string }
-
-export default function Page({ domShell }: PageProps) {
-  return reactJsx`
-    <main>
-      <${ReactBadge} />
-      <div dangerouslySetInnerHTML={${{ __html: domShell }}}></div>
-    </main>
-  `
-}
-```
-
-Build the fixture locally with `npx next build test/fixtures/next-app` (or run `npx vitest run test/next-fixture.test.ts`) to verify the integration end to end. You can adapt the same pattern in `app/` routes, API handlers, or server actions whenever you need DOM output generated by the tagged template runtime.
-
-### Interpolations
-
-- All dynamic values are provided through standard template literal expressions (`${...}`) and map to JSX exactly where they appear. Interpolations used as text children no longer need an extra `{...}` wrapper—the runtime automatically recognizes placeholders inside text segments (so `Count is ${value}` just works). Use the usual JSX braces when the syntax requires them (`className={${value}}`, `{...props}`, conditionals, etc.).
-- Every expression can be any JavaScript value: primitives, arrays/iterables, DOM nodes, functions, other `jsx` results, or custom component references.
-- Async values (Promises) are not supported. Resolve them before passing into the template.
-
-### Components
-
-You can inline components by interpolating the function used for the tag name. The component receives a props object plus the optional `children` prop and can return anything that `jsx` can render (DOM nodes, strings, fragments, other arrays, ...).
-
-```ts
-const Button = ({ children, variant = 'primary' }) => {
-  const el = document.createElement('button')
-  el.dataset.variant = variant
-  el.append(children ?? '')
-  return el
-}
-
-const label = 'Tap me'
-
-const view = jsx`
-  <section>
-    <${Button} variant="ghost">
-      ${label}
-    </${Button}>
-  </section>
-`
-
-document.body.append(view)
-```
-
-### Fragments & SVG
-
-Use JSX fragments (`<>...</>`) for multi-root templates. SVG trees automatically switch to the `http://www.w3.org/2000/svg` namespace once they enter an `<svg>` tag, and fall back inside `<foreignObject>`.
-
-### DOM-specific props
-
-- `style` accepts either a string or an object. Object values handle CSS custom properties (`--token`) automatically.
-- `class` and `className` both work and can be strings or arrays.
-- Event handlers use the `on<Event>` naming convention (e.g. `onClick`).
-- `ref` supports callback refs as well as mutable `{ current }` objects.
-- `dangerouslySetInnerHTML` expects an object with an `__html` field, mirroring React.
+See how to [integrate with Next.js](./docs/nextjs-integration.md).
 
 ## Browser usage
 
@@ -303,25 +213,25 @@ When you are not using a bundler, load the module directly from a CDN that under
 ```html
 <script type="module">
   import { jsx } from 'https://esm.sh/@knighted/jsx'
+  import { reactJsx } from 'https://esm.sh/@knighted/jsx/react'
+  import { useState } from 'https://esm.sh/react@19'
+  import { createRoot } from 'https://esm.sh/react-dom@19/client'
 
-  const message = jsx`<p>Hello from the browser</p>`
-  document.body.append(message)
+  const reactMount = jsx`<div data-kind="react-mount" />`
+
+  const CounterButton = () => {
+    const [count, setCount] = useState(0)
+    return reactJsx`
+      <button type="button" onClick={${() => setCount(value => value + 1)}}>
+        Count is ${count}
+      </button>
+    `
+  }
+
+  document.body.append(reactMount)
+  createRoot(reactMount).render(reactJsx`<${CounterButton} />`)
 </script>
 ```
-
-If you are building locally with Vite/Rollup/Webpack make sure the WASM binding is installable so the bundler can resolve `@oxc-parser/binding-wasm32-wasi` (details below).
-
-### Installing the WASM binding locally
-
-`@oxc-parser/binding-wasm32-wasi` publishes with `"cpu": ["wasm32"]`, so npm/yarn/pnpm skip it on macOS and Linux unless you override the platform guard. Run the helper script after cloning (or whenever you clean `node_modules`) to pull the binding into place for the Vite demo and any other local bundler builds:
-
-```sh
-npm run setup:wasm
-```
-
-The script downloads the published tarball via `npm pack`, extracts it into `node_modules/@oxc-parser/binding-wasm32-wasi`, and removes the temporary archive so your lockfile stays untouched. If you need to test a different binding build, set `WASM_BINDING_PACKAGE` before running the script (for example, `WASM_BINDING_PACKAGE=@oxc-parser/binding-wasm32-wasi@0.100.0 npm run setup:wasm`).
-
-Prefer the manual route? You can still run `npm_config_ignore_platform=true npm install --no-save @oxc-parser/binding-wasm32-wasi@^0.99.0`, but the script above replicates the vendored behavior with less ceremony.
 
 ### Lite bundle entry
 
@@ -335,44 +245,6 @@ import { reactJsx as nodeReactJsx } from '@knighted/jsx/node/react/lite'
 ```
 
 Each lite subpath ships the same API as its standard counterpart but is pre-minified and scoped to just that runtime (DOM, React, Node DOM, or Node React). Swap them in when you want the smallest possible bundles; otherwise the default exports keep working as-is.
-
-## Testing
-
-Looking for guidance on testing your own components with `jsx` or `reactJsx`? See
-[docs/testing.md](docs/testing.md) for DOM and React runtime examples. The commands
-below cover the library's internal test suites.
-
-Run the Vitest suite (powered by jsdom) to exercise the DOM runtime and component support:
-
-```sh
-npm run test
-```
-
-Tests live in `test/jsx.test.ts` and cover DOM props/events, custom components, fragments, and iterable children so you can see exactly how the template tag is meant to be used.
-
-Need full end-to-end coverage? The Playwright suite boots the CDN demo (`examples/esm-demo.html`) and the loader-backed Rspack fixture to verify nested trees, sibling structures, and interop with Lit/React:
-
-```sh
-npm run test:e2e
-```
-
-> [!NOTE]
-> The e2e script builds the library, installs the WASM parser binding, bundles the loader fixture, and then runs `playwright test`. Make sure Playwright browsers are installed locally (`npx playwright install --with-deps chromium`).
-
-## Browser demo / Vite build
-
-This repo ships with a ready-to-run Vite demo under `examples/browser` that bundles the library (make sure you have installed the WASM binding via the command above first). Use it for a full end-to-end verification in a real browser (the demo imports `@knighted/jsx/lite` so you can confirm the lighter entry behaves identically):
-
-```sh
-# Start a dev server at http://localhost:5173
-npm run dev
-
-# Produce a production Rollup build and preview it
-npm run build:demo
-npm run preview
-```
-
-For a zero-build verification of the lite bundle, open `examples/esm-demo-lite.html` locally (double-click or run `open examples/esm-demo-lite.html`) or visit the deployed GitHub Pages build produced by `.github/workflows/deploy-demo.yml` (it serves that same lite HTML demo).
 
 ## Limitations
 
