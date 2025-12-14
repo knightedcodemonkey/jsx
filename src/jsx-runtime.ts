@@ -45,8 +45,9 @@ type EventHandlers<T extends EventTarget> = {
   ) => void
 }
 
-type ElementProps<Tag extends keyof HTMLElementTagNameMap> = Partial<
-  HTMLElementTagNameMap[Tag]
+type ElementProps<Tag extends keyof HTMLElementTagNameMap> = Omit<
+  Partial<HTMLElementTagNameMap[Tag]>,
+  'children'
 > &
   EventHandlers<HTMLElementTagNameMap[Tag]> &
   DataAttributes &
