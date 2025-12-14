@@ -20,6 +20,7 @@ A runtime JSX template tag backed by the [`oxc-parser`](https://github.com/oxc-p
 - [Node / SSR usage](#node--ssr-usage)
 - [Next.js integration](#nextjs-integration)
 - [Browser usage](#browser-usage)
+- [Component testing](docs/testing.md)
 - [Testing & demos](#testing)
 - [CLI setup](docs/cli.md)
 
@@ -336,6 +337,10 @@ import { reactJsx as nodeReactJsx } from '@knighted/jsx/node/react/lite'
 Each lite subpath ships the same API as its standard counterpart but is pre-minified and scoped to just that runtime (DOM, React, Node DOM, or Node React). Swap them in when you want the smallest possible bundles; otherwise the default exports keep working as-is.
 
 ## Testing
+
+Looking for guidance on testing your own components with `jsx` or `reactJsx`? See
+[docs/testing.md](docs/testing.md) for DOM and React runtime examples. The commands
+below cover the library's internal test suites.
 
 Run the Vitest suite (powered by jsdom) to exercise the DOM runtime and component support:
 
