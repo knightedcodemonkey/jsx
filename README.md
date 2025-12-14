@@ -206,6 +206,41 @@ This repository ships a ready-to-run fixture under `test/fixtures/node-ssr` that
 
 See how to [integrate with Next.js](./docs/nextjs-integration.md).
 
+## TypeScript integration
+
+The [`@knighted/jsx-ts-plugin`](docs/ts-plugin.md) keeps DOM (`jsx`) and React (`reactJsx`) templates type-safe with a single config block. The plugin maps each helper to the right mode by default, so you can mix DOM nodes and React components in the same file without juggling multiple plugin entries.
+
+```jsonc
+// tsconfig.json
+{
+  "compilerOptions": {
+    "plugins": [
+      {
+        "name": "@knighted/jsx-ts-plugin",
+        "tagModes": {
+          "jsx": "dom",
+          "reactJsx": "react",
+        },
+      },
+    ],
+  },
+}
+```
+
+- Choose **TypeScript: Select TypeScript Version → Use Workspace Version** in VS Code so the plugin loads from `node_modules`.
+- Run `tsc --noEmit` (or your build step) to surface the same diagnostics your editor shows.
+- Drop `/* @jsx-dom */` or `/* @jsx-react */` immediately before a tagged template when you need a one-off override.
+- Import the `JsxRenderable` helper type from `@knighted/jsx` whenever you annotate DOM-facing utilities without the plugin:
+
+  ```ts
+  import type { JsxRenderable } from '@knighted/jsx'
+
+  const coerceToDom = (value: unknown): JsxRenderable => value ?? ''
+  const view = jsx`<section>${coerceToDom(data)}</section>`
+  ```
+
+Head over to [docs/ts-plugin.md](docs/ts-plugin.md) for deeper guidance, advanced options, and troubleshooting tips.
+
 ## Browser usage
 
 When you are not using a bundler, load the module directly from a CDN that understands npm packages:
