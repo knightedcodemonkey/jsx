@@ -1,6 +1,9 @@
 # TypeScript Plugin Support
 
-Use the [`@knighted/jsx-ts-plugin`](https://github.com/knightedcodemonkey/jsx-ts-plugin) to teach both the TypeScript language service and `tsc --noEmit` how to interpret `@knighted/jsx` tagged templates. The plugin understands the DOM (`jsx`) and React (`reactJsx`) entrypoints, applies mode-aware diagnostics, and forwards the same rules to the compiler so command-line builds match what your editor reports.
+Use the [`@knighted/jsx-ts-plugin`](https://github.com/knightedcodemonkey/jsx-ts-plugin) to teach the TypeScript language service how to interpret `@knighted/jsx` tagged templates. The plugin understands the DOM (`jsx`) and React (`reactJsx`) entrypoints and applies mode-aware diagnostics so editors surface real JSX errors inside template literals.
+
+> [!IMPORTANT]
+> TypeScript only loads language-service plugins inside editors (via `tsserver`). Running `tsc` or `tsc --noEmit` directly will **not** execute this plugin. To enforce the same diagnostics in CI, pair your build with a compiler transform (loader, `ts-patch`, etc.) or run a custom check that reuses the plugin’s transformation logic.
 
 ## Installation
 
