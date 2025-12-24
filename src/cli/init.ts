@@ -340,9 +340,11 @@ function persistBindingSpec(
   const pkgRaw = fs.readFileSync(pkgPath, 'utf8')
   const pkgJson = JSON.parse(pkgRaw)
   pkgJson.optionalDependencies = pkgJson.optionalDependencies ?? {}
-  pkgJson.optionalDependencies[name] = version
+  const semver =
+    version.startsWith('^') || version.startsWith('~') ? version : `^${version}`
+  pkgJson.optionalDependencies[name] = semver
 
-  log(`> Recording optionalDependency ${name}@${version}`)
+  log(`> Recording optionalDependency ${name}@${semver}`)
   if (!dryRun) {
     fs.writeFileSync(pkgPath, `${JSON.stringify(pkgJson, null, 2)}\n`, 'utf8')
   }
