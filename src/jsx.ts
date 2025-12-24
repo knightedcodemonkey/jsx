@@ -17,9 +17,17 @@ import {
   parserOptions,
   type TemplateContext,
 } from './runtime/shared.js'
+import {
+  find as findPropertyInfo,
+  html as htmlProperties,
+  svg as svgProperties,
+  type Info as PropertyInfo,
+  type Space as PropertySpace,
+} from 'property-information'
 
 type Namespace = 'svg' | null
 type JsxContext = TemplateContext<JsxComponent>
+type ElementWithIndex = Element & Record<string, unknown>
 
 export type JsxRenderable =
   | Node
@@ -69,38 +77,69 @@ const isPromiseLike = (value: unknown): value is PromiseLike<unknown> => {
   return typeof (value as { then?: unknown }).then === 'function'
 }
 
-const BOOLEAN_ATTRIBUTES = new Set([
-  'allowfullscreen',
-  'allowpaymentrequest',
-  'async',
-  'autofocus',
-  'autoplay',
-  'checked',
-  'controls',
-  'default',
-  'defer',
-  'disabled',
-  'formnovalidate',
-  'hidden',
-  'inert',
-  'ismap',
-  'itemscope',
-  'loop',
-  'multiple',
-  'muted',
-  'nomodule',
-  'novalidate',
-  'open',
-  'playsinline',
-  'readonly',
-  'required',
-  'reversed',
-  'selected',
-])
+const ATTRIBUTE_NAMESPACE_URIS: Record<Exclude<PropertySpace, 'html' | 'svg'>, string> = {
+  xlink: 'http://www.w3.org/1999/xlink',
+  xml: 'http://www.w3.org/XML/1998/namespace',
+  xmlns: 'http://www.w3.org/2000/xmlns/',
+}
 
-const isBooleanAttribute = (name: string) => BOOLEAN_ATTRIBUTES.has(name.toLowerCase())
+const getAttributeNamespace = (space: PropertySpace | undefined) => {
+  if (!space || space === 'html' || space === 'svg') {
+    return undefined
+  }
 
-const isAriaAttribute = (name: string) => name.startsWith('aria-')
+  return ATTRIBUTE_NAMESPACE_URIS[space]
+}
+
+const getSchemaForNamespace = (namespace: Namespace) =>
+  namespace === 'svg' ? svgProperties : htmlProperties
+
+const setAttributeValue = (element: Element, info: PropertyInfo, value: unknown) => {
+  const namespaceUri = getAttributeNamespace(info.space)
+  const attrValue = String(value)
+
+  if (namespaceUri) {
+    element.setAttributeNS(namespaceUri, info.attribute, attrValue)
+    return
+  }
+
+  element.setAttribute(info.attribute, attrValue)
+}
+
+const removeAttributeValue = (element: Element, info: PropertyInfo) => {
+  const namespaceUri = getAttributeNamespace(info.space)
+
+  if (namespaceUri) {
+    element.removeAttributeNS(namespaceUri, info.attribute)
+    return
+  }
+
+  element.removeAttribute(info.attribute)
+}
+
+const joinTokenList = (value: unknown, delimiter: string) => {
+  if (!Array.isArray(value)) {
+    return value
+  }
+
+  return value.filter(Boolean).join(delimiter)
+}
+
+const shouldAssignProperty = (
+  element: Element,
+  namespace: Namespace,
+  info: PropertyInfo,
+) => {
+  if (namespace === 'svg') {
+    return false
+  }
+
+  if (!info.property || info.property.includes(':')) {
+    return false
+  }
+
+  return info.property in (element as ElementWithIndex)
+}
 
 const captureSuffix = 'Capture'
 
@@ -224,22 +263,13 @@ const resolveEventHandlerValue = (value: unknown): ResolvedEventHandler | null =
   }
 }
 
-const setDomProp = (element: Element, name: string, value: unknown) => {
+const setDomProp = (
+  element: Element,
+  name: string,
+  value: unknown,
+  namespace: Namespace,
+) => {
   if (value === null || value === undefined) {
-    return
-  }
-
-  if (isBooleanAttribute(name)) {
-    const nextState = Boolean(value)
-    if (name in element && !name.includes('-')) {
-      type ElementWithIndex = Element & Record<string, unknown>
-      ;(element as ElementWithIndex)[name] = nextState as never
-    }
-    element.toggleAttribute(name, nextState)
-    return
-  }
-
-  if (!isAriaAttribute(name) && value === false) {
     return
   }
 
@@ -309,31 +339,67 @@ const setDomProp = (element: Element, name: string, value: unknown) => {
     }
   }
 
-  if (isAriaAttribute(name)) {
-    element.setAttribute(name, String(value))
+  const info = findPropertyInfo(getSchemaForNamespace(namespace), name)
+  const elementWithIndex = element as ElementWithIndex
+  const canAssignProperty = shouldAssignProperty(element, namespace, info)
+
+  if (info.mustUseProperty) {
+    const nextValue = info.boolean ? Boolean(value) : value
+    elementWithIndex[info.property] = nextValue as never
     return
   }
 
-  if (name === 'class' || name === 'className') {
-    const classValue = Array.isArray(value)
-      ? value.filter(Boolean).join(' ')
-      : String(value)
-    element.setAttribute('class', classValue)
+  if (info.boolean) {
+    const boolValue = Boolean(value)
+
+    if (canAssignProperty) {
+      elementWithIndex[info.property] = boolValue as never
+    }
+
+    if (boolValue) {
+      setAttributeValue(element, info, '')
+    } else {
+      removeAttributeValue(element, info)
+    }
     return
   }
 
-  if (name === 'htmlFor') {
-    element.setAttribute('for', String(value))
+  let normalizedValue: unknown = value
+
+  if (info.spaceSeparated) {
+    normalizedValue = joinTokenList(value, ' ')
+  } else if (info.commaSeparated) {
+    normalizedValue = joinTokenList(value, ',')
+  } else if (info.commaOrSpaceSeparated) {
+    normalizedValue = joinTokenList(value, ' ')
+  }
+
+  if (info.booleanish && typeof normalizedValue === 'boolean') {
+    normalizedValue = normalizedValue ? 'true' : 'false'
+  }
+
+  if (info.overloadedBoolean) {
+    if (normalizedValue === false) {
+      removeAttributeValue(element, info)
+      return
+    }
+
+    if (normalizedValue === true) {
+      setAttributeValue(element, info, '')
+      return
+    }
+  }
+
+  if (canAssignProperty) {
+    elementWithIndex[info.property] = normalizedValue as never
     return
   }
 
-  if (name in element && !name.includes('-')) {
-    type ElementWithIndex = Element & Record<string, unknown>
-    ;(element as ElementWithIndex)[name] = value as never
+  if (normalizedValue === false) {
     return
   }
 
-  element.setAttribute(name, value === true ? '' : String(value))
+  setAttributeValue(element, info, normalizedValue)
 }
 
 const appendChildValue = (parent: Node & ParentNode, value: JsxRenderable) => {
@@ -443,7 +509,7 @@ const applyDomAttributes = (
       return
     }
 
-    setDomProp(element, name, value)
+    setDomProp(element, name, value, namespace)
   })
 }
 

@@ -140,6 +140,7 @@
   "dependencies": {
     "magic-string": "^0.30.21",
     "oxc-parser": "^0.105.0",
+    "property-information": "^7.1.0",
     "tar": "^7.4.3"
   },
   "peerDependencies": {
