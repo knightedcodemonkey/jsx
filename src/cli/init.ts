@@ -6,8 +6,13 @@ import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
 import { extract } from 'tar'
 
-const DEFAULT_BINDING_SPEC =
-  process.env.WASM_BINDING_PACKAGE ?? '@oxc-parser/binding-wasm32-wasi@^0.99.0'
+const CLI_REQUIRE = createRequire(
+  typeof __filename !== 'undefined' ? __filename : path.join(process.cwd(), 'noop.js'),
+)
+const DEFAULT_BINDING_PACKAGE_NAME = '@oxc-parser/binding-wasm32-wasi'
+const DEFAULT_BINDING_PACKAGE =
+  process.env.WASM_BINDING_PACKAGE ?? DEFAULT_BINDING_PACKAGE_NAME
+const DEFAULT_BINDING_SOURCE = process.env.WASM_BINDING_PACKAGE ? 'env' : 'default'
 const RUNTIME_DEPS = ['@napi-rs/wasm-runtime', '@emnapi/runtime', '@emnapi/core']
 const SUPPORTED_PACKAGE_MANAGERS = ['npm', 'pnpm', 'yarn', 'bun'] as const
 // Node emits a noisy ExperimentalWarning whenever the WASI shim loads; silence just that message.
@@ -37,6 +42,8 @@ type CliOptions = {
   skipConfig: boolean
   packageManager?: PackageManager
   wasmPackage: string
+  wasmVersion?: string
+  wasmPackageSource: 'default' | 'env' | 'flag'
 }
 
 function parseArgs(argv: string[]): CliOptions {
@@ -46,7 +53,9 @@ function parseArgs(argv: string[]): CliOptions {
     verbose: false,
     force: false,
     skipConfig: true,
-    wasmPackage: DEFAULT_BINDING_SPEC,
+    wasmPackage: DEFAULT_BINDING_PACKAGE,
+    wasmVersion: undefined,
+    wasmPackageSource: DEFAULT_BINDING_SOURCE,
   }
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -73,6 +82,12 @@ function parseArgs(argv: string[]): CliOptions {
       const pkg = argv[i + 1]
       if (!pkg) throw new Error('Missing value for --wasm-package')
       options.wasmPackage = pkg
+      options.wasmPackageSource = 'flag'
+      i += 1
+    } else if (arg === '--wasm-version') {
+      const version = argv[i + 1]
+      if (!version) throw new Error('Missing value for --wasm-version')
+      options.wasmVersion = version
       i += 1
     } else if (arg === '--help' || arg === '-h') {
       printHelp()
@@ -85,7 +100,7 @@ function parseArgs(argv: string[]): CliOptions {
 
 function printHelp() {
   console.log(
-    `\nUsage: npx @knighted/jsx init [options]\n\nOptions:\n  --package-manager, --pm <name>  Choose npm | pnpm | yarn | bun\n  --wasm-package <spec>           Override binding package spec\n  --config                        Prompt to help with loader config\n  --skip-config                   Skip any loader config prompts (default)\n  --dry-run                       Print actions without executing\n  --force, --yes                  Assume yes for prompts\n  --verbose                       Log extra detail\n  -h, --help                      Show this help message\n`,
+    `\nUsage: npx @knighted/jsx init [options]\n\nOptions:\n  --package-manager, --pm <name>  Choose npm | pnpm | yarn | bun\n  --wasm-package <spec>           Override binding package spec\n  --wasm-version <version>        Pin version for the default binding\n  --config                        Prompt to help with loader config\n  --skip-config                   Skip any loader config prompts (default)\n  --dry-run                       Print actions without executing\n  --force, --yes                  Assume yes for prompts\n  --verbose                       Log extra detail\n  -h, --help                      Show this help message\n`,
   )
 }
 
@@ -153,6 +168,87 @@ function parsePackageName(spec: string) {
   if (!match) return { name: spec, version: undefined }
   const [, name, version] = match
   return { name, version }
+}
+
+type NodeRequireFn = ReturnType<typeof createRequire>
+
+function readLocalOxcParserVersion(resolver: NodeRequireFn = CLI_REQUIRE) {
+  try {
+    const pkg = resolver('oxc-parser/package.json') as { version?: string }
+    if (pkg && typeof pkg.version === 'string') {
+      return pkg.version
+    }
+  } catch {
+    // Ignore resolution failures and fall back to registry lookup later.
+  }
+
+  return undefined
+}
+
+function isRegistryResolvablePackage(name: string) {
+  if (!name) return false
+  if (name.startsWith('.') || name.startsWith('/')) return false
+  if (path.isAbsolute(name)) return false
+  const blockedPrefixes = [
+    'file:',
+    'link:',
+    'git+',
+    'github:',
+    'workspace:',
+    'http://',
+    'https://',
+  ]
+  return !blockedPrefixes.some(prefix => name.startsWith(prefix))
+}
+
+function fetchLatestBindingVersion(
+  pkgName: string,
+  execFn: typeof execFileSync = execFileSync,
+) {
+  const output = execFn('npm', ['view', pkgName, 'version', '--json'], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'inherit'],
+  }).trim()
+
+  if (!output) {
+    throw new Error(`Unable to determine latest version for ${pkgName}`)
+  }
+
+  const parsed = JSON.parse(output)
+  if (typeof parsed === 'string') return parsed
+  if (Array.isArray(parsed) && parsed.length > 0) {
+    const last = parsed[parsed.length - 1]
+    if (typeof last === 'string') return last
+  }
+
+  throw new Error(`Unable to determine latest version for ${pkgName}`)
+}
+
+function resolveBindingSpec(
+  spec: string,
+  explicitVersion?: string,
+  fetchLatest: typeof fetchLatestBindingVersion = fetchLatestBindingVersion,
+) {
+  let combinedSpec = spec
+  if (explicitVersion) {
+    const { name } = parsePackageName(spec)
+    if (!name) {
+      throw new Error(`Unable to parse binding package spec: ${spec}`)
+    }
+    combinedSpec = `${name}@${explicitVersion}`
+  }
+
+  const { name, version } = parsePackageName(combinedSpec)
+  if (!name) {
+    throw new Error(`Unable to parse binding package spec: ${spec}`)
+  }
+
+  if (version || !isRegistryResolvablePackage(name)) {
+    return { spec: combinedSpec, name, version }
+  }
+
+  const latest = fetchLatest(name)
+  return { spec: `${name}@${latest}`, name, version: latest }
 }
 
 type PackFunction = (
@@ -319,6 +415,8 @@ type MainDeps = {
   persistBindingSpec: typeof persistBindingSpec
   verifyBinding: typeof verifyBinding
   maybeHandleConfigPrompt: typeof maybeHandleConfigPrompt
+  resolveBindingSpec: typeof resolveBindingSpec
+  readLocalOxcParserVersion: typeof readLocalOxcParserVersion
   log: typeof log
 }
 
@@ -332,11 +430,23 @@ async function main(overrides: Partial<MainDeps> = {}) {
     persistBindingSpec: persistBindingSpecImpl = persistBindingSpec,
     verifyBinding: verifyBindingImpl = verifyBinding,
     maybeHandleConfigPrompt: maybeHandleConfigPromptImpl = maybeHandleConfigPrompt,
+    resolveBindingSpec: resolveBindingSpecImpl = resolveBindingSpec,
+    readLocalOxcParserVersion: readLocalOxcParserVersionImpl = readLocalOxcParserVersion,
     log: logImpl = log,
   } = overrides
 
   const options = parseArgsImpl(process.argv.slice(2))
   ensurePackageJsonImpl(options.cwd)
+
+  const bundledParserVersion = readLocalOxcParserVersionImpl()
+  const desiredBindingVersion =
+    options.wasmVersion ??
+    (options.wasmPackageSource === 'default' ? bundledParserVersion : undefined)
+
+  const resolvedBinding = resolveBindingSpecImpl(
+    options.wasmPackage,
+    desiredBindingVersion,
+  )
 
   const packageManager = detectPackageManagerImpl(options.cwd, options.packageManager)
   logImpl(`> Using package manager: ${packageManager}`)
@@ -350,7 +460,7 @@ async function main(overrides: Partial<MainDeps> = {}) {
   )
 
   const binding = await installBindingImpl(
-    options.wasmPackage,
+    resolvedBinding.spec,
     options.cwd,
     options.dryRun,
     options.verbose,
@@ -397,6 +507,9 @@ export {
   ensurePackageJson,
   runNpmPack,
   parsePackageName,
+  resolveBindingSpec,
+  fetchLatestBindingVersion,
+  readLocalOxcParserVersion,
   installBinding,
   installRuntimeDeps,
   isDependencyInstalled,
