@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { jsx, type JsxComponent, type JsxRenderable } from '../src/jsx.js'
+import { find as findPropertyInfo, html as htmlProperties } from 'property-information'
 
 const resetDom = () => {
   document.body.innerHTML = ''
@@ -376,5 +377,149 @@ describe('jsx template tag', () => {
 
   it('throws when encountering unknown component names', () => {
     expect(() => jsx`<Missing />`).toThrow('Unknown component "Missing"')
+  })
+
+  describe('edge cases and coverage guards', () => {
+    it('applies and removes xml namespaced attributes through property metadata', () => {
+      const element = jsx`<div xmlLang="en-US" />` as HTMLElement
+      const xmlNamespace = 'http://www.w3.org/XML/1998/namespace'
+      expect(element.getAttributeNS(xmlNamespace, 'lang')).toBe('en-US')
+
+      const info = findPropertyInfo(htmlProperties, 'xmlLang')
+      const originalBoolean = info.boolean
+
+      try {
+        info.boolean = true
+        const toggled = jsx`<div xmlLang={${false}} />` as HTMLElement
+        expect(toggled.hasAttributeNS(xmlNamespace, 'lang')).toBe(false)
+      } finally {
+        info.boolean = originalBoolean
+      }
+    })
+
+    it('respects svg namespace assignment rules and colon attribute names', () => {
+      const colonProps = { 'foo:bar': 'baz' }
+      const svg = jsx`
+        <svg>
+          <a rel={${['prev', 'next']}} {...${colonProps}} />
+        </svg>
+      ` as SVGSVGElement
+
+      const link = svg.querySelector('a') as SVGAElement | null
+      expect(link?.getAttribute('foo:bar')).toBe('baz')
+      expect(link?.getAttribute('rel')).toBe('prev next')
+    })
+
+    it('joins comma-separated attribute values', () => {
+      const input = jsx`
+        <input accept={${['image/png', 'image/jpeg']}} />
+      ` as HTMLInputElement
+
+      expect(input.getAttribute('accept')).toBe('image/png,image/jpeg')
+    })
+
+    it('ignores invalid event prop names from spread objects', () => {
+      const strayHandlers = {
+        'on:': vi.fn(),
+        on: vi.fn(),
+        'on:invalid-capture': vi.fn(),
+      }
+
+      const button = jsx`
+        <button {...${strayHandlers}}>Invalid bindings</button>
+      ` as HTMLButtonElement
+
+      button.click()
+
+      Object.values(strayHandlers).forEach(handler => {
+        expect(handler).not.toHaveBeenCalled()
+      })
+    })
+
+    it('validates event listener descriptors and objects', () => {
+      const listenerObject = { handleEvent: vi.fn() }
+      const descriptorWithoutHandler = { once: true } as Record<string, unknown>
+      const descriptorWithObject = { handler: listenerObject, capture: true }
+
+      const button = jsx`
+        <button
+          onClick={${123 as unknown as () => void}}
+          on:missing-handler={${descriptorWithoutHandler as unknown}}
+          onMouseDown={${descriptorWithObject}}
+          onMouseUp={${listenerObject}}
+        />
+      ` as HTMLButtonElement
+
+      button.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+      button.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
+
+      expect(listenerObject.handleEvent).toHaveBeenCalledTimes(2)
+    })
+
+    it('skips style assignment when style targets are unavailable', () => {
+      const originalCreateElement = document.createElement
+      const spy = vi.spyOn(document, 'createElement').mockImplementation(((
+        tagName: string,
+        options?: ElementCreationOptions,
+      ) => {
+        const node = originalCreateElement.call(document, tagName, options)
+        if (tagName === 'div') {
+          Object.defineProperty(node, 'style', { value: undefined })
+        }
+        return node
+      }) as typeof document.createElement)
+
+      try {
+        const element = jsx`<div style={${{ color: 'tomato' }}} />` as HTMLDivElement
+        expect(element.getAttribute('style')).toBeNull()
+      } finally {
+        spy.mockRestore()
+      }
+    })
+
+    it('sets must-use properties directly on the DOM element', () => {
+      const input = jsx`<input checked={${true}} />` as HTMLInputElement
+      expect(input.checked).toBe(true)
+    })
+
+    it('handles overloaded boolean and false attribute serialization', () => {
+      const enabled =
+        jsx`<a download={${false}} data-flag={${false}} />` as HTMLAnchorElement
+      const forced = jsx`<a download={${true}} />` as HTMLAnchorElement
+
+      expect(enabled.hasAttribute('download')).toBe(false)
+      expect(enabled.hasAttribute('data-flag')).toBe(false)
+      expect(forced.getAttribute('download')).toBe('')
+    })
+
+    it('omits null and boolean children when rendering', () => {
+      const list = jsx`
+        <ul>
+          {${[null, undefined, false, 'visible']}}
+        </ul>
+      ` as HTMLUListElement
+
+      expect(list.textContent).toBe('visible')
+    })
+
+    it('supports shorthand attributes for boolean props', () => {
+      const element = jsx`
+        <div hidden />
+      ` as HTMLDivElement
+
+      expect(element.hasAttribute('hidden')).toBe(true)
+    })
+
+    it('keeps working when global Node is temporarily unavailable', () => {
+      const originalNode = globalThis.Node
+      ;(globalThis as { Node?: typeof Node }).Node = undefined as never
+
+      try {
+        const element = jsx`<div>text fallback</div>` as HTMLDivElement
+        expect(element.textContent).toBe('text fallback')
+      } finally {
+        ;(globalThis as { Node?: typeof Node }).Node = originalNode
+      }
+    })
   })
 })
