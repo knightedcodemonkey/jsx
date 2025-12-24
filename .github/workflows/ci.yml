@@ -33,6 +33,8 @@ jobs:
         with:
           name: npm-debug-log-${{ hashFiles('package-lock.json') }}
           path: npm-debug.log
+      - name: Check Cycles
+        run: npm run cycles
       - name: Check Types
         run: npm run check-types
       - name: Test

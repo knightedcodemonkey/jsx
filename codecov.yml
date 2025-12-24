@@ -8,3 +8,8 @@ coverage:
       default:
         target: 80.0
         threshold: 2.0
+      cli:
+        target: 55.0
+        threshold: 5.0
+        paths:
+          - src/cli/

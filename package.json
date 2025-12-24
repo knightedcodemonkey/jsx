@@ -1,6 +1,6 @@
 {
   "name": "@knighted/jsx",
-  "version": "1.4.1",
+  "version": "1.5.0-rc.0",
   "description": "Runtime JSX tagged template that renders DOM or React trees anywhere without a build step.",
   "keywords": [
     "jsx runtime",
@@ -89,6 +89,7 @@
     "check-types:lib": "tsc --noEmit --project tsconfig.json",
     "check-types:demo": "tsc --noEmit --project examples/browser/tsconfig.json",
     "lint": "eslint src test",
+    "cycles": "madge src --circular --extensions ts,tsx,js,jsx --ts-config tsconfig.json",
     "prettier": "prettier -w .",
     "prettier:check": "prettier --check .",
     "test": "KNIGHTED_JSX_CLI_TEST=1 vitest run --coverage",
@@ -107,7 +108,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@knighted/duel": "^2.1.6",
-    "@oxc-project/types": "^0.99.0",
+    "@oxc-project/types": "^0.105.0",
     "@playwright/test": "^1.57.0",
     "@rspack/core": "^1.0.5",
     "@types/jsdom": "^27.0.0",
@@ -115,14 +116,17 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitest/coverage-v8": "^4.0.14",
+    "@vitest/eslint-plugin": "^1.6.4",
     "eslint": "^9.39.1",
     "eslint-plugin-n": "^17.10.3",
     "eslint-plugin-playwright": "^2.4.0",
+    "eslint-plugin-unicorn": "^62.0.0",
     "http-server": "^14.1.1",
     "husky": "^9.1.7",
     "jsdom": "^27.2.0",
     "lint-staged": "^16.2.7",
     "lit": "^3.2.1",
+    "madge": "^8.0.0",
     "next": "^16.0.0",
     "prettier": "^3.7.3",
     "react": "^19.0.0",
@@ -135,7 +139,8 @@
   },
   "dependencies": {
     "magic-string": "^0.30.21",
-    "oxc-parser": "^0.99.0",
+    "oxc-parser": "^0.105.0",
+    "property-information": "^7.1.0",
     "tar": "^7.4.3"
   },
   "peerDependencies": {
@@ -155,9 +160,14 @@
     }
   },
   "optionalDependencies": {
-    "@oxc-parser/binding-darwin-arm64": "^0.99.0",
-    "@oxc-parser/binding-linux-x64-gnu": "^0.99.0",
-    "@oxc-parser/binding-wasm32-wasi": "^0.99.0"
+    "@oxc-parser/binding-darwin-arm64": "^0.105.0",
+    "@oxc-parser/binding-linux-x64-gnu": "^0.105.0",
+    "@oxc-parser/binding-wasm32-wasi": "0.105.0"
+  },
+  "overrides": {
+    "module-lookup-amd": {
+      "glob": "^9.0.0"
+    }
   },
   "files": [
     "dist"
@@ -178,6 +188,7 @@
     "singleQuote": true
   },
   "lint-staged": {
+    "src/**/*.{ts,tsx,js,jsx}": "npm run cycles",
     "*.{js,jsx,ts,tsx,mjs,cjs,cts,mts}": "eslint --max-warnings=0",
     "*.{js,jsx,ts,tsx,mjs,cjs,cts,mts,json,md,css,scss,html}": "prettier --check"
   }

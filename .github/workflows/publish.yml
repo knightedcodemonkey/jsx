@@ -3,6 +3,12 @@ name: Publish
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch to publish from (defaults to main)
+        required: false
+        default: main
 
 permissions:
   id-token: write
@@ -13,8 +19,22 @@ jobs:
     if: contains('["knightedcodemonkey"]', github.actor)
     runs-on: ubuntu-latest
     steps:
+      - name: Determine ref
+        id: publish-ref
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ref="${{ github.event.inputs.branch }}"
+            if [ -z "$ref" ]; then
+              ref="main"
+            fi
+          else
+            ref="${{ github.ref }}"
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
       - name: Checkout
         uses: actions/checkout@v4.2.2
+        with:
+          ref: ${{ steps.publish-ref.outputs.ref }}
       - name: Setup Node
         uses: actions/setup-node@v4.3.0
         with:

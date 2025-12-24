@@ -23,6 +23,8 @@ describe('parseArgs', () => {
       'pnpm',
       '--wasm-package',
       '@custom/pkg@1.0.0',
+      '--wasm-version',
+      '2.0.0',
     ])
 
     expect(result.dryRun).toBe(true)
@@ -31,6 +33,8 @@ describe('parseArgs', () => {
     expect(result.skipConfig).toBe(false)
     expect(result.packageManager).toBe('pnpm')
     expect(result.wasmPackage).toBe('@custom/pkg@1.0.0')
+    expect(result.wasmVersion).toBe('2.0.0')
+    expect(result.wasmPackageSource).toBe('flag')
   })
 
   it('re-applies skip-config flag when requested explicitly', () => {
@@ -100,6 +104,41 @@ describe('detectPackageManager', () => {
     } else {
       delete process.env.npm_config_user_agent
     }
+  })
+})
+
+describe('resolveBindingSpec + fetchLatestBindingVersion', () => {
+  it('applies explicit version overrides without fetching', () => {
+    const fetchSpy = vi.fn()
+    const resolved = cli.resolveBindingSpec('@scope/pkg', '1.2.3', fetchSpy)
+
+    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(resolved.spec).toBe('@scope/pkg@1.2.3')
+    expect(resolved.version).toBe('1.2.3')
+  })
+
+  it('fetches latest registry version when unspecified', () => {
+    const resolved = cli.resolveBindingSpec('@scope/pkg', undefined, () => '9.9.9')
+
+    expect(resolved.spec).toBe('@scope/pkg@9.9.9')
+    expect(resolved.version).toBe('9.9.9')
+  })
+
+  it('skips registry lookups for non-registry specs', () => {
+    const fetchSpy = vi.fn(() => '9.9.9')
+    const resolved = cli.resolveBindingSpec('file:../local', undefined, fetchSpy)
+
+    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(resolved.spec).toBe('file:../local')
+    expect(resolved.version).toBeUndefined()
+  })
+
+  it('parses npm view output when fetching latest version', () => {
+    const execSpy = vi.fn().mockReturnValue('"3.4.5"')
+    const latest = cli.fetchLatestBindingVersion('@scope/pkg', execSpy as any)
+
+    expect(latest).toBe('3.4.5')
+    expect(execSpy).toHaveBeenCalled()
   })
 })
 
@@ -240,14 +279,14 @@ describe('persistBindingSpec', () => {
     cli.persistBindingSpec(
       tmp,
       '@oxc-parser/binding-wasm32-wasi',
-      '^0.99.0',
+      '^0.105.0',
       false,
       false,
     )
 
     const updated = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
     expect(updated.optionalDependencies['@oxc-parser/binding-wasm32-wasi']).toBe(
-      '^0.99.0',
+      '^0.105.0',
     )
   })
 
@@ -393,6 +432,8 @@ describe('main (overrides)', () => {
       skipConfig: false,
       packageManager: 'npm' as const,
       wasmPackage: 'pkg@1.0.0',
+      wasmVersion: undefined,
+      wasmPackageSource: 'flag' as const,
     }
 
     const parseArgs = vi.fn().mockReturnValue(options)
@@ -413,6 +454,11 @@ describe('main (overrides)', () => {
     const log = vi.fn((message: string) => {
       logs.push(String(message))
     })
+    const resolveBindingSpec = vi.fn().mockReturnValue({
+      spec: 'pkg@1.0.0',
+      name: 'pkg',
+      version: '1.0.0',
+    })
 
     await cli.main({
       parseArgs,
@@ -423,14 +469,26 @@ describe('main (overrides)', () => {
       persistBindingSpec,
       verifyBinding,
       maybeHandleConfigPrompt,
+      resolveBindingSpec,
+      readLocalOxcParserVersion: vi.fn().mockReturnValue('9.9.9'),
       log,
     })
 
     expect(ensurePackageJson).toHaveBeenCalledWith(options.cwd)
     expect(detectPackageManager).toHaveBeenCalledWith(options.cwd, options.packageManager)
+    expect(resolveBindingSpec).toHaveBeenCalledWith(
+      options.wasmPackage,
+      options.wasmVersion,
+    )
     expect(installRuntimeDeps).toHaveBeenCalledWith(
       'pnpm',
       expect.any(Array),
+      options.cwd,
+      options.dryRun,
+      options.verbose,
+    )
+    expect(installBinding).toHaveBeenCalledWith(
+      'pkg@1.0.0',
       options.cwd,
       options.dryRun,
       options.verbose,
@@ -448,6 +506,60 @@ describe('main (overrides)', () => {
       options.force,
     )
     expect(logs.at(-1)).toContain('Verified import')
+  })
+
+  it('aligns the default binding with the bundled parser version', async () => {
+    const options = {
+      cwd: '/tmp/project',
+      dryRun: false,
+      verbose: false,
+      force: false,
+      skipConfig: true,
+      packageManager: 'pnpm' as const,
+      wasmPackage: '@oxc-parser/binding-wasm32-wasi',
+      wasmVersion: undefined,
+      wasmPackageSource: 'default' as const,
+    }
+
+    const parseArgs = vi.fn().mockReturnValue(options)
+    const ensurePackageJson = vi.fn()
+    const detectPackageManager = vi.fn().mockReturnValue('pnpm')
+    const installRuntimeDeps = vi.fn().mockReturnValue([])
+    const installBinding = vi.fn().mockResolvedValue({
+      targetDir: '/tmp/project/node_modules/@oxc-parser/binding-wasm32-wasi',
+      name: '@oxc-parser/binding-wasm32-wasi',
+      version: '0.105.0',
+    })
+    const persistBindingSpec = vi.fn()
+    const verifyBinding = vi.fn().mockResolvedValue('resolved.js')
+    const maybeHandleConfigPrompt = vi.fn().mockResolvedValue(undefined)
+    const resolveBindingSpec = vi.fn().mockReturnValue({
+      spec: '@oxc-parser/binding-wasm32-wasi@0.105.0',
+      name: '@oxc-parser/binding-wasm32-wasi',
+      version: '0.105.0',
+    })
+    const readLocalOxcParserVersion = vi.fn().mockReturnValue('0.105.0')
+
+    await cli.main({
+      parseArgs,
+      ensurePackageJson,
+      detectPackageManager,
+      installRuntimeDeps,
+      installBinding,
+      persistBindingSpec,
+      verifyBinding,
+      maybeHandleConfigPrompt,
+      resolveBindingSpec,
+      readLocalOxcParserVersion,
+    })
+
+    expect(resolveBindingSpec).toHaveBeenCalledWith(options.wasmPackage, '0.105.0')
+    expect(installBinding).toHaveBeenCalledWith(
+      '@oxc-parser/binding-wasm32-wasi@0.105.0',
+      options.cwd,
+      options.dryRun,
+      options.verbose,
+    )
   })
 })
 

@@ -1,9 +1,12 @@
 import js from '@eslint/js'
 import pluginN from 'eslint-plugin-n'
 import playwright from 'eslint-plugin-playwright'
+import unicorn from 'eslint-plugin-unicorn'
+import vitest from '@vitest/eslint-plugin'
 import tseslint from 'typescript-eslint'
 
 const playwrightConfig = playwright.configs['flat/recommended']
+const filenameCaseIgnore = ['^README(?:\\..+)?$']
 
 export default [
   {
@@ -63,10 +66,41 @@ export default [
     },
   },
   {
+    plugins: {
+      unicorn,
+    },
+    rules: {
+      'unicorn/filename-case': [
+        'error',
+        {
+          cases: {
+            kebabCase: true,
+          },
+          ignore: filenameCaseIgnore,
+        },
+      ],
+    },
+  },
+  {
+    ...vitest.configs.recommended,
+    files: ['test/**/*.test.{js,jsx,ts,tsx}', 'test/**/*.spec.{js,jsx,ts,tsx}'],
+  },
+  {
     files: ['src/jsx-runtime.ts'],
     rules: {
       '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/no-namespace': 'off',
+    },
+  },
+  {
+    files: ['src/jsx-runtime.ts', 'test/jsx.test.ts'],
+    rules: {
+      'n/no-unsupported-features/node-builtins': [
+        'error',
+        {
+          ignores: ['CustomEvent'],
+        },
+      ],
     },
   },
   {

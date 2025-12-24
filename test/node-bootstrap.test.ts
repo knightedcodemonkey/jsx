@@ -146,12 +146,10 @@ describe('ensureNodeDom', () => {
     await expect(ensureNodeDom()).rejects.toThrow(
       'Unable to bootstrap a DOM-like environment',
     )
-    try {
-      await ensureNodeDom()
-    } catch (error) {
-      expect(error).toBeInstanceOf(AggregateError)
-      expect((error as AggregateError).errors).toEqual([linkedomError, jsdomError])
-    }
+
+    const aggregateError = (await ensureNodeDom().catch(error => error)) as AggregateError
+    expect(aggregateError).toBeInstanceOf(AggregateError)
+    expect(aggregateError.errors).toEqual([linkedomError, jsdomError])
   })
 
   it('short-circuits when a DOM already exists', async () => {

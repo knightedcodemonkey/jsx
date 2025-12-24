@@ -17,9 +17,17 @@ import {
   parserOptions,
   type TemplateContext,
 } from './runtime/shared.js'
+import {
+  find as findPropertyInfo,
+  html as htmlProperties,
+  svg as svgProperties,
+  type Info as PropertyInfo,
+  type Space as PropertySpace,
+} from 'property-information'
 
 type Namespace = 'svg' | null
 type JsxContext = TemplateContext<JsxComponent>
+type ElementWithIndex = Element & Record<string, unknown>
 
 export type JsxRenderable =
   | Node
@@ -69,8 +77,199 @@ const isPromiseLike = (value: unknown): value is PromiseLike<unknown> => {
   return typeof (value as { then?: unknown }).then === 'function'
 }
 
-const setDomProp = (element: Element, name: string, value: unknown) => {
-  if (value === false || value === null || value === undefined) {
+const ATTRIBUTE_NAMESPACE_URIS: Record<Exclude<PropertySpace, 'html' | 'svg'>, string> = {
+  xlink: 'http://www.w3.org/1999/xlink',
+  xml: 'http://www.w3.org/XML/1998/namespace',
+  xmlns: 'http://www.w3.org/2000/xmlns/',
+}
+
+const getAttributeNamespace = (space: PropertySpace | undefined) => {
+  if (!space || space === 'html' || space === 'svg') {
+    return undefined
+  }
+
+  return ATTRIBUTE_NAMESPACE_URIS[space]
+}
+
+const getSchemaForNamespace = (namespace: Namespace) =>
+  namespace === 'svg' ? svgProperties : htmlProperties
+
+const setAttributeValue = (element: Element, info: PropertyInfo, value: unknown) => {
+  const namespaceUri = getAttributeNamespace(info.space)
+  const attrValue = String(value)
+
+  if (namespaceUri) {
+    element.setAttributeNS(namespaceUri, info.attribute, attrValue)
+    return
+  }
+
+  element.setAttribute(info.attribute, attrValue)
+}
+
+const removeAttributeValue = (element: Element, info: PropertyInfo) => {
+  const namespaceUri = getAttributeNamespace(info.space)
+
+  if (namespaceUri) {
+    element.removeAttributeNS(namespaceUri, info.attribute)
+    return
+  }
+
+  element.removeAttribute(info.attribute)
+}
+
+const joinTokenList = (value: unknown, delimiter: string) => {
+  if (!Array.isArray(value)) {
+    return value
+  }
+
+  return value.filter(Boolean).join(delimiter)
+}
+
+const shouldAssignProperty = (
+  element: Element,
+  namespace: Namespace,
+  info: PropertyInfo,
+) => {
+  if (namespace === 'svg') {
+    return false
+  }
+
+  if (!info.property || info.property.includes(':')) {
+    return false
+  }
+
+  return info.property in (element as ElementWithIndex)
+}
+
+const captureSuffix = 'Capture'
+
+type ParsedEventBinding = {
+  eventName: string
+  capture: boolean
+}
+
+const stripCaptureSuffix = (rawName: string): ParsedEventBinding => {
+  if (rawName.endsWith(captureSuffix) && rawName.length > captureSuffix.length) {
+    return { eventName: rawName.slice(0, -captureSuffix.length), capture: true }
+  }
+
+  return { eventName: rawName, capture: false }
+}
+
+const parseEventPropName = (name: string): ParsedEventBinding | null => {
+  if (!name.startsWith('on')) {
+    return null
+  }
+
+  if (name.startsWith('on:')) {
+    const raw = name.slice(3)
+    if (!raw) {
+      return null
+    }
+    const parsed = stripCaptureSuffix(raw)
+    if (!parsed.eventName) {
+      return null
+    }
+    return parsed
+  }
+
+  const raw = name.slice(2)
+  if (!raw) {
+    return null
+  }
+
+  const parsed = stripCaptureSuffix(raw)
+  if (!parsed.eventName) {
+    return null
+  }
+
+  return {
+    eventName: parsed.eventName.toLowerCase(),
+    capture: parsed.capture,
+  }
+}
+
+const isEventListenerObject = (value: unknown): value is EventListenerObject => {
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+
+  return (
+    'handleEvent' in (value as Record<string, unknown>) &&
+    typeof (value as EventListenerObject).handleEvent === 'function'
+  )
+}
+
+type EventHandlerDescriptor = {
+  handler: EventListenerOrEventListenerObject
+  capture?: boolean
+  once?: boolean
+  passive?: boolean
+  signal?: AbortSignal | null
+  options?: AddEventListenerOptions
+}
+
+const isEventHandlerDescriptor = (value: unknown): value is EventHandlerDescriptor => {
+  if (!value || typeof value !== 'object' || !('handler' in value)) {
+    return false
+  }
+
+  const handler = (value as EventHandlerDescriptor).handler
+  if (typeof handler === 'function') {
+    return true
+  }
+
+  return isEventListenerObject(handler)
+}
+
+type ResolvedEventHandler = {
+  listener: EventListenerOrEventListenerObject
+  options?: AddEventListenerOptions
+}
+
+const resolveEventHandlerValue = (value: unknown): ResolvedEventHandler | null => {
+  if (typeof value === 'function' || isEventListenerObject(value)) {
+    return { listener: value as EventListenerOrEventListenerObject }
+  }
+
+  if (!isEventHandlerDescriptor(value)) {
+    return null
+  }
+
+  const descriptor = value
+  let options = descriptor.options ? { ...descriptor.options } : undefined
+
+  const assignOption = <K extends keyof AddEventListenerOptions>(
+    key: K,
+    optionValue: AddEventListenerOptions[K] | null | undefined,
+  ) => {
+    if (optionValue === undefined || optionValue === null) {
+      return
+    }
+    if (!options) {
+      options = {}
+    }
+    options[key] = optionValue
+  }
+
+  assignOption('capture', descriptor.capture)
+  assignOption('once', descriptor.once)
+  assignOption('passive', descriptor.passive)
+  assignOption('signal', descriptor.signal ?? undefined)
+
+  return {
+    listener: descriptor.handler,
+    options,
+  }
+}
+
+const setDomProp = (
+  element: Element,
+  name: string,
+  value: unknown,
+  namespace: Namespace,
+) => {
+  if (value === null || value === undefined) {
     return
   }
 
@@ -120,32 +319,87 @@ const setDomProp = (element: Element, name: string, value: unknown) => {
     return
   }
 
-  if (typeof value === 'function' && name.startsWith('on')) {
-    const eventName = name.slice(2).toLowerCase()
-    element.addEventListener(eventName, value as EventListener)
+  const eventBinding = parseEventPropName(name)
+  if (eventBinding) {
+    const handlerValue = resolveEventHandlerValue(value)
+
+    if (handlerValue) {
+      let options = handlerValue.options ? { ...handlerValue.options } : undefined
+
+      if (eventBinding.capture) {
+        if (!options) {
+          options = { capture: true }
+        } else {
+          options.capture = true
+        }
+      }
+
+      element.addEventListener(eventBinding.eventName, handlerValue.listener, options)
+      return
+    }
+  }
+
+  const info = findPropertyInfo(getSchemaForNamespace(namespace), name)
+  const elementWithIndex = element as ElementWithIndex
+  const canAssignProperty = shouldAssignProperty(element, namespace, info)
+
+  if (info.mustUseProperty) {
+    const nextValue = info.boolean ? Boolean(value) : value
+    elementWithIndex[info.property] = nextValue as never
     return
   }
 
-  if (name === 'class' || name === 'className') {
-    const classValue = Array.isArray(value)
-      ? value.filter(Boolean).join(' ')
-      : String(value)
-    element.setAttribute('class', classValue)
+  if (info.boolean) {
+    const boolValue = Boolean(value)
+
+    if (canAssignProperty) {
+      elementWithIndex[info.property] = boolValue as never
+    }
+
+    if (boolValue) {
+      setAttributeValue(element, info, '')
+    } else {
+      removeAttributeValue(element, info)
+    }
     return
   }
 
-  if (name === 'htmlFor') {
-    element.setAttribute('for', String(value))
+  let normalizedValue: unknown = value
+
+  if (info.spaceSeparated) {
+    normalizedValue = joinTokenList(value, ' ')
+  } else if (info.commaSeparated) {
+    normalizedValue = joinTokenList(value, ',')
+  } else if (info.commaOrSpaceSeparated) {
+    normalizedValue = joinTokenList(value, ' ')
+  }
+
+  if (info.booleanish && typeof normalizedValue === 'boolean') {
+    normalizedValue = normalizedValue ? 'true' : 'false'
+  }
+
+  if (info.overloadedBoolean) {
+    if (normalizedValue === false) {
+      removeAttributeValue(element, info)
+      return
+    }
+
+    if (normalizedValue === true) {
+      setAttributeValue(element, info, '')
+      return
+    }
+  }
+
+  if (canAssignProperty) {
+    elementWithIndex[info.property] = normalizedValue as never
     return
   }
 
-  if (name in element && !name.includes('-')) {
-    type ElementWithIndex = Element & Record<string, unknown>
-    ;(element as ElementWithIndex)[name] = value as never
+  if (normalizedValue === false) {
     return
   }
 
-  element.setAttribute(name, value === true ? '' : String(value))
+  setAttributeValue(element, info, normalizedValue)
 }
 
 const appendChildValue = (parent: Node & ParentNode, value: JsxRenderable) => {
@@ -255,7 +509,7 @@ const applyDomAttributes = (
       return
     }
 
-    setDomProp(element, name, value)
+    setDomProp(element, name, value, namespace)
   })
 }
 

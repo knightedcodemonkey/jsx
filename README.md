@@ -99,7 +99,7 @@ The React runtime shares the same template semantics as `jsx`, except it returns
 
 - `style` accepts either a string or an object. Object values handle CSS custom properties (`--token`) automatically.
 - `class` and `className` both work and can be strings or arrays.
-- Event handlers use the `on<Event>` naming convention (e.g. `onClick`).
+- Event handlers use the `on<Event>` naming convention (e.g. `onClick`), support capture-phase variants via `on<Event>Capture`, and allow custom events with the `on:custom-event` syntax (descriptor objects with `{ handler, once, capture }` are also accepted).
 - `ref` supports callback refs as well as mutable `{ current }` objects.
 - `dangerouslySetInnerHTML` expects an object with an `__html` field, mirroring React.
 
@@ -285,6 +285,26 @@ import { reactJsx as nodeReactJsx } from '@knighted/jsx/node/react/lite'
 ```
 
 Each lite subpath ships the same API as its standard counterpart but is pre-minified and scoped to just that runtime (DOM, React, Node DOM, or Node React). Swap them in when you want the smallest possible bundles; otherwise the default exports keep working as-is.
+
+## Common gotchas
+
+### DocumentFragment reuse (DOM helper)
+
+`jsx` returns actual DOM nodes, so fragments compile down to real `DocumentFragment` instances. The browser treats those fragments as one-time transport containers: append them to a parent, and the fragment empties itself as it moves its children. Unlike VDOM libraries (React, Preact, Solid), we do not clone fragments on your behalf, so storing a fragment and reusing it later will not work the way a React developer might expect.
+
+```ts
+const header = jsx`
+  <>
+    <h1>Title</h1>
+    <p>Reusable? Only if you clone.</p>
+  </>
+`
+
+document.querySelector('header')!.append(header)
+document.querySelector('footer')!.append(header) // footer stays empty
+```
+
+When you need multiple copies, call the template again, wrap it in a helper (`const makeHeader = () => jsx`<...>`; makeHeader()`), or clone the fragment before reusing it (`footer.append(header.cloneNode(true))`). Components that return fragments are unaffected because every invocation produces a fresh fragment.
 
 ## Limitations
 

@@ -10,7 +10,7 @@ npx @knighted/jsx init
 
 What it does by default:
 
-- Installs `@oxc-parser/binding-wasm32-wasi` plus runtime helpers (`@napi-rs/wasm-runtime`, `@emnapi/runtime`, `@emnapi/core`).
+- Installs `@oxc-parser/binding-wasm32-wasi` that matches the library's bundled `oxc-parser` version plus runtime helpers (`@napi-rs/wasm-runtime`, `@emnapi/runtime`, `@emnapi/core`).
 - Records the binding in `optionalDependencies` so the version is visible in your project.
 - Verifies the binding can be imported and reports the resolved path.
 - Skips loader config changes (prompted only when you opt in).
@@ -19,6 +19,7 @@ What it does by default:
 
 - `--package-manager`, `--pm <npm|pnpm|yarn|bun>`: override detection.
 - `--wasm-package <spec>`: install a different binding spec (or set `WASM_BINDING_PACKAGE`).
+- `--wasm-version <semver>`: override the default bundled version when using the standard binding package.
 - `--config`: prompt for loader help (no automatic edits yet; shows guidance only).
 - `--skip-config`: skip loader help (default).
 - `--dry-run`: print what would happen without executing.
@@ -40,12 +41,16 @@ npx @knighted/jsx init --pm npm
 # Prompt for loader guidance after install
 npx @knighted/jsx init --config
 
-# Use a custom binding build
-WASM_BINDING_PACKAGE=@oxc-parser/binding-wasm32-wasi@^0.100.0 npx @knighted/jsx init
+# Install a specific binding version
+npx @knighted/jsx init --wasm-version 0.100.0
+
+# Use a custom binding spec entirely
+WASM_BINDING_PACKAGE=@oxc-parser/binding-wasm32-wasi@beta npx @knighted/jsx init
 ```
 
 ## Notes
 
+- The default binding install always matches the `oxc-parser` version bundled with `@knighted/jsx`; use `--wasm-version`, `--wasm-package`, or `WASM_BINDING_PACKAGE` when you intentionally need a different build.
 - The command uses `npm pack` internally to pull the WASM binding even when it is marked for `cpu: ["wasm32"]`.
 - Loader configuration is opt-in and requires a prompt. No config files are modified unless you request help.
 - If verification fails, rerun with `--verbose` to see the resolved binding path and error details.
