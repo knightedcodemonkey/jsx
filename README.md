@@ -304,7 +304,7 @@ document.querySelector('header')!.append(header)
 document.querySelector('footer')!.append(header) // footer stays empty
 ```
 
-When you need multiple copies, call the template again, wrap it in a helper (`const makeHeader = () => jsx`<...>`; makeHeader()`), or clone the fragment before reusing it (`footer.append(header.cloneNode(true))`). Components that return fragments are unaffected because every invocation produces a fresh fragment.
+When you need multiple copies, call the template again, wrap it in a helper (``const makeHeader = () => jsx`<...>`; makeHeader()``), or clone the fragment before reusing it (`footer.append(header.cloneNode(true))`). Components that return fragments are unaffected because every invocation produces a fresh fragment.
 
 ## Limitations
 
