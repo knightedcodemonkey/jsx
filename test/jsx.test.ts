@@ -146,6 +146,33 @@ describe('jsx template tag', () => {
     expect(label.hasAttribute('hidden')).toBe(true)
   })
 
+  it('toggles boolean attributes explicitly and removes them when false', () => {
+    const toggle = jsx`
+      <button disabled={${true}} required={${false}} />
+    ` as HTMLButtonElement
+
+    expect(toggle.hasAttribute('disabled')).toBe(true)
+    expect(toggle.disabled).toBe(true)
+    expect(toggle.hasAttribute('required')).toBe(false)
+
+    const enabled = jsx`
+      <button disabled={${false}} />
+    ` as HTMLButtonElement
+
+    expect(enabled.hasAttribute('disabled')).toBe(false)
+    expect(enabled.disabled).toBe(false)
+  })
+
+  it('serializes aria attributes as strings even for booleans', () => {
+    const div = jsx`
+      <div aria-hidden={${true}} aria-live={${'polite'}} aria-checked={${false}} />
+    ` as HTMLDivElement
+
+    expect(div.getAttribute('aria-hidden')).toBe('true')
+    expect(div.getAttribute('aria-live')).toBe('polite')
+    expect(div.getAttribute('aria-checked')).toBe('false')
+  })
+
   it('renders innerHTML payloads safely', () => {
     const html = '<span class="danger">watch me</span>'
     const container = jsx`

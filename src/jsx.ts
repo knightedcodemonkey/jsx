@@ -69,6 +69,39 @@ const isPromiseLike = (value: unknown): value is PromiseLike<unknown> => {
   return typeof (value as { then?: unknown }).then === 'function'
 }
 
+const BOOLEAN_ATTRIBUTES = new Set([
+  'allowfullscreen',
+  'allowpaymentrequest',
+  'async',
+  'autofocus',
+  'autoplay',
+  'checked',
+  'controls',
+  'default',
+  'defer',
+  'disabled',
+  'formnovalidate',
+  'hidden',
+  'inert',
+  'ismap',
+  'itemscope',
+  'loop',
+  'multiple',
+  'muted',
+  'nomodule',
+  'novalidate',
+  'open',
+  'playsinline',
+  'readonly',
+  'required',
+  'reversed',
+  'selected',
+])
+
+const isBooleanAttribute = (name: string) => BOOLEAN_ATTRIBUTES.has(name.toLowerCase())
+
+const isAriaAttribute = (name: string) => name.startsWith('aria-')
+
 const captureSuffix = 'Capture'
 
 type ParsedEventBinding = {
@@ -192,7 +225,21 @@ const resolveEventHandlerValue = (value: unknown): ResolvedEventHandler | null =
 }
 
 const setDomProp = (element: Element, name: string, value: unknown) => {
-  if (value === false || value === null || value === undefined) {
+  if (value === null || value === undefined) {
+    return
+  }
+
+  if (isBooleanAttribute(name)) {
+    const nextState = Boolean(value)
+    if (name in element && !name.includes('-')) {
+      type ElementWithIndex = Element & Record<string, unknown>
+      ;(element as ElementWithIndex)[name] = nextState as never
+    }
+    element.toggleAttribute(name, nextState)
+    return
+  }
+
+  if (!isAriaAttribute(name) && value === false) {
     return
   }
 
@@ -260,6 +307,11 @@ const setDomProp = (element: Element, name: string, value: unknown) => {
       element.addEventListener(eventBinding.eventName, handlerValue.listener, options)
       return
     }
+  }
+
+  if (isAriaAttribute(name)) {
+    element.setAttribute(name, String(value))
+    return
   }
 
   if (name === 'class' || name === 'className') {
