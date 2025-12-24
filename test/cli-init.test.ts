@@ -279,14 +279,14 @@ describe('persistBindingSpec', () => {
     cli.persistBindingSpec(
       tmp,
       '@oxc-parser/binding-wasm32-wasi',
-      '^0.99.0',
+      '^0.105.0',
       false,
       false,
     )
 
     const updated = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
     expect(updated.optionalDependencies['@oxc-parser/binding-wasm32-wasi']).toBe(
-      '^0.99.0',
+      '^0.105.0',
     )
   })
 
@@ -528,17 +528,17 @@ describe('main (overrides)', () => {
     const installBinding = vi.fn().mockResolvedValue({
       targetDir: '/tmp/project/node_modules/@oxc-parser/binding-wasm32-wasi',
       name: '@oxc-parser/binding-wasm32-wasi',
-      version: '0.99.0',
+      version: '0.105.0',
     })
     const persistBindingSpec = vi.fn()
     const verifyBinding = vi.fn().mockResolvedValue('resolved.js')
     const maybeHandleConfigPrompt = vi.fn().mockResolvedValue(undefined)
     const resolveBindingSpec = vi.fn().mockReturnValue({
-      spec: '@oxc-parser/binding-wasm32-wasi@0.99.0',
+      spec: '@oxc-parser/binding-wasm32-wasi@0.105.0',
       name: '@oxc-parser/binding-wasm32-wasi',
-      version: '0.99.0',
+      version: '0.105.0',
     })
-    const readLocalOxcParserVersion = vi.fn().mockReturnValue('0.99.0')
+    const readLocalOxcParserVersion = vi.fn().mockReturnValue('0.105.0')
 
     await cli.main({
       parseArgs,
@@ -553,9 +553,9 @@ describe('main (overrides)', () => {
       readLocalOxcParserVersion,
     })
 
-    expect(resolveBindingSpec).toHaveBeenCalledWith(options.wasmPackage, '0.99.0')
+    expect(resolveBindingSpec).toHaveBeenCalledWith(options.wasmPackage, '0.105.0')
     expect(installBinding).toHaveBeenCalledWith(
-      '@oxc-parser/binding-wasm32-wasi@0.99.0',
+      '@oxc-parser/binding-wasm32-wasi@0.105.0',
       options.cwd,
       options.dryRun,
       options.verbose,

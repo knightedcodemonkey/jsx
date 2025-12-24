@@ -119,7 +119,7 @@ describe('reactJsx template tag', () => {
     const items = new Set(['alpha', 'beta'])
 
     const element = reactJsx`
-      <section {...${extras}} hidden data-note={/* transient */}>
+      <section {...${extras}} hidden data-note={${undefined}}>
         {/* drop this comment */}
         {${null}}
         {${false}}
