@@ -99,7 +99,7 @@ The React runtime shares the same template semantics as `jsx`, except it returns
 
 - `style` accepts either a string or an object. Object values handle CSS custom properties (`--token`) automatically.
 - `class` and `className` both work and can be strings or arrays.
-- Event handlers use the `on<Event>` naming convention (e.g. `onClick`).
+- Event handlers use the `on<Event>` naming convention (e.g. `onClick`), support capture-phase variants via `on<Event>Capture`, and allow custom events with the `on:custom-event` syntax (descriptor objects with `{ handler, once, capture }` are also accepted).
 - `ref` supports callback refs as well as mutable `{ current }` objects.
 - `dangerouslySetInnerHTML` expects an object with an `__html` field, mirroring React.
 

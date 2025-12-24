@@ -93,6 +93,17 @@ export default [
     },
   },
   {
+    files: ['src/jsx-runtime.ts', 'test/jsx.test.ts'],
+    rules: {
+      'n/no-unsupported-features/node-builtins': [
+        'error',
+        {
+          ignores: ['CustomEvent'],
+        },
+      ],
+    },
+  },
+  {
     ...playwrightConfig,
     files: ['playwright/**/*.{ts,tsx,js}'],
   },

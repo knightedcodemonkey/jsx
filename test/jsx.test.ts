@@ -32,6 +32,47 @@ describe('jsx template tag', () => {
     expect(button.textContent).toBe('Count is 3')
   })
 
+  it('supports capture-phase handlers via the Capture suffix', () => {
+    const captureHandler = vi.fn()
+    const bubbleHandler = vi.fn()
+
+    const tree = jsx`
+      <div onClickCapture={${captureHandler}}>
+        <button onClick={${bubbleHandler}}>Click me</button>
+      </div>
+    ` as HTMLDivElement
+
+    document.body.append(tree)
+
+    tree.querySelector('button')?.click()
+
+    expect(captureHandler).toHaveBeenCalledTimes(1)
+    expect(bubbleHandler).toHaveBeenCalledTimes(1)
+    expect(captureHandler.mock.invocationCallOrder[0]).toBeLessThan(
+      bubbleHandler.mock.invocationCallOrder[0],
+    )
+  })
+
+  it('handles custom events via the on: prefix and handler descriptors', () => {
+    const customHandler = vi.fn()
+    const descriptorHandler = vi.fn()
+
+    const element = jsx`
+      <section
+        on:widget-toggle={${customHandler}}
+        on:readyCapture={${{ handler: descriptorHandler, once: true }}}
+      />
+    ` as HTMLElement
+
+    element.dispatchEvent(new CustomEvent('widget-toggle'))
+    expect(customHandler).toHaveBeenCalledTimes(1)
+
+    element.dispatchEvent(new CustomEvent('ready', { bubbles: true }))
+    element.dispatchEvent(new CustomEvent('ready', { bubbles: true }))
+
+    expect(descriptorHandler).toHaveBeenCalledTimes(1)
+  })
+
   it('inlines dynamic text expressions without extra braces', () => {
     const strong = document.createElement('strong')
     strong.textContent = 'bold'
