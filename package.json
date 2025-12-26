@@ -162,7 +162,7 @@
   "optionalDependencies": {
     "@oxc-parser/binding-darwin-arm64": "^0.105.0",
     "@oxc-parser/binding-linux-x64-gnu": "^0.105.0",
-    "@oxc-parser/binding-wasm32-wasi": "0.105.0"
+    "@oxc-parser/binding-wasm32-wasi": "^0.105.0"
   },
   "overrides": {
     "module-lookup-amd": {
