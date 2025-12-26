@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import readline from 'node:readline/promises'
+import { createRequire } from 'node:module'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { create } from 'tar'
 
@@ -104,6 +105,61 @@ describe('detectPackageManager', () => {
     } else {
       delete process.env.npm_config_user_agent
     }
+  })
+})
+
+describe('readLocalOxcParserVersion', () => {
+  it('prefers the parser colocated with @knighted/jsx over a hoisted copy', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jsx-cli-parser-local-'))
+    const requireFromTmp = createRequire(path.join(tmp, 'package.json'))
+
+    const jsxPkgDir = path.join(tmp, 'node_modules', '@knighted', 'jsx')
+    fs.mkdirSync(jsxPkgDir, { recursive: true })
+    fs.writeFileSync(path.join(tmp, 'package.json'), JSON.stringify({ name: 'tmp' }))
+    fs.writeFileSync(
+      path.join(jsxPkgDir, 'package.json'),
+      JSON.stringify({ name: '@knighted/jsx', version: '0.0.0' }),
+    )
+
+    const colocatedParser = path.join(jsxPkgDir, 'node_modules', 'oxc-parser')
+    fs.mkdirSync(colocatedParser, { recursive: true })
+    fs.writeFileSync(
+      path.join(colocatedParser, 'package.json'),
+      JSON.stringify({ name: 'oxc-parser', version: '9.9.9' }),
+    )
+
+    const hoistedParser = path.join(tmp, 'node_modules', 'oxc-parser')
+    fs.mkdirSync(hoistedParser, { recursive: true })
+    fs.writeFileSync(
+      path.join(hoistedParser, 'package.json'),
+      JSON.stringify({ name: 'oxc-parser', version: '0.7.8' }),
+    )
+
+    const version = cli.readLocalOxcParserVersion(requireFromTmp)
+    expect(version).toBe('9.9.9')
+  })
+
+  it('falls back to a hoisted parser when no colocated copy exists', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jsx-cli-parser-hoisted-'))
+    const requireFromTmp = createRequire(path.join(tmp, 'package.json'))
+
+    const jsxPkgDir = path.join(tmp, 'node_modules', '@knighted', 'jsx')
+    fs.mkdirSync(jsxPkgDir, { recursive: true })
+    fs.writeFileSync(path.join(tmp, 'package.json'), JSON.stringify({ name: 'tmp' }))
+    fs.writeFileSync(
+      path.join(jsxPkgDir, 'package.json'),
+      JSON.stringify({ name: '@knighted/jsx', version: '0.0.0' }),
+    )
+
+    const hoistedParser = path.join(tmp, 'node_modules', 'oxc-parser')
+    fs.mkdirSync(hoistedParser, { recursive: true })
+    fs.writeFileSync(
+      path.join(hoistedParser, 'package.json'),
+      JSON.stringify({ name: 'oxc-parser', version: '0.7.8' }),
+    )
+
+    const version = cli.readLocalOxcParserVersion(requireFromTmp)
+    expect(version).toBe('0.7.8')
   })
 })
 
