@@ -103,6 +103,7 @@
     "build:lite": "tsup --config tsup.config.ts",
     "build:cli": "tsup --config tsup.cli.config.ts",
     "setup:wasm": "node scripts/setup-wasm.mjs",
+    "sizecheck": "node scripts/sizecheck.mjs",
     "prepack": "npm run build"
   },
   "devDependencies": {

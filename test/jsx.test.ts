@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { jsx, type JsxComponent, type JsxRenderable } from '../src/jsx.js'
 import { createResolveAttributes } from '../src/internal/attribute-resolution.js'
@@ -272,7 +272,12 @@ describe('jsx template tag', () => {
   })
 
   it('throws helpful parser errors for invalid markup', () => {
-    expect(() => jsx`<div>`).toThrow('[oxc-parser]')
+    expect(() => jsx`<div>`).toThrowErrorMatchingInlineSnapshot(`
+      [Error: [oxc-parser] Unexpected token
+      --> jsx template:1:6
+      1 | <div>
+        |      ^]
+    `)
   })
 
   it('supports inline JSX expressions inside children', () => {
@@ -575,6 +580,49 @@ describe('jsx template tag', () => {
       } finally {
         ;(globalThis as { Node?: typeof Node }).Node = originalNode
       }
+    })
+  })
+
+  describe('dev diagnostics', () => {
+    let warnSpy: ReturnType<typeof vi.spyOn> | null = null
+
+    const resetDebugFlag = () => {
+      if (warnSpy) {
+        warnSpy.mockRestore()
+        warnSpy = null
+      }
+      delete process.env.KNIGHTED_JSX_DEBUG
+    }
+
+    beforeEach(() => {
+      process.env.KNIGHTED_JSX_DEBUG = '1'
+      warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    })
+
+    afterEach(() => {
+      resetDebugFlag()
+    })
+
+    it('suggests camelCase names for lowercase DOM events', () => {
+      const element = jsx`<button onclick={${() => {}}} />` as HTMLButtonElement
+
+      expect(element).toBeInstanceOf(HTMLButtonElement)
+      expect(warnSpy).not.toBeNull()
+      expect(warnSpy?.mock.calls.some(call => call[0]?.includes('onclick'))).toBe(true)
+    })
+
+    it('throws when event handlers are not functions or descriptors', () => {
+      expect(() => jsx`<button onClick={${'not-a-function'}} />`).toThrow(/onClick/)
+    })
+
+    it('throws when dangerouslySetInnerHTML is missing a string __html field', () => {
+      expect(() => jsx`<div dangerouslySetInnerHTML={${{}}} />`).toThrow(
+        /dangerouslySetInnerHTML/,
+      )
+
+      expect(() => jsx`<div dangerouslySetInnerHTML={${{ __html: 123 }}} />`).toThrow(
+        /dangerouslySetInnerHTML/,
+      )
     })
   })
 })

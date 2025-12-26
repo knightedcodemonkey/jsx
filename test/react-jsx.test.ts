@@ -145,6 +145,11 @@ describe('reactJsx template tag', () => {
   })
 
   it('surfaces parser errors with helpful context when JSX is invalid', () => {
-    expect(() => reactJsx`<section>`).toThrow('[oxc-parser]')
+    expect(() => reactJsx`<section>`).toThrowErrorMatchingInlineSnapshot(`
+      [Error: [oxc-parser] Unexpected token
+      --> reactJsx template:1:10
+      1 | <section>
+        |          ^]
+    `)
   })
 })

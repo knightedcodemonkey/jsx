@@ -1,3 +1,5 @@
+import { createDevError, describeValue, isDevEnvironment } from './dev-environment.js'
+
 const captureSuffix = 'Capture'
 
 export type ParsedEventBinding = {
@@ -84,12 +86,26 @@ export type ResolvedEventHandler = {
   options?: AddEventListenerOptions
 }
 
-export const resolveEventHandlerValue = (value: unknown): ResolvedEventHandler | null => {
+const throwInvalidHandlerError = (propName: string, value: unknown) => {
+  if (!isDevEnvironment()) {
+    return
+  }
+
+  throw createDevError(
+    `The "${propName}" prop expects a function, EventListenerObject, or descriptor ({ handler }) but received ${describeValue(value)}.`,
+  )
+}
+
+export const resolveEventHandlerValue = (
+  propName: string,
+  value: unknown,
+): ResolvedEventHandler | null => {
   if (typeof value === 'function' || isEventListenerObject(value)) {
     return { listener: value as EventListenerOrEventListenerObject }
   }
 
   if (!isEventHandlerDescriptor(value)) {
+    throwInvalidHandlerError(propName, value)
     return null
   }
 

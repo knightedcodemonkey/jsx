@@ -11,7 +11,7 @@ import {
   buildTemplate,
   evaluateExpression,
   extractRootNode,
-  formatParserError,
+  formatTaggedTemplateParserError,
   getIdentifierName,
   normalizeJsxTextSegments,
   parserOptions,
@@ -206,7 +206,7 @@ const setDomProp = (
 
   const eventBinding = parseEventPropName(name)
   if (eventBinding) {
-    const handlerValue = resolveEventHandlerValue(value)
+    const handlerValue = resolveEventHandlerValue(name, value)
 
     if (handlerValue) {
       let options = handlerValue.options ? { ...handlerValue.options } : undefined
@@ -486,7 +486,14 @@ export const jsx = (
   const result = parseSync('inline.jsx', build.source, parserOptions)
 
   if (result.errors.length > 0) {
-    throw new Error(formatParserError(result.errors[0]!))
+    throw new Error(
+      formatTaggedTemplateParserError(
+        'jsx',
+        templates,
+        build.diagnostics,
+        result.errors[0]!,
+      ),
+    )
   }
 
   const root = extractRootNode(result.program)
