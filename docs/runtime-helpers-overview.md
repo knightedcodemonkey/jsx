@@ -2,7 +2,8 @@
 
 This note explains how the runtime helpers behave when you call them directly—without involving the loader. Both helpers are plain JavaScript tagged template literals that lean on the `oxc-parser` WebAssembly build to interpret JSX syntax at execution time.
 
-> [!IMPORTANT] Runtime `jsx` calls must include literal JSX braces around attribute/child expressions (for example, `onClick={${handler}}`). Only the loader and TypeScript plugin auto-insert those braces; direct helper usage feeds the template straight into the parser and will throw if braces are missing.
+> [!IMPORTANT]  
+> Runtime `jsx` calls must include literal JSX braces around attribute/child expressions (for example, `onClick={${handler}}`). Only the loader and TypeScript plugin auto-insert those braces; direct helper usage feeds the template straight into the parser and will throw if braces are missing.
 
 ## What happens when you call the helpers?
 
@@ -19,7 +20,8 @@ This note explains how the runtime helpers behave when you call them directly—
 - Works in browsers out of the box. In Node you can import `@knighted/jsx/node` to bootstrap a DOM shim (tries `linkedom`, then `jsdom`).
 - Expressions inside the template (props, children, dynamic tags) are evaluated before parsing—no special placeholder syntax is required.
 
-> [!IMPORTANT] The runtime parser only understands literal JSX syntax, so attribute expressions must include braces in the template source (e.g. `onClick={${handler}}`). The loader/plugin pipeline can insert those braces for you, but direct calls to ` jsx`` ` must already contain them.
+> [!IMPORTANT]  
+> The runtime parser only understands literal JSX syntax, so attribute expressions must include braces in the template source (e.g. `onClick={${handler}}`). The loader/plugin pipeline can insert those braces for you, but direct calls to ` jsx`` ` must already contain them.
 
 Example:
 
