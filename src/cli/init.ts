@@ -174,6 +174,28 @@ type NodeRequireFn = ReturnType<typeof createRequire>
 
 function readLocalOxcParserVersion(resolver: NodeRequireFn = CLI_REQUIRE) {
   try {
+    // Prefer the version installed alongside this CLI package, not a hoisted sibling.
+    const jsxPkgPath = resolver.resolve('@knighted/jsx/package.json')
+    const jsxRoot = path.dirname(jsxPkgPath)
+    const localParserPkg = path.join(
+      jsxRoot,
+      'node_modules',
+      'oxc-parser',
+      'package.json',
+    )
+    if (fs.existsSync(localParserPkg)) {
+      const pkgJson = JSON.parse(fs.readFileSync(localParserPkg, 'utf8')) as {
+        version?: string
+      }
+      if (pkgJson && typeof pkgJson.version === 'string') {
+        return pkgJson.version
+      }
+    }
+  } catch {
+    // Ignore resolution failures and fall back below.
+  }
+
+  try {
     const pkg = resolver('oxc-parser/package.json') as { version?: string }
     if (pkg && typeof pkg.version === 'string') {
       return pkg.version
