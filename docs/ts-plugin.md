@@ -4,6 +4,8 @@ Use the [`@knighted/jsx-ts-plugin`](https://github.com/knightedcodemonkey/jsx-ts
 
 > [!IMPORTANT]
 > TypeScript only loads language-service plugins inside editors (via `tsserver`). Running `tsc` or `tsc --noEmit` directly will **not** execute this plugin. To enforce the same diagnostics in CI, pair your build with a compiler transform (loader, `ts-patch`, etc.) or run a custom check that reuses the plugin’s transformation logic.
+>
+> Requires TypeScript 5.4 or newer (matching the v0.3.x peer dependency in `@knighted/jsx-ts-plugin`).
 
 ## Installation
 
@@ -34,6 +36,12 @@ Enable the plugin inside the `plugins` section of your `tsconfig.json` (or `jsco
 > [!TIP]
 > The `tagModes` entry shown above matches the built-in defaults. Keep it when you add custom tag names (for example, if you alias `jsx` to `html`), otherwise you can omit the property entirely.
 
+### Options reference
+
+- `tagModes`: maps each tagged template function to either `"dom"` or `"react"`. Defaults to `{ "jsx": "dom", "reactJsx": "react" }` so mixed projects work with zero config.
+- `tags` / `mode`: legacy aliases from early releases. They continue to work but `tagModes` is preferred because it supports multiple identifiers at once.
+- `maxTemplatesPerFile`: optional safeguard that skips files containing more tagged templates than the provided number—handy if you have giant fixtures that would otherwise slow down the language service.
+
 Restart your editor after saving the config. From VS Code you can run **TypeScript: Select TypeScript Version** → **Use Workspace Version** to make sure the plugin loads from `node_modules`. The plugin repository documents every option and includes advanced examples—see [knightedcodemonkey/jsx-ts-plugin](https://github.com/knightedcodemonkey/jsx-ts-plugin) for details.
 
 ## Mixed DOM + React diagnostics
@@ -51,6 +59,14 @@ You can override the mode per expression by dropping an inline directive immedia
 ```
 
 The directive applies only to the next tagged template, making it safe to mix DOM wrappers and React islands inside the same file without global config churn.
+
+Directives can be line or block comments, and they work even when the tag name is custom (for example, if you alias `jsx` to `html`).
+
+## TSX runtime integration
+
+`@knighted/jsx` bundles a `jsx-runtime` entrypoint, so setting `"jsxImportSource": "@knighted/jsx"` gives the TypeScript compiler everything it needs for TSX files.
+
+Remember that DOM-mode helpers return `JsxRenderable` (real DOM nodes, strings, iterables, etc.) while React-mode helpers return `ReactElement`. When sharing utilities between the two ecosystems, let inference pick the right return type and only cast when you truly need DOM-only APIs.
 
 ## Helpful types
 
