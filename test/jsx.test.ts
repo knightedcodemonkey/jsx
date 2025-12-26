@@ -606,7 +606,11 @@ describe('jsx template tag', () => {
 
       expect(element).toBeInstanceOf(HTMLButtonElement)
       expect(warnSpy).not.toBeNull()
-      expect(warnSpy?.mock.calls.some(call => call[0]?.includes('onclick'))).toBe(true)
+      expect(
+        warnSpy?.mock.calls.some(([message]: Parameters<typeof console.warn>) =>
+          message?.includes('onclick'),
+        ),
+      ).toBe(true)
     })
 
     it('throws when event handlers are not functions or descriptors', () => {

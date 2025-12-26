@@ -1,6 +1,6 @@
 {
   "name": "@knighted/jsx",
-  "version": "1.6.0-rc.0",
+  "version": "1.6.0",
   "description": "Runtime JSX tagged template that renders DOM or React trees anywhere without a build step.",
   "keywords": [
     "jsx runtime",
@@ -115,9 +115,10 @@
     "build": "duel && npm run build:lite && npm run build:cli",
     "prepare": "husky",
     "precheck-types": "npm run build",
-    "check-types": "npm run check-types:lib && npm run check-types:demo",
+    "check-types": "npm run check-types:lib && npm run check-types:demo && npm run check-types:test",
     "check-types:lib": "tsc --noEmit --project tsconfig.json",
     "check-types:demo": "tsc --noEmit --project examples/browser/tsconfig.json",
+    "check-types:test": "tsc --noEmit --project tsconfig.vitest.json",
     "lint": "eslint src test",
     "cycles": "madge src --circular --extensions ts,tsx,js,jsx --ts-config tsconfig.json",
     "prettier": "prettier -w .",

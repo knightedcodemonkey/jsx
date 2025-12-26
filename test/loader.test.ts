@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import loader from '../src/loader/jsx'
+import loader from '../src/loader/jsx.js'
 
 type LoaderResult = {
   code: string

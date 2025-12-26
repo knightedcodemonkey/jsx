@@ -5,11 +5,11 @@ import readline from 'node:readline/promises'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { create } from 'tar'
 
-let cli: typeof import('../src/cli/init')
+let cli: typeof import('../src/cli/init.js')
 
 beforeAll(async () => {
   process.env.KNIGHTED_JSX_CLI_TEST = '1'
-  cli = await import('../src/cli/init')
+  cli = await import('../src/cli/init.js')
 })
 
 describe('parseArgs', () => {
@@ -576,7 +576,7 @@ describe('module entrypoint guard', () => {
     process.env.KNIGHTED_JSX_CLI_TEST = '0'
     process.argv = ['node', 'cli']
     process.chdir(tmp)
-    await import('../src/cli/init')
+    await import('../src/cli/init.js')
 
     expect(errorSpy).toHaveBeenCalledWith(
       'Failed to set up WASM binding:',
@@ -601,7 +601,7 @@ describe('suppressExperimentalWasiWarning', () => {
 
     vi.resetModules()
     process.env.KNIGHTED_JSX_CLI_TEST = '1'
-    await import('../src/cli/init')
+    await import('../src/cli/init.js')
 
     const patchedEmit = process.emitWarning
     patchedEmit('WASI is an experimental feature', 'ExperimentalWarning')
