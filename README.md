@@ -19,6 +19,7 @@ A runtime JSX template tag backed by the [`oxc-parser`](https://github.com/oxc-p
 - [Loader integration](#loader-integration)
 - [Node / SSR usage](#node--ssr-usage)
 - [Browser usage](#browser-usage)
+- [Development diagnostics](docs/development-diagnostics.md)
 - [TypeScript plugin](docs/ts-plugin.md)
 - [TypeScript guide](docs/typescript.md)
 - [Component testing](docs/testing.md)
@@ -102,16 +103,6 @@ The React runtime shares the same template semantics as `jsx`, except it returns
 - Event handlers use the `on<Event>` naming convention (e.g. `onClick`), support capture-phase variants via `on<Event>Capture`, and allow custom events with the `on:custom-event` syntax (descriptor objects with `{ handler, once, capture }` are also accepted).
 - `ref` supports callback refs as well as mutable `{ current }` objects.
 - `dangerouslySetInnerHTML` expects an object with an `__html` field, mirroring React.
-
-### Development diagnostics
-
-Enable additional runtime warnings by setting `KNIGHTED_JSX_DEBUG=1` before executing your code (for example, `KNIGHTED_JSX_DEBUG=1 node demo.mjs`). When the flag is present the runtime:
-
-- Warns when lowercase DOM events such as `onclick` are used instead of the camelCase `onClick` form.
-- Throws descriptive errors for invalid event handlers (anything other than a function, `EventListenerObject`, or `{ handler }` descriptor).
-- Throws when `dangerouslySetInnerHTML` is provided without a `{ __html: string }` payload.
-
-Bundlers can tree-shake these diagnostics by replacing the environment variable with a compile-time constant—for example, Rspack/Webpack users can set `define: { 'process.env.KNIGHTED_JSX_DEBUG': '0' }`.
 
 ### Fragments & SVG
 

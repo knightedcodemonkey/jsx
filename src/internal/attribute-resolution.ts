@@ -6,12 +6,16 @@ import type {
   JSXSpreadAttribute,
 } from '@oxc-project/types'
 import type { TemplateComponent, TemplateContext } from '../runtime/shared.js'
-import {
-  createDevError,
-  describeValue,
-  emitDevWarning,
-  isDevEnvironment,
-} from './dev-environment.js'
+export type AttributeDiagnosticsHooks = {
+  warnLowercaseEventProp?: (name: string) => void
+  ensureValidDangerouslySetInnerHTML?: (value: unknown) => void
+}
+
+let attributeDiagnostics: AttributeDiagnosticsHooks | null = null
+
+export const setAttributeDiagnosticsHooks = (hooks: AttributeDiagnosticsHooks | null) => {
+  attributeDiagnostics = hooks
+}
 
 export type Namespace = 'svg' | null
 
@@ -32,41 +36,12 @@ export type ResolveAttributesFn<TComponent extends TemplateComponent> = (
   namespace: Namespace,
 ) => Record<string, unknown>
 
-const isAsciiLowercase = (char: string) => char >= 'a' && char <= 'z'
-
 const warnLowercaseEventProp = (name: string) => {
-  if (!name.startsWith('on') || name.startsWith('on:') || name.length < 3) {
-    return
-  }
-
-  const indicator = name[2] ?? ''
-  if (!isAsciiLowercase(indicator)) {
-    return
-  }
-
-  const suggestion = `${name.slice(0, 2)}${indicator.toUpperCase()}${name.slice(3)}`
-  emitDevWarning(
-    `Use camelCase DOM event props when targeting runtime jsx templates. Received "${name}"; did you mean "${suggestion}"?`,
-  )
+  attributeDiagnostics?.warnLowercaseEventProp?.(name)
 }
 
 const ensureValidDangerouslySetInnerHTML = (value: unknown) => {
-  if (!isDevEnvironment()) {
-    return
-  }
-
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw createDevError(
-      'dangerouslySetInnerHTML expects an object with a string __html field.',
-    )
-  }
-
-  const html = (value as { __html?: unknown }).__html
-  if (typeof html !== 'string') {
-    throw createDevError(
-      `dangerouslySetInnerHTML.__html must be a string but received ${describeValue(html)}.`,
-    )
-  }
+  attributeDiagnostics?.ensureValidDangerouslySetInnerHTML?.(value)
 }
 
 export const createResolveAttributes = <TComponent extends TemplateComponent>(

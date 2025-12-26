@@ -35,8 +35,8 @@ export const describeValue = (value: unknown) => {
 
 export const createDevError = (message: string) => new Error(formatDevMessage(message))
 
-export const emitDevWarning = (message: string) => {
-  if (!isDevEnvironment()) {
+export const emitDevWarning = (message: string, force = false) => {
+  if (!force && !isDevEnvironment()) {
     return
   }
 

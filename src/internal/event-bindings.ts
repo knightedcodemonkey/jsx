@@ -1,4 +1,12 @@
-import { createDevError, describeValue, isDevEnvironment } from './dev-environment.js'
+export type EventDiagnosticsHooks = {
+  onInvalidHandler?: (propName: string, value: unknown) => void
+}
+
+let eventDiagnostics: EventDiagnosticsHooks | null = null
+
+export const setEventDiagnosticsHooks = (hooks: EventDiagnosticsHooks | null) => {
+  eventDiagnostics = hooks
+}
 
 const captureSuffix = 'Capture'
 
@@ -87,13 +95,7 @@ export type ResolvedEventHandler = {
 }
 
 const throwInvalidHandlerError = (propName: string, value: unknown) => {
-  if (!isDevEnvironment()) {
-    return
-  }
-
-  throw createDevError(
-    `The "${propName}" prop expects a function, EventListenerObject, or descriptor ({ handler }) but received ${describeValue(value)}.`,
-  )
+  eventDiagnostics?.onInvalidHandler?.(propName, value)
 }
 
 export const resolveEventHandlerValue = (

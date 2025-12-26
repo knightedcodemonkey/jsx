@@ -2,6 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { jsx, type JsxComponent, type JsxRenderable } from '../src/jsx.js'
 import { createResolveAttributes } from '../src/internal/attribute-resolution.js'
+import {
+  disableJsxDebugDiagnostics,
+  enableJsxDebugDiagnostics,
+} from '../src/debug/diagnostics.js'
 import { find as findPropertyInfo, html as htmlProperties } from 'property-information'
 
 const resetDom = () => {
@@ -586,21 +590,15 @@ describe('jsx template tag', () => {
   describe('dev diagnostics', () => {
     let warnSpy: ReturnType<typeof vi.spyOn> | null = null
 
-    const resetDebugFlag = () => {
-      if (warnSpy) {
-        warnSpy.mockRestore()
-        warnSpy = null
-      }
-      delete process.env.KNIGHTED_JSX_DEBUG
-    }
-
     beforeEach(() => {
-      process.env.KNIGHTED_JSX_DEBUG = '1'
+      enableJsxDebugDiagnostics({ mode: 'always' })
       warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     })
 
     afterEach(() => {
-      resetDebugFlag()
+      warnSpy?.mockRestore()
+      warnSpy = null
+      disableJsxDebugDiagnostics()
     })
 
     it('suggests camelCase names for lowercase DOM events', () => {
