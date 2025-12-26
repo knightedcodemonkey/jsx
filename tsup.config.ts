@@ -10,8 +10,11 @@ const external = [
 export default defineConfig({
   entry: {
     index: 'src/index.ts',
+    'debug/index': 'src/debug/index.ts',
+    'debug/diagnostics': 'src/debug/diagnostics.ts',
     'react/index': 'src/react/index.ts',
     'node/index': 'src/node/index.ts',
+    'node/debug/index': 'src/node/debug/index.ts',
     'node/react/index': 'src/node/react/index.ts',
   },
   outDir: 'dist/lite',

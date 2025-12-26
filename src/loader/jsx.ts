@@ -1,4 +1,4 @@
-import MagicString from 'magic-string'
+import MagicString, { type SourceMap } from 'magic-string'
 import { parseSync, type ParserOptions, type OxcError } from 'oxc-parser'
 import type {
   Expression,
@@ -12,8 +12,17 @@ import type {
   JSXSpreadAttribute,
   Program,
 } from '@oxc-project/types'
+import {
+  formatTaggedTemplateParserError,
+  type TemplateDiagnostics,
+  type TemplateExpressionRange,
+} from '../internal/template-diagnostics.js'
 
-type LoaderCallback = (err: Error | null, content?: string) => void
+type LoaderCallback = (
+  error: Error | null,
+  content?: string,
+  map?: SourceMap | null,
+) => void
 
 type LoaderContext<TOptions> = {
   resourcePath: string
@@ -47,6 +56,10 @@ type LoaderOptions = {
    * Optional per-tag override of the transformation mode. Keys map to tag names.
    */
   tagModes?: Record<string, LoaderMode | undefined>
+  /**
+   * When true, generate inline source maps for mutated files.
+   */
+  sourceMap?: boolean
 }
 
 type Slot = {
@@ -329,7 +342,8 @@ type HelperKind = 'react'
 
 type TransformResult = {
   code: string
-  helpers: string[]
+  map?: SourceMap
+  mutated: boolean
 }
 
 const TEMPLATE_EXPR_PLACEHOLDER_PREFIX = '__JSX_LOADER_TEMPLATE_EXPR_'
@@ -548,7 +562,13 @@ const renderTemplateWithSlots = (source: string, slots: Slot[]) => {
   return { code: output, changed: slots.length > 0 }
 }
 
-const transformTemplateLiteral = (templateSource: string, resourcePath: string) => {
+const transformTemplateLiteral = (
+  templateSource: string,
+  resourcePath: string,
+  tagName: string,
+  templates: TemplateStringsArray,
+  diagnostics: TemplateDiagnostics,
+) => {
   const result = parseSync(
     `${resourcePath}?jsx-template`,
     templateSource,
@@ -556,7 +576,17 @@ const transformTemplateLiteral = (templateSource: string, resourcePath: string) 
   )
 
   if (result.errors.length > 0) {
-    throw new Error(formatParserError(result.errors[0]!))
+    throw new Error(
+      formatTaggedTemplateParserError(
+        tagName,
+        templates,
+        diagnostics,
+        result.errors[0]!,
+        {
+          label: 'jsx-loader',
+        },
+      ),
+    )
   }
 
   const slots = collectSlots(result.program, templateSource)
@@ -644,6 +674,31 @@ const normalizeJsxTextSegments = (
 
 const TAG_PLACEHOLDER_PREFIX = '__JSX_LOADER_TAG_EXPR_'
 
+const materializeTemplateStrings = (
+  quasis: Array<Record<string, unknown>>,
+): TemplateStringsArray => {
+  const cooked: string[] = []
+  const raw: string[] = []
+
+  quasis.forEach(quasi => {
+    const value = quasi.value as { cooked?: string; raw?: string }
+    const cookedChunk =
+      typeof value.cooked === 'string' ? value.cooked : (value.raw ?? '')
+    const rawChunk = typeof value.raw === 'string' ? value.raw : cookedChunk
+    cooked.push(cookedChunk)
+    raw.push(rawChunk)
+  })
+
+  const templates = cooked as unknown as TemplateStringsArray
+  Object.defineProperty(templates, 'raw', {
+    value: raw as readonly string[],
+    writable: false,
+    configurable: false,
+    enumerable: false,
+  })
+  return templates
+}
+
 const buildTemplateSource = (
   quasis: Array<Record<string, unknown>>,
   expressions: Array<Record<string, unknown>>,
@@ -656,6 +711,7 @@ const buildTemplateSource = (
   let placeholderIndex = 0
   let trimStartNext = 0
   let mutated = false
+  const expressionRanges: TemplateExpressionRange[] = []
 
   const registerMarker = (code: string, isTag: boolean) => {
     if (isTag) {
@@ -672,6 +728,13 @@ const buildTemplateSource = (
     const marker = `${TEMPLATE_EXPR_PLACEHOLDER_PREFIX}${placeholderIndex++}__`
     placeholderMap.set(marker, code)
     return marker
+  }
+
+  const appendInsertion = (expressionIndex: number, insertion: string) => {
+    const start = template.length
+    template += insertion
+    const end = template.length
+    expressionRanges.push({ index: expressionIndex, sourceStart: start, sourceEnd: end })
   }
 
   quasis.forEach((quasi, index) => {
@@ -694,6 +757,7 @@ const buildTemplateSource = (
     if (!expression) {
       return
     }
+    const expressionIndex = index
 
     const start = (expression.start as number | undefined) ?? null
     const end = (expression.end as number | undefined) ?? null
@@ -712,7 +776,8 @@ const buildTemplateSource = (
     const marker = registerMarker(code, context.type === 'tag')
 
     const appendMarker = (wrapper?: (identifier: string) => string) => {
-      template += wrapper ? wrapper(marker) : marker
+      const insertion = wrapper ? wrapper(marker) : marker
+      appendInsertion(expressionIndex, insertion)
     }
 
     switch (context.type) {
@@ -758,6 +823,7 @@ const buildTemplateSource = (
       marker,
       code,
     })),
+    diagnostics: { expressionRanges },
   }
 }
 
@@ -766,10 +832,18 @@ const restoreTemplatePlaceholders = (code: string, placeholders: TemplatePlaceho
     return result.split(placeholder.marker).join(`\${${placeholder.code}}`)
   }, code)
 
+const createInlineSourceMapComment = (map: SourceMap) => {
+  const payload = Buffer.from(JSON.stringify(map), 'utf8').toString('base64')
+  return `//# sourceMappingURL=data:application/json;charset=utf-8;base64,${payload}`
+}
+
 const compileReactTemplate = (
   templateSource: string,
   placeholders: TemplatePlaceholder[],
   resourcePath: string,
+  tagName: string,
+  templates: TemplateStringsArray,
+  diagnostics: TemplateDiagnostics,
 ) => {
   const parsed = parseSync(
     `${resourcePath}?jsx-react-template`,
@@ -778,7 +852,17 @@ const compileReactTemplate = (
   )
 
   if (parsed.errors.length > 0) {
-    throw new Error(formatParserError(parsed.errors[0]!))
+    throw new Error(
+      formatTaggedTemplateParserError(
+        tagName,
+        templates,
+        diagnostics,
+        parsed.errors[0]!,
+        {
+          label: 'jsx-loader',
+        },
+      ),
+    )
   }
 
   const root = extractJsxRoot(parsed.program)
@@ -804,7 +888,11 @@ const isLoaderPlaceholderIdentifier = (node: AnyNode | undefined) => {
   )
 }
 
-const transformSource = (source: string, config: TransformConfig): TransformResult => {
+const transformSource = (
+  source: string,
+  config: TransformConfig,
+  options?: { sourceMap: boolean },
+): TransformResult => {
   const ast = parseSync(config.resourcePath, source, MODULE_PARSER_OPTIONS)
   if (ast.errors.length > 0) {
     throw new Error(formatParserError(ast.errors[0]!))
@@ -824,7 +912,7 @@ const transformSource = (source: string, config: TransformConfig): TransformResu
   })
 
   if (!taggedTemplates.length) {
-    return { code: source, helpers: [] }
+    return { code: source, mutated: false }
   }
 
   const magic = new MagicString(source)
@@ -847,11 +935,15 @@ const transformSource = (source: string, config: TransformConfig): TransformResu
         source,
         tagName,
       )
+      const templateStrings = materializeTemplateStrings(quasi.quasis)
 
       if (mode === 'runtime') {
         const { code, changed } = transformTemplateLiteral(
           templateSource.source,
           config.resourcePath,
+          tagName,
+          templateStrings,
+          templateSource.diagnostics,
         )
         const restored = restoreTemplatePlaceholders(code, templateSource.placeholders)
         const templateChanged = changed || templateSource.mutated
@@ -876,6 +968,9 @@ const transformSource = (source: string, config: TransformConfig): TransformResu
           templateSource.source,
           templateSource.placeholders,
           config.resourcePath,
+          tagName,
+          templateStrings,
+          templateSource.diagnostics,
         )
         helperKinds.add('react')
         magic.overwrite(node.start as number, node.end as number, compiled)
@@ -891,11 +986,30 @@ const transformSource = (source: string, config: TransformConfig): TransformResu
       )
     })
 
+  const helperSource = Array.from(helperKinds)
+    .map(kind => HELPER_SNIPPETS[kind])
+    .filter(Boolean)
+    .join('\n')
+
+  if (helperSource) {
+    magic.append(`\n${helperSource}`)
+    mutated = true
+  }
+
+  const code = mutated ? magic.toString() : source
+  const map =
+    options?.sourceMap && mutated
+      ? magic.generateMap({
+          hires: true,
+          source: config.resourcePath,
+          includeContent: true,
+        })
+      : undefined
+
   return {
-    code: mutated ? magic.toString() : source,
-    helpers: Array.from(helperKinds)
-      .map(kind => HELPER_SNIPPETS[kind])
-      .filter(Boolean),
+    code,
+    map,
+    mutated,
   }
 }
 
@@ -903,7 +1017,7 @@ export default function jsxLoader(
   this: LoaderContext<LoaderOptions>,
   input: string | Buffer,
 ) {
-  const callback = this.async()
+  const callback = this.async() as LoaderCallback
 
   try {
     const options = this.getOptions?.() ?? {}
@@ -943,18 +1057,21 @@ export default function jsxLoader(
       }
     })
     const source = typeof input === 'string' ? input : input.toString('utf8')
-    const { code, helpers } = transformSource(source, {
-      resourcePath: this.resourcePath,
-      tags,
-      tagModes,
-    })
+    const enableSourceMap = options.sourceMap === true
+    const { code, map } = transformSource(
+      source,
+      {
+        resourcePath: this.resourcePath,
+        tags,
+        tagModes,
+      },
+      { sourceMap: enableSourceMap },
+    )
 
-    if (helpers.length) {
-      callback(null, `${code}\n${helpers.join('\n')}`)
-      return
-    }
+    const output =
+      map && enableSourceMap ? `${code}\n${createInlineSourceMapComment(map)}` : code
 
-    callback(null, code)
+    callback(null, output, map)
   } catch (error) {
     callback(error as Error)
   }

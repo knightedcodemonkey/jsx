@@ -1,25 +1,40 @@
 import { describe, it, expect } from 'vitest'
 
-import loader from '../src/loader/jsx'
+import loader from '../src/loader/jsx.js'
 
-const runLoader = (source: string, options?: Record<string, unknown>) =>
-  new Promise<string>((resolve, reject) => {
+type LoaderResult = {
+  code: string
+  map?: unknown
+}
+
+const invokeLoader = <T>(
+  source: string,
+  options: Record<string, unknown> | undefined,
+  formatResult: (code: string, map?: unknown) => T,
+) =>
+  new Promise<T>((resolve, reject) => {
     const context = {
       resourcePath: '/virtual/file.tsx',
       getOptions: () => options ?? {},
       async() {
-        return (err: Error | null, result?: string) => {
+        return (err: Error | null, result?: string, map?: unknown) => {
           if (err) {
             reject(err)
             return
           }
-          resolve(result ?? '')
+          resolve(formatResult(result ?? '', map))
         }
       },
     }
 
     loader.call(context as never, source)
   })
+
+const runLoader = (source: string, options?: Record<string, unknown>) =>
+  invokeLoader(source, options, result => result)
+
+const runLoaderDetailed = (source: string, options?: Record<string, unknown>) =>
+  invokeLoader<LoaderResult>(source, options, (code, map) => ({ code, map }))
 
 describe('jsx loader', () => {
   it('leaves static templates untouched', async () => {
@@ -291,13 +306,28 @@ describe('jsx loader', () => {
   it('throws when a JSX template cannot be parsed', async () => {
     const source = ['const view = jsx`', '  <div>', '`'].join('\n')
 
-    await expect(runLoader(source)).rejects.toThrow('[jsx-loader]')
+    await expect(runLoader(source)).rejects.toThrowErrorMatchingInlineSnapshot(`
+      [Error: [jsx-loader] Unexpected token
+      --> jsx template:2:8
+      1 | 
+      2 |   <div>
+        |        ^
+      3 | ]
+    `)
   })
 
   it('throws when a react template cannot be parsed', async () => {
     const source = ['const view = reactJsx`', '  <section>', '`'].join('\n')
 
-    await expect(runLoader(source, { mode: 'react' })).rejects.toThrow('[jsx-loader]')
+    await expect(runLoader(source, { mode: 'react' })).rejects
+      .toThrowErrorMatchingInlineSnapshot(`
+      [Error: [jsx-loader] Unexpected token
+      --> reactJsx template:2:12
+      1 | 
+      2 |   <section>
+        |            ^
+      3 | ]
+    `)
   })
 
   it('requires a JSX root when compiling react templates', async () => {
@@ -553,5 +583,18 @@ describe('jsx loader', () => {
     })
 
     expect(transformed).toContain('<button>{${label}}</button>')
+  })
+
+  it('emits inline source maps when sourceMap option is enabled', async () => {
+    const source = ["const name = 'esm'", 'const view = jsx`<div>${name}</div>`'].join(
+      '\n',
+    )
+
+    const { code, map } = await runLoaderDetailed(source, { sourceMap: true })
+
+    expect(code).toContain(
+      '//# sourceMappingURL=data:application/json;charset=utf-8;base64,',
+    )
+    expect(map).toBeDefined()
   })
 })

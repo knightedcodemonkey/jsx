@@ -19,6 +19,7 @@ A runtime JSX template tag backed by the [`oxc-parser`](https://github.com/oxc-p
 - [Loader integration](#loader-integration)
 - [Node / SSR usage](#node--ssr-usage)
 - [Browser usage](#browser-usage)
+- [Development diagnostics](docs/development-diagnostics.md)
 - [TypeScript plugin](docs/ts-plugin.md)
 - [TypeScript guide](docs/typescript.md)
 - [Component testing](docs/testing.md)

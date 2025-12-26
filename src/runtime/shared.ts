@@ -8,6 +8,16 @@ import type {
   Program,
 } from '@oxc-project/types'
 import type { OxcError, ParserOptions } from 'oxc-parser'
+import type {
+  TemplateDiagnostics,
+  TemplateExpressionRange,
+} from '../internal/template-diagnostics.js'
+
+export { formatTaggedTemplateParserError } from '../internal/template-diagnostics.js'
+export type {
+  TemplateDiagnostics,
+  TemplateExpressionRange,
+} from '../internal/template-diagnostics.js'
 
 const OPEN_TAG_RE = /<\s*$/
 const CLOSE_TAG_RE = /<\/\s*$/
@@ -15,6 +25,25 @@ export const PLACEHOLDER_PREFIX = '__KX_EXPR__'
 export const placeholderPattern = new RegExp(`${PLACEHOLDER_PREFIX}\\d+_\\d+__`, 'g')
 
 let invocationCounter = 0
+
+export const formatParserError = (error: OxcError) => {
+  let message = `[oxc-parser] ${error.message}`
+  const primaryLabel = error.labels?.[0]
+
+  if (primaryLabel?.message) {
+    message += `\n${primaryLabel.message}`
+  }
+
+  if (error.codeframe) {
+    message += `\n${error.codeframe}`
+  }
+
+  if (error.helpMessage) {
+    message += `\n${error.helpMessage}`
+  }
+
+  return message
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyTemplateFunction = (...args: any[]) => unknown
@@ -35,6 +64,7 @@ export type TemplateBuildResult<TComponent extends TemplateComponent> = {
   source: string
   placeholders: Map<string, unknown>
   bindings: BindingEntry<TComponent>[]
+  diagnostics: TemplateDiagnostics
 }
 
 export type TemplateContext<TComponent extends TemplateComponent> = {
@@ -48,23 +78,6 @@ export const parserOptions: ParserOptions = {
   sourceType: 'module',
   range: true,
   preserveParens: true,
-}
-
-export const formatParserError = (error: OxcError) => {
-  let message = `[oxc-parser] ${error.message}`
-
-  if (error.labels?.length) {
-    const label = error.labels[0]
-    if (label.message) {
-      message += `\n${label.message}`
-    }
-  }
-
-  if (error.codeframe) {
-    message += `\n${error.codeframe}`
-  }
-
-  return message
 }
 
 export const extractRootNode = (program: Program): JSXElement | JSXFragment => {
@@ -276,6 +289,7 @@ export const buildTemplate = <TComponent extends TemplateComponent>(
   let source = raw[0] ?? ''
   const templateId = invocationCounter++
   let placeholderIndex = 0
+  const expressionRanges: TemplateExpressionRange[] = []
 
   for (let idx = 0; idx < values.length; idx++) {
     const chunk = raw[idx] ?? ''
@@ -283,22 +297,36 @@ export const buildTemplate = <TComponent extends TemplateComponent>(
     const value = values[idx]
 
     const isTagNamePosition = OPEN_TAG_RE.test(chunk) || CLOSE_TAG_RE.test(chunk)
+    let insertion: string
 
     if (isTagNamePosition && typeof value === 'function') {
       const binding = ensureBinding(value as TComponent, bindings, bindingLookup)
-      source += binding.name + nextChunk
-      continue
+      insertion = binding.name
+    } else if (isTagNamePosition && typeof value === 'string') {
+      insertion = value
+    } else {
+      const placeholder = `${PLACEHOLDER_PREFIX}${templateId}_${placeholderIndex++}__`
+      placeholders.set(placeholder, value)
+      insertion = placeholder
     }
 
-    if (isTagNamePosition && typeof value === 'string') {
-      source += value + nextChunk
-      continue
-    }
+    const sourceStart = source.length
+    source += insertion
+    const sourceEnd = source.length
 
-    const placeholder = `${PLACEHOLDER_PREFIX}${templateId}_${placeholderIndex++}__`
-    placeholders.set(placeholder, value)
-    source += placeholder + nextChunk
+    expressionRanges.push({
+      index: idx,
+      sourceStart,
+      sourceEnd,
+    })
+
+    source += nextChunk
   }
 
-  return { source, placeholders, bindings }
+  return {
+    source,
+    placeholders,
+    bindings,
+    diagnostics: { expressionRanges },
+  }
 }

@@ -11,7 +11,7 @@ import {
   buildTemplate,
   evaluateExpression,
   extractRootNode,
-  formatParserError,
+  formatTaggedTemplateParserError,
   getIdentifierName,
   normalizeJsxTextSegments,
   parserOptions,
@@ -207,7 +207,14 @@ export const reactJsx = (
   const result = parseSync('inline.jsx', build.source, parserOptions)
 
   if (result.errors.length > 0) {
-    throw new Error(formatParserError(result.errors[0]!))
+    throw new Error(
+      formatTaggedTemplateParserError(
+        'reactJsx',
+        templates,
+        build.diagnostics,
+        result.errors[0]!,
+      ),
+    )
   }
 
   const root = extractRootNode(result.program)

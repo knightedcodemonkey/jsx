@@ -1,18 +1,18 @@
 {
   "name": "@knighted/jsx",
-  "version": "1.5.2",
+  "version": "1.6.0",
   "description": "Runtime JSX tagged template that renders DOM or React trees anywhere without a build step.",
   "keywords": [
     "jsx runtime",
-    "jsx template literal",
     "tagged template",
     "no-build jsx",
-    "dom runtime",
-    "react runtime",
+    "dom rendering",
+    "react rendering",
     "ssr",
-    "lit",
+    "rspack loader",
     "webpack loader",
-    "oxc parser"
+    "wasm parser",
+    "typescript plugin"
   ],
   "type": "module",
   "main": "./dist/index.js",
@@ -36,10 +36,30 @@
       "import": "./dist/jsx-runtime.js",
       "default": "./dist/jsx-runtime.js"
     },
+    "./debug": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/debug/index.js",
+      "default": "./dist/debug/index.js"
+    },
+    "./debug-tools": {
+      "types": "./dist/debug/diagnostics.d.ts",
+      "import": "./dist/debug/diagnostics.js",
+      "default": "./dist/debug/diagnostics.js"
+    },
     "./lite": {
       "types": "./dist/index.d.ts",
       "import": "./dist/lite/index.js",
       "default": "./dist/lite/index.js"
+    },
+    "./lite/debug": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/lite/debug/index.js",
+      "default": "./dist/lite/debug/index.js"
+    },
+    "./lite/debug-tools": {
+      "types": "./dist/debug/diagnostics.d.ts",
+      "import": "./dist/lite/debug/diagnostics.js",
+      "default": "./dist/lite/debug/diagnostics.js"
     },
     "./react": {
       "types": "./dist/react/index.d.ts",
@@ -56,10 +76,20 @@
       "import": "./dist/node/index.js",
       "default": "./dist/node/index.js"
     },
+    "./node/debug": {
+      "types": "./dist/node/index.d.ts",
+      "import": "./dist/node/debug/index.js",
+      "default": "./dist/node/debug/index.js"
+    },
     "./node/lite": {
       "types": "./dist/node/index.d.ts",
       "import": "./dist/lite/node/index.js",
       "default": "./dist/lite/node/index.js"
+    },
+    "./node/lite/debug": {
+      "types": "./dist/node/index.d.ts",
+      "import": "./dist/lite/node/debug/index.js",
+      "default": "./dist/lite/node/debug/index.js"
     },
     "./node/react": {
       "types": "./dist/node/react/index.d.ts",
@@ -85,9 +115,10 @@
     "build": "duel && npm run build:lite && npm run build:cli",
     "prepare": "husky",
     "precheck-types": "npm run build",
-    "check-types": "npm run check-types:lib && npm run check-types:demo",
+    "check-types": "npm run check-types:lib && npm run check-types:demo && npm run check-types:test",
     "check-types:lib": "tsc --noEmit --project tsconfig.json",
     "check-types:demo": "tsc --noEmit --project examples/browser/tsconfig.json",
+    "check-types:test": "tsc --noEmit --project tsconfig.vitest.json",
     "lint": "eslint src test",
     "cycles": "madge src --circular --extensions ts,tsx,js,jsx --ts-config tsconfig.json",
     "prettier": "prettier -w .",
@@ -103,6 +134,7 @@
     "build:lite": "tsup --config tsup.config.ts",
     "build:cli": "tsup --config tsup.cli.config.ts",
     "setup:wasm": "node scripts/setup-wasm.mjs",
+    "sizecheck": "node scripts/sizecheck.mjs",
     "prepack": "npm run build"
   },
   "devDependencies": {

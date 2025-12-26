@@ -82,7 +82,7 @@ const createMockRequire = () => {
 let currentMockRequire = createMockRequire()
 
 const importBootstrap = async () => {
-  const mod = await import('../src/node/bootstrap.ts')
+  const mod = await import('../src/node/bootstrap.js')
   mod.__setNodeRequireForTesting(currentMockRequire)
   return mod
 }

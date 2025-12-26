@@ -1,3 +1,13 @@
+export type EventDiagnosticsHooks = {
+  onInvalidHandler?: (propName: string, value: unknown) => void
+}
+
+let eventDiagnostics: EventDiagnosticsHooks | null = null
+
+export const setEventDiagnosticsHooks = (hooks: EventDiagnosticsHooks | null) => {
+  eventDiagnostics = hooks
+}
+
 const captureSuffix = 'Capture'
 
 export type ParsedEventBinding = {
@@ -84,12 +94,20 @@ export type ResolvedEventHandler = {
   options?: AddEventListenerOptions
 }
 
-export const resolveEventHandlerValue = (value: unknown): ResolvedEventHandler | null => {
+const throwInvalidHandlerError = (propName: string, value: unknown) => {
+  eventDiagnostics?.onInvalidHandler?.(propName, value)
+}
+
+export const resolveEventHandlerValue = (
+  propName: string,
+  value: unknown,
+): ResolvedEventHandler | null => {
   if (typeof value === 'function' || isEventListenerObject(value)) {
     return { listener: value as EventListenerOrEventListenerObject }
   }
 
   if (!isEventHandlerDescriptor(value)) {
+    throwInvalidHandlerError(propName, value)
     return null
   }
 

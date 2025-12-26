@@ -6,6 +6,16 @@ import type {
   JSXSpreadAttribute,
 } from '@oxc-project/types'
 import type { TemplateComponent, TemplateContext } from '../runtime/shared.js'
+export type AttributeDiagnosticsHooks = {
+  warnLowercaseEventProp?: (name: string) => void
+  ensureValidDangerouslySetInnerHTML?: (value: unknown) => void
+}
+
+let attributeDiagnostics: AttributeDiagnosticsHooks | null = null
+
+export const setAttributeDiagnosticsHooks = (hooks: AttributeDiagnosticsHooks | null) => {
+  attributeDiagnostics = hooks
+}
 
 export type Namespace = 'svg' | null
 
@@ -26,6 +36,14 @@ export type ResolveAttributesFn<TComponent extends TemplateComponent> = (
   namespace: Namespace,
 ) => Record<string, unknown>
 
+const warnLowercaseEventProp = (name: string) => {
+  attributeDiagnostics?.warnLowercaseEventProp?.(name)
+}
+
+const ensureValidDangerouslySetInnerHTML = (value: unknown) => {
+  attributeDiagnostics?.ensureValidDangerouslySetInnerHTML?.(value)
+}
+
 export const createResolveAttributes = <TComponent extends TemplateComponent>(
   deps: ResolveAttributesDependencies<TComponent>,
 ): ResolveAttributesFn<TComponent> => {
@@ -33,6 +51,12 @@ export const createResolveAttributes = <TComponent extends TemplateComponent>(
 
   return (attributes, ctx, namespace) => {
     const props: Record<string, unknown> = {}
+    const assignProp = (propName: string, propValue: unknown) => {
+      if (propName === 'dangerouslySetInnerHTML') {
+        ensureValidDangerouslySetInnerHTML(propValue)
+      }
+      props[propName] = propValue
+    }
 
     attributes.forEach(attribute => {
       if (attribute.type === 'JSXSpreadAttribute') {
@@ -54,14 +78,15 @@ export const createResolveAttributes = <TComponent extends TemplateComponent>(
       }
 
       const name = getIdentifierName(attribute.name)
+      warnLowercaseEventProp(name)
 
       if (!attribute.value) {
-        props[name] = true
+        assignProp(name, true)
         return
       }
 
       if (attribute.value.type === 'Literal') {
-        props[name] = attribute.value.value
+        assignProp(name, attribute.value.value)
         return
       }
 
@@ -70,10 +95,9 @@ export const createResolveAttributes = <TComponent extends TemplateComponent>(
           return
         }
 
-        props[name] = evaluateExpressionWithNamespace(
-          attribute.value.expression,
-          ctx,
-          namespace,
+        assignProp(
+          name,
+          evaluateExpressionWithNamespace(attribute.value.expression, ctx, namespace),
         )
       }
     })

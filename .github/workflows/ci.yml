@@ -45,5 +45,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: Build
         run: npm run build
+      - name: Size Check
+        run: npm run sizecheck
       - name: Pack
         run: npm pack

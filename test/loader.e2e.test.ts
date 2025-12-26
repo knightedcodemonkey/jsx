@@ -14,31 +14,150 @@ const fixtures = {
   reactMode: path.join(fixtureDir, 'src/react-mode.tsx'),
 }
 
-const buildLoaderArtifact = async (tempDir: string) => {
-  const compiledPath = path.join(tempDir, 'loader.cjs')
-  const source = await fsPromises.readFile(loaderSource, 'utf8')
-  const transpiled = ts.transpileModule(source, {
-    compilerOptions: {
-      target: ts.ScriptTarget.ES2022,
-      module: ts.ModuleKind.CommonJS,
-      esModuleInterop: true,
-    },
-    fileName: loaderSource,
+const compilerOptions: ts.TranspileOptions['compilerOptions'] = {
+  target: ts.ScriptTarget.ES2022,
+  module: ts.ModuleKind.CommonJS,
+  esModuleInterop: true,
+}
+
+const diagnosticsHost: ts.FormatDiagnosticsHost = {
+  getCanonicalFileName: fileName => fileName,
+  getCurrentDirectory: () => process.cwd(),
+  getNewLine: () => '\n',
+}
+
+const isRelativeSpecifier = (specifier: string) =>
+  specifier.startsWith('./') || specifier.startsWith('../')
+
+const collectRelativeSpecifiers = (sourceText: string, fileName: string) => {
+  const specifiers = new Set<string>()
+  const sourceFile = ts.createSourceFile(
+    fileName,
+    sourceText,
+    ts.ScriptTarget.ES2022,
+    true,
+    ts.ScriptKind.TS,
+  )
+
+  const visit = (node: ts.Node) => {
+    if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
+      const value = node.moduleSpecifier.text
+      if (isRelativeSpecifier(value)) {
+        specifiers.add(value)
+      }
+    } else if (ts.isExportDeclaration(node) && node.moduleSpecifier) {
+      if (ts.isStringLiteral(node.moduleSpecifier)) {
+        const value = node.moduleSpecifier.text
+        if (isRelativeSpecifier(value)) {
+          specifiers.add(value)
+        }
+      }
+    }
+
+    ts.forEachChild(node, visit)
+  }
+
+  visit(sourceFile)
+  return Array.from(specifiers)
+}
+
+const transpileToFile = async (sourcePath: string, targetPath: string) => {
+  const sourceText = await fsPromises.readFile(sourcePath, 'utf8')
+  const transpiled = ts.transpileModule(sourceText, {
+    compilerOptions,
+    fileName: sourcePath,
     reportDiagnostics: true,
   })
 
   if (transpiled.diagnostics?.length) {
     throw new Error(
-      ts.formatDiagnosticsWithColorAndContext(transpiled.diagnostics, {
-        getCanonicalFileName: fileName => fileName,
-        getCurrentDirectory: () => process.cwd(),
-        getNewLine: () => '\n',
-      }),
+      ts.formatDiagnosticsWithColorAndContext(transpiled.diagnostics, diagnosticsHost),
     )
   }
 
-  await fsPromises.writeFile(compiledPath, transpiled.outputText, 'utf8')
+  await fsPromises.mkdir(path.dirname(targetPath), { recursive: true })
+  await fsPromises.writeFile(targetPath, transpiled.outputText ?? '', 'utf8')
 
+  return sourceText
+}
+
+const pathExists = async (candidate: string) => {
+  try {
+    await fsPromises.access(candidate)
+    return true
+  } catch {
+    return false
+  }
+}
+
+const resolveModuleSourcePath = async (fromFile: string, specifier: string) => {
+  const absolute = path.resolve(path.dirname(fromFile), specifier)
+  const ext = path.extname(absolute)
+  const base = ext ? absolute.slice(0, -ext.length) : absolute
+  const candidates = new Set<string>()
+
+  if (ext) {
+    ;['.ts', '.tsx', '.mts', '.cts'].forEach(candidateExt => {
+      candidates.add(base + candidateExt)
+    })
+    candidates.add(absolute)
+  } else {
+    candidates.add(`${absolute}.ts`)
+    candidates.add(`${absolute}.tsx`)
+    candidates.add(`${absolute}.mts`)
+    candidates.add(`${absolute}.cts`)
+    candidates.add(absolute)
+    candidates.add(`${absolute}.js`)
+    candidates.add(`${absolute}.jsx`)
+  }
+
+  for (const candidate of candidates) {
+    if (await pathExists(candidate)) {
+      return candidate
+    }
+  }
+
+  return null
+}
+
+const compileModuleGraph = async (
+  sourcePath: string,
+  targetPath: string,
+  seen = new Set<string>(),
+) => {
+  if (seen.has(sourcePath)) {
+    return
+  }
+
+  seen.add(sourcePath)
+  const sourceText = await transpileToFile(sourcePath, targetPath)
+  const relativeImports = collectRelativeSpecifiers(sourceText, sourcePath)
+
+  await Promise.all(
+    relativeImports.map(async specifier => {
+      const resolvedSource = await resolveModuleSourcePath(sourcePath, specifier)
+      if (!resolvedSource) {
+        throw new Error(
+          `Failed to resolve ${specifier} imported from ${path.relative(rootDir, sourcePath)}`,
+        )
+      }
+
+      const outputPath = path.resolve(path.dirname(targetPath), specifier)
+      await compileModuleGraph(resolvedSource, outputPath, seen)
+    }),
+  )
+}
+
+const buildLoaderArtifact = async (tempDir: string) => {
+  const compiledDir = path.join(tempDir, 'loader')
+  await fsPromises.mkdir(compiledDir, { recursive: true })
+  await fsPromises.writeFile(
+    path.join(tempDir, 'package.json'),
+    JSON.stringify({ type: 'commonjs' }),
+    'utf8',
+  )
+  const compiledPath = path.join(compiledDir, 'jsx.cjs')
+  await compileModuleGraph(loaderSource, compiledPath)
   const proxyPath = path.join(tempDir, 'loader-proxy.cjs')
   await fsPromises.writeFile(
     proxyPath,
