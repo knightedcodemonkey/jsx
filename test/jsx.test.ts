@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { jsx, type JsxComponent, type JsxRenderable } from '../src/jsx.js'
+import { createResolveAttributes } from '../src/internal/attribute-resolution.js'
 import { find as findPropertyInfo, html as htmlProperties } from 'property-information'
 
 const resetDom = () => {
@@ -72,6 +73,30 @@ describe('jsx template tag', () => {
     element.dispatchEvent(new CustomEvent('ready', { bubbles: true }))
 
     expect(descriptorHandler).toHaveBeenCalledTimes(1)
+  })
+
+  it('ignores handlers whose Capture suffix removes the on: event name', () => {
+    const addSpy = vi.spyOn(HTMLButtonElement.prototype, 'addEventListener')
+
+    try {
+      const element = jsx`<button on:Capture={${() => {}}} />` as HTMLButtonElement
+      expect(element.tagName).toBe('BUTTON')
+      expect(addSpy).not.toHaveBeenCalled()
+    } finally {
+      addSpy.mockRestore()
+    }
+  })
+
+  it('ignores handlers whose Capture suffix removes the standard event name', () => {
+    const addSpy = vi.spyOn(HTMLButtonElement.prototype, 'addEventListener')
+
+    try {
+      const element = jsx`<button onCapture={${() => {}}} />` as HTMLButtonElement
+      expect(element.tagName).toBe('BUTTON')
+      expect(addSpy).not.toHaveBeenCalled()
+    } finally {
+      addSpy.mockRestore()
+    }
   })
 
   it('inlines dynamic text expressions without extra braces', () => {
@@ -198,6 +223,36 @@ describe('jsx template tag', () => {
     expect(input.value).toBe('hello')
     expect(objRef.current).toBe(bound)
     expect(bound.className).toBe('secondary')
+  })
+
+  it('skips attributes backed by empty JSX expression containers', () => {
+    const resolveAttributes = createResolveAttributes<JsxComponent>({
+      getIdentifierName: identifier => (identifier as { name: string }).name,
+      evaluateExpressionWithNamespace: () => {
+        throw new Error('should not evaluate empty expressions')
+      },
+    })
+
+    const props = resolveAttributes(
+      [
+        {
+          type: 'JSXAttribute',
+          name: { type: 'JSXIdentifier', name: 'data-empty' },
+          value: {
+            type: 'JSXExpressionContainer',
+            expression: { type: 'JSXEmptyExpression' },
+          },
+        },
+      ] as unknown as Parameters<typeof resolveAttributes>[0],
+      {
+        source: '',
+        placeholders: new Map(),
+        components: new Map(),
+      } as Parameters<typeof resolveAttributes>[1],
+      null,
+    )
+
+    expect(props).toEqual({})
   })
 
   it('throws when DOM APIs are unavailable', () => {

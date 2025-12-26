@@ -1,8 +1,15 @@
+import { createRequire } from 'node:module'
+
 type ShimWindow = Window & typeof globalThis
-
-type ShimLoader = () => Promise<ShimWindow>
-
+type ShimLoader = () => ShimWindow
 type ShimPreference = 'auto' | 'linkedom' | 'jsdom'
+type LinkedomModule = typeof import('linkedom')
+type JsdomModule = typeof import('jsdom')
+
+const nodeRequire = createRequire(import.meta.url)
+let requireOverride: NodeJS.Require | null = null
+
+const resolveRequire = () => requireOverride ?? nodeRequire
 
 const DOM_TEMPLATE = '<!doctype html><html><body></body></html>'
 const GLOBAL_KEYS = [
@@ -34,14 +41,14 @@ const assignGlobalTargets = (windowObj: ShimWindow) => {
   })
 }
 
-const loadLinkedom: ShimLoader = async () => {
-  const { parseHTML } = await import('linkedom')
+const loadLinkedom: ShimLoader = () => {
+  const { parseHTML } = resolveRequire()('linkedom') as LinkedomModule
   const { window } = parseHTML(DOM_TEMPLATE)
   return window as unknown as ShimWindow
 }
 
-const loadJsdom: ShimLoader = async () => {
-  const { JSDOM } = await import('jsdom')
+const loadJsdom: ShimLoader = () => {
+  const { JSDOM } = resolveRequire()('jsdom') as JsdomModule
   const { window } = new JSDOM(DOM_TEMPLATE)
   return window as unknown as ShimWindow
 }
@@ -73,12 +80,12 @@ const selectLoaders = (): ShimLoader[] => {
   return [loadLinkedom, loadJsdom]
 }
 
-const createShimWindow = async () => {
+const createShimWindow = () => {
   const errors: unknown[] = []
 
   for (const loader of selectLoaders()) {
     try {
-      return await loader()
+      return loader()
     } catch (error) {
       errors.push(error)
     }
@@ -90,22 +97,18 @@ const createShimWindow = async () => {
   throw new AggregateError(errors, help)
 }
 
-let bootstrapPromise: Promise<void> | null = null
+let bootstrapped = false
 
-export const ensureNodeDom = async () => {
-  if (hasDom()) {
+export const ensureNodeDom = () => {
+  if (hasDom() || bootstrapped) {
     return
   }
 
-  if (!bootstrapPromise) {
-    bootstrapPromise = (async () => {
-      const windowObj = await createShimWindow()
-      assignGlobalTargets(windowObj)
-    })().catch(error => {
-      bootstrapPromise = null
-      throw error
-    })
-  }
+  const windowObj = createShimWindow()
+  assignGlobalTargets(windowObj)
+  bootstrapped = true
+}
 
-  return bootstrapPromise
+export const __setNodeRequireForTesting = (mockRequire: NodeJS.Require | null) => {
+  requireOverride = mockRequire
 }

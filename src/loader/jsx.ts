@@ -250,6 +250,9 @@ class ReactTemplateBuilder {
     }
 
     /* c8 ignore next */
+    /* v8 ignore next */
+    /* istanbul ignore next */
+    // Should never happen because OXC always annotates expression ranges.
     throw new Error('[jsx-loader] Unable to compile expression for react mode.')
   }
 
@@ -423,12 +426,16 @@ const shouldInterpolateName = (name: JSXIdentifier) => /^[A-Z]/.test(name.name)
 const addSlot = (slots: Slot[], source: string, range?: [number, number]) => {
   if (!range) {
     /* c8 ignore next */
+    /* v8 ignore next */
+    // OXC always provides ranges; guard defends against malformed AST nodes.
     return
   }
 
   const [start, end] = range
   if (start === end) {
     /* c8 ignore next */
+    /* v8 ignore next */
+    // Zero-length ranges indicate parser bugs and would emit empty slices.
     return
   }
 
@@ -444,6 +451,9 @@ const collectSlots = (program: Program, source: string) => {
 
   const recordComponentName = (name: JSXElement['openingElement']['name']) => {
     if (!name) {
+      /* c8 ignore next */
+      /* v8 ignore next */
+      // JSX elements emitted by OXC always carry a name; this is defensive.
       return
     }
 
@@ -524,6 +534,8 @@ const renderTemplateWithSlots = (source: string, slots: Slot[]) => {
   slots.forEach(slot => {
     if (slot.start < cursor) {
       /* c8 ignore next */
+      /* v8 ignore next */
+      // Slots are generated from non-overlapping JSX ranges; this protects against parser regressions.
       throw new Error('Overlapping JSX expressions detected inside template literal.')
     }
 
@@ -666,6 +678,8 @@ const buildTemplateSource = (
     let chunk = (quasi.value as { cooked?: string; raw?: string }).cooked
     if (typeof chunk !== 'string') {
       /* c8 ignore next */
+      /* v8 ignore next */
+      // Cooked text is always available for valid templates; fall back shields invalid escape sequences.
       chunk = (quasi.value as { raw?: string }).raw ?? ''
     }
 
@@ -685,6 +699,8 @@ const buildTemplateSource = (
     const end = (expression.end as number | undefined) ?? null
     if (start === null || end === null) {
       /* c8 ignore next */
+      /* v8 ignore next */
+      // Expressions parsed from tagged templates always include start/end ranges.
       throw new Error('Unable to read template expression source range.')
     }
 
@@ -777,6 +793,8 @@ const isLoaderPlaceholderIdentifier = (node: AnyNode | undefined) => {
     typeof node.name !== 'string'
   ) {
     /* c8 ignore next */
+    /* v8 ignore next */
+    // Visitor only calls this helper with identifier-like nodes; guard prevents crashes on malformed ASTs.
     return false
   }
 
@@ -866,6 +884,8 @@ const transformSource = (source: string, config: TransformConfig): TransformResu
       }
 
       /* c8 ignore next */
+      /* v8 ignore next */
+      // Modes are validated during option parsing; this fallback guards future extensions.
       throw new Error(
         `[jsx-loader] Transformation mode "${mode}" not implemented yet for tag "${tagName}".`,
       )
