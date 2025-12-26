@@ -385,6 +385,93 @@ describe('jsx loader', () => {
     expect(transformed).toContain('__jsxReact("span", null, "Label")')
   })
 
+  it('compiles literal expression containers in react mode', async () => {
+    const source = ['const view = jsx`', '  <section>{"literal"}</section>', '`'].join(
+      '\n',
+    )
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain('__jsxReact("section", null, "literal")')
+  })
+
+  it('splits inline text interpolations when compiling react templates', async () => {
+    const source = [
+      "const greeting = 'Hello'",
+      "const subject = 'team'",
+      'const view = jsx`',
+      '  <p>${greeting}, ${subject}!</p>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain('__jsxReact("p", null, greeting, ", ", subject, "!")')
+  })
+
+  it('omits JSX comments when compiling react templates', async () => {
+    const source = [
+      'const view = jsx`',
+      '  <section>',
+      '    {/* comment only */}',
+      '    Ready',
+      '  </section>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain('__jsxReact("section", null, "Ready")')
+    expect(transformed).not.toContain('comment only')
+  })
+
+  it('expands spread children in react mode', async () => {
+    const source = [
+      'const items = []',
+      'const view = jsx`',
+      '  <>',
+      '    {...items}',
+      '  </>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain('__jsxReact(React.Fragment, null, items)')
+  })
+
+  it('treats literal placeholder markers inside JSX text as expressions when registered', async () => {
+    const source = [
+      "const label = 'Hi'",
+      'const view = jsx`',
+      '  <p>${label}__JSX_LOADER_TEMPLATE_EXPR_0__</p>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    const match = transformed.match(/__jsxReact\("p", null,([\s\S]+?)\)/)
+    expect(match?.[1]).toMatch(/label[\s\S]*label/)
+    expect(transformed).not.toContain('__JSX_LOADER_TEMPLATE_EXPR_0__')
+  })
+
+  it('keeps literal placeholder markers when no expression is registered for them', async () => {
+    const source = [
+      'const view = jsx`',
+      '  <p>Value: __JSX_LOADER_TEMPLATE_EXPR_123__</p>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'react' })
+    expect(transformed).toContain('"Value: "')
+    expect(transformed).toContain('"__JSX_LOADER_TEMPLATE_EXPR_123__"')
+  })
+
+  it('throws when a literal tag placeholder lacks a registered expression', async () => {
+    const source = ['const view = jsx`', '  <__JSX_LOADER_TAG_EXPR_0__ />', '`'].join(
+      '\n',
+    )
+
+    await expect(runLoader(source, { mode: 'react' })).rejects.toThrow(
+      'Unable to resolve placeholder for tag expression.',
+    )
+  })
+
   it('surfaces parser label details for mismatched JSX tags', async () => {
     const source = ['const view = jsx`', '  <div></span>', '`'].join('\n')
 
