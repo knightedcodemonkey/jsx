@@ -1,6 +1,6 @@
 {
   "name": "@knighted/jsx",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "description": "Runtime JSX tagged template that renders DOM or React trees anywhere without a build step.",
   "keywords": [
     "jsx runtime",
@@ -139,7 +139,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
-    "@knighted/duel": "^2.1.6",
+    "@knighted/duel": "^3.2.0",
     "@oxc-project/types": "^0.105.0",
     "@playwright/test": "^1.57.0",
     "@rspack/core": "^1.0.5",
@@ -170,6 +170,7 @@
     "vitest": "^4.0.14"
   },
   "dependencies": {
+    "@napi-rs/wasm-runtime": "^1.1.0",
     "magic-string": "^0.30.21",
     "oxc-parser": "^0.105.0",
     "property-information": "^7.1.0",
