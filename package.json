@@ -1,6 +1,6 @@
 {
   "name": "@knighted/jsx",
-  "version": "1.6.3-rc.0",
+  "version": "1.6.3-rc.1",
   "description": "Runtime JSX tagged template that renders DOM or React trees anywhere without a build step.",
   "keywords": [
     "jsx runtime",
@@ -119,7 +119,11 @@
     "check-types:lib": "tsc --noEmit --project tsconfig.json",
     "check-types:demo": "tsc --noEmit --project examples/browser/tsconfig.json",
     "check-types:test": "tsc --noEmit --project tsconfig.vitest.json",
+    "clean:deps": "rimraf \"**/node_modules\"",
+    "clean:dist": "rimraf \"**/dist\"",
+    "clean": "npm run clean:deps && npm run clean:dist",
     "lint": "eslint src test",
+    "pretest": "npm run build",
     "cycles": "madge src --circular --extensions ts,tsx,js,jsx --ts-config tsconfig.json",
     "prettier": "prettier -w .",
     "prettier:check": "prettier --check .",
@@ -139,7 +143,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
-    "@knighted/duel": "^4.0.0-rc.2",
+    "@knighted/duel": "^4.0.0-rc.5",
     "@oxc-project/types": "^0.105.0",
     "@playwright/test": "^1.57.0",
     "@rspack/core": "^1.0.5",
@@ -164,6 +168,7 @@
     "prettier": "^3.7.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "rimraf": "^6.1.2",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.48.0",
