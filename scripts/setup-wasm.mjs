@@ -1,28 +1,28 @@
-import { execFileSync, spawnSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { extract } from 'tar'
 
+const npmExecPath = process.env.npm_execpath
+const npmBin = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 const PACKAGE_SPEC =
-  process.env.WASM_BINDING_PACKAGE ?? '@oxc-parser/binding-wasm32-wasi@^0.99.0'
+  process.env.WASM_BINDING_PACKAGE ?? '@oxc-parser/binding-wasm32-wasi@^0.105.0'
 const cwd = process.cwd()
-const cliEntry = path.resolve(cwd, 'dist', 'cli', 'init.js')
-
-if (fs.existsSync(cliEntry)) {
-  const result = spawnSync(process.execPath, [cliEntry, '--skip-config', '--force'], {
-    cwd,
-    stdio: 'inherit',
-  })
-
-  process.exit(result.status ?? 0)
-}
 
 function runNpmPack() {
-  const output = execFileSync('npm', ['pack', PACKAGE_SPEC], {
+  const baseOptions = {
     cwd,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'inherit'],
-  }).trim()
+  }
+  const output = (
+    npmExecPath
+      ? execFileSync(process.execPath, [npmExecPath, 'pack', PACKAGE_SPEC], baseOptions)
+      : execFileSync(npmBin, ['pack', PACKAGE_SPEC], {
+          ...baseOptions,
+          shell: process.platform === 'win32',
+        })
+  ).trim()
   const lines = output.split('\n').filter(Boolean)
 
   return lines[lines.length - 1]

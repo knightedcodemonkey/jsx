@@ -21,10 +21,20 @@ const runCommand = (
   options: { cwd?: string; env?: NodeJS.ProcessEnv } = {},
 ) =>
   new Promise<void>((resolve, reject) => {
+    const env: NodeJS.ProcessEnv = { ...process.env, ...options.env }
+
+    // Drop undefined env entries to avoid Windows EINVAL from spawn.
+    for (const key of Object.keys(env)) {
+      if (env[key] === undefined) {
+        delete env[key]
+      }
+    }
+
     const child = spawn(bin, args, {
       cwd: options.cwd,
-      env: options.env,
+      env,
       stdio: ['ignore', 'pipe', 'pipe'],
+      shell: process.platform === 'win32',
     })
 
     let stderr = ''
