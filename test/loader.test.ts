@@ -7,10 +7,16 @@ type LoaderResult = {
   map?: unknown
 }
 
+type LoaderContextExtras = Partial<{
+  target: string
+  emitWarning: (warning: unknown) => void
+}>
+
 const invokeLoader = <T>(
   source: string,
   options: Record<string, unknown> | undefined,
   formatResult: (code: string, map?: unknown) => T,
+  extras?: LoaderContextExtras,
 ) =>
   new Promise<T>((resolve, reject) => {
     const context = {
@@ -25,16 +31,23 @@ const invokeLoader = <T>(
           resolve(formatResult(result ?? '', map))
         }
       },
+      ...extras,
     }
 
     loader.call(context as never, source)
   })
 
-const runLoader = (source: string, options?: Record<string, unknown>) =>
-  invokeLoader(source, options, result => result)
+const runLoader = (
+  source: string,
+  options?: Record<string, unknown>,
+  extras?: LoaderContextExtras,
+) => invokeLoader(source, options, result => result, extras)
 
-const runLoaderDetailed = (source: string, options?: Record<string, unknown>) =>
-  invokeLoader<LoaderResult>(source, options, (code, map) => ({ code, map }))
+const runLoaderDetailed = (
+  source: string,
+  options?: Record<string, unknown>,
+  extras?: LoaderContextExtras,
+) => invokeLoader<LoaderResult>(source, options, (code, map) => ({ code, map }), extras)
 
 describe('jsx loader', () => {
   it('leaves static templates untouched', async () => {
@@ -236,6 +249,87 @@ describe('jsx loader', () => {
     expect(transformed).toContain(
       'const __jsxReactMergeProps = (...sources) => Object.assign({}, ...sources)',
     )
+  })
+
+  it('defaults to react mode on web targets to avoid node-only runtime', async () => {
+    const source = [
+      "const title = 'Hello'",
+      'const view = jsx`',
+      '  <button>{title}</button>',
+      '`',
+    ].join('\n')
+
+    let warning: unknown
+    const transformed = await runLoader(source, undefined, {
+      target: 'web',
+      emitWarning: value => {
+        warning = value
+      },
+    })
+
+    expect(transformed).toContain('__jsxReact("button", null, title)')
+    expect(warning).toBeTruthy()
+  })
+
+  it('still downgrades to react on web targets when emitWarning is missing', async () => {
+    const source = [
+      "const title = 'Hello'",
+      'const view = jsx`',
+      '  <button>{title}</button>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, undefined, { target: 'web' })
+
+    expect(transformed).toContain('__jsxReact("button", null, title)')
+  })
+
+  it('preserves explicit runtime mode on web targets when requested', async () => {
+    const source = [
+      "const title = 'Hello'",
+      'const view = jsx`',
+      '  <button>{title}</button>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'runtime' }, { target: 'web' })
+
+    expect(transformed).toContain('<button>{${title}}</button>')
+    expect(transformed).not.toContain('__jsxReact(')
+  })
+
+  it('hoists react helpers before transformed templates', async () => {
+    const source = ['const view = reactJsx`', '  <button>Ready</button>', '`'].join('\n')
+
+    const transformed = await runLoader(source, {
+      tags: ['reactJsx'],
+      mode: 'react',
+    })
+
+    expect(transformed.startsWith('const __jsxReactMergeProps')).toBe(true)
+    const helperIndex = transformed.indexOf('const __jsxReact')
+    const callIndex = transformed.indexOf('__jsxReact("button"')
+
+    expect(helperIndex).toBeGreaterThanOrEqual(0)
+    expect(callIndex).toBeGreaterThan(helperIndex)
+  })
+
+  it('hoists helpers after a shebang line', async () => {
+    const source = [
+      '#!/usr/bin/env node',
+      'const view = reactJsx`',
+      '  <button>Ready</button>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, {
+      tags: ['reactJsx'],
+      mode: 'react',
+    })
+
+    expect(
+      transformed.startsWith('#!/usr/bin/env node\nconst __jsxReactMergeProps'),
+    ).toBe(true)
   })
 
   it('honors per-tag react overrides via tagModes', async () => {

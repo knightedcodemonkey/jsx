@@ -26,6 +26,10 @@ type LoaderCallback = (
 
 type LoaderContext<TOptions> = {
   resourcePath: string
+  // webpack/rspack expose target; optional for other bundlers.
+  target?: string
+  // webpack-compatible warning hook; optional for other bundlers.
+  emitWarning?: (warning: Error | string) => void
   async(): LoaderCallback
   getOptions?: () => Partial<TOptions>
 }
@@ -368,6 +372,11 @@ const TEMPLATE_PARSER_OPTIONS: ParserOptions = {
 
 const DEFAULT_TAGS = ['jsx', 'reactJsx']
 const DEFAULT_MODE: LoaderMode = 'runtime'
+
+const WEB_TARGETS = new Set(['web', 'webworker', 'electron-renderer', 'node-webkit'])
+
+const isWebTarget = (target: string | undefined) =>
+  target ? WEB_TARGETS.has(target) : false
 
 const HELPER_SNIPPETS: Record<HelperKind, string> = {
   react: `const __jsxReactMergeProps = (...sources) => Object.assign({}, ...sources)
@@ -992,7 +1001,14 @@ const transformSource = (
     .join('\n')
 
   if (helperSource) {
-    magic.append(`\n${helperSource}`)
+    const helperBlock = `${helperSource.trimEnd()}\n\n`
+    const shebangIndex = source.startsWith('#!') ? source.indexOf('\n') : -1
+
+    if (shebangIndex >= 0) {
+      magic.appendLeft(shebangIndex + 1, helperBlock)
+    } else {
+      magic.prepend(helperBlock)
+    }
     mutated = true
   }
 
@@ -1021,6 +1037,8 @@ export default function jsxLoader(
 
   try {
     const options = this.getOptions?.() ?? {}
+    const warn = this.emitWarning?.bind(this)
+    const webTarget = isWebTarget(this.target)
     const explicitTags = Array.isArray(options.tags)
       ? options.tags.filter(
           (value): value is string => typeof value === 'string' && value.length > 0,
@@ -1038,6 +1056,9 @@ export default function jsxLoader(
       options.tagModes && typeof options.tagModes === 'object'
         ? options.tagModes
         : undefined
+    const userSpecifiedMode = parseLoaderMode(options.mode)
+    const defaultMode = userSpecifiedMode ?? DEFAULT_MODE
+    const userConfiguredTags = new Set<string>()
 
     if (configuredTagModes) {
       Object.entries(configuredTagModes).forEach(([tagName, mode]) => {
@@ -1046,16 +1067,31 @@ export default function jsxLoader(
           return
         }
         tagModes.set(tagName, parsed)
+        userConfiguredTags.add(tagName)
       })
     }
 
-    const defaultMode = parseLoaderMode(options.mode) ?? DEFAULT_MODE
     const tags = Array.from(new Set([...tagList, ...tagModes.keys()]))
     tags.forEach(tagName => {
       if (!tagModes.has(tagName)) {
         tagModes.set(tagName, defaultMode)
       }
     })
+
+    // If targeting the web and runtime mode is only implied (not explicitly requested),
+    // downgrade to react to avoid bundling the Node-only wasm parser.
+    if (webTarget && userSpecifiedMode === null) {
+      tagModes.forEach((mode, tagName) => {
+        if (mode === 'runtime' && !userConfiguredTags.has(tagName)) {
+          tagModes.set(tagName, 'react')
+          warn?.(
+            new Error(
+              `[jsx-loader] Falling back to react mode for tag "${tagName}" because the runtime parser is not browser-safe. Set mode explicitly if you need runtime behavior.`,
+            ),
+          )
+        }
+      })
+    }
     const source = typeof input === 'string' ? input : input.toString('utf8')
     const enableSourceMap = options.sourceMap === true
     const { code, map } = transformSource(
