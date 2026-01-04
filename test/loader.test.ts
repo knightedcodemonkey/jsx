@@ -272,6 +272,35 @@ describe('jsx loader', () => {
     expect(warning).toBeTruthy()
   })
 
+  it('does not warn on web targets when tags are explicitly set to react mode', async () => {
+    const source = [
+      "const title = 'Hello'",
+      'const view = jsx`',
+      '  <button>{title}</button>',
+      '`',
+    ].join('\n')
+
+    let warning: unknown
+    const transformed = await runLoader(
+      source,
+      {
+        tagModes: {
+          jsx: 'react',
+          reactJsx: 'react',
+        },
+      },
+      {
+        target: 'web',
+        emitWarning: value => {
+          warning = value
+        },
+      },
+    )
+
+    expect(transformed).toContain('__jsxReact("button", null, title)')
+    expect(warning).toBeUndefined()
+  })
+
   it('keeps implicit runtime mode on web targets when emitWarning is missing', async () => {
     const source = [
       "const title = 'Hello'",
