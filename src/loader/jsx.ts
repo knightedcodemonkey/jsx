@@ -1078,19 +1078,24 @@ export default function jsxLoader(
       }
     })
 
-    // If targeting the web and runtime mode is only implied (not explicitly requested),
-    // downgrade to react to avoid bundling the Node-only wasm parser.
+    /**
+     * If targeting the web and runtime mode is only implied (not explicitly requested),
+     * keep the runtime output but surface a warning so users can opt into react mode when
+     * bundling for the browser.
+     */
     if (webTarget && userSpecifiedMode === null) {
-      tagModes.forEach((mode, tagName) => {
-        if (mode === 'runtime' && !userConfiguredTags.has(tagName)) {
-          tagModes.set(tagName, 'react')
-          warn?.(
-            new Error(
-              `[jsx-loader] Falling back to react mode for tag "${tagName}" because the runtime parser is not browser-safe. Set mode explicitly if you need runtime behavior.`,
-            ),
-          )
-        }
-      })
+      const hasImplicitRuntime = tags.some(
+        tagName =>
+          tagModes.get(tagName) === 'runtime' && !userConfiguredTags.has(tagName),
+      )
+
+      if (hasImplicitRuntime) {
+        warn?.(
+          new Error(
+            '[jsx-loader] Web target detected while defaulting to runtime mode; the shipped parser expects a Node-like environment. Set mode: "react" (or configure per-tag) when bundling client code, or provide a browser-safe runtime parser if you intentionally need runtime output.',
+          ),
+        )
+      }
     }
     const source = typeof input === 'string' ? input : input.toString('utf8')
     const enableSourceMap = options.sourceMap === true
