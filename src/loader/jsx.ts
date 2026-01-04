@@ -992,7 +992,14 @@ const transformSource = (
     .join('\n')
 
   if (helperSource) {
-    magic.append(`\n${helperSource}`)
+    const helperBlock = `${helperSource.trimEnd()}\n\n`
+    const shebangIndex = source.startsWith('#!') ? source.indexOf('\n') : -1
+
+    if (shebangIndex >= 0) {
+      magic.appendLeft(shebangIndex + 1, helperBlock)
+    } else {
+      magic.prepend(helperBlock)
+    }
     mutated = true
   }
 

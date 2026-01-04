@@ -238,6 +238,22 @@ describe('jsx loader', () => {
     )
   })
 
+  it('hoists react helpers before transformed templates', async () => {
+    const source = ['const view = reactJsx`', '  <button>Ready</button>', '`'].join('\n')
+
+    const transformed = await runLoader(source, {
+      tags: ['reactJsx'],
+      mode: 'react',
+    })
+
+    expect(transformed.startsWith('const __jsxReactMergeProps')).toBe(true)
+    const helperIndex = transformed.indexOf('const __jsxReact')
+    const callIndex = transformed.indexOf('__jsxReact("button"')
+
+    expect(helperIndex).toBeGreaterThanOrEqual(0)
+    expect(callIndex).toBeGreaterThan(helperIndex)
+  })
+
   it('honors per-tag react overrides via tagModes', async () => {
     const source = [
       "const label = 'Ready'",
