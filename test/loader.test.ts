@@ -251,7 +251,7 @@ describe('jsx loader', () => {
     )
   })
 
-  it('defaults to react mode on web targets to avoid node-only runtime', async () => {
+  it('keeps implicit runtime mode on web targets but warns about the browser runtime parser', async () => {
     const source = [
       "const title = 'Hello'",
       'const view = jsx`',
@@ -267,11 +267,12 @@ describe('jsx loader', () => {
       },
     })
 
-    expect(transformed).toContain('__jsxReact("button", null, title)')
+    expect(transformed).toContain('<button>{${title}}</button>')
+    expect(transformed).not.toContain('__jsxReact(')
     expect(warning).toBeTruthy()
   })
 
-  it('still downgrades to react on web targets when emitWarning is missing', async () => {
+  it('keeps implicit runtime mode on web targets when emitWarning is missing', async () => {
     const source = [
       "const title = 'Hello'",
       'const view = jsx`',
@@ -281,7 +282,8 @@ describe('jsx loader', () => {
 
     const transformed = await runLoader(source, undefined, { target: 'web' })
 
-    expect(transformed).toContain('__jsxReact("button", null, title)')
+    expect(transformed).toContain('<button>{${title}}</button>')
+    expect(transformed).not.toContain('__jsxReact(')
   })
 
   it('preserves explicit runtime mode on web targets when requested', async () => {
