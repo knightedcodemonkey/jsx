@@ -8,7 +8,7 @@ This guide shows how to compile JSX tagged templates with `@knighted/jsx/loader`
 ## When to use the loader
 
 - Use the runtime tag directly when you want zero build steps. Import `reactJsx` from `@knighted/jsx/node/react` and return `ReactElement`s.
-- Use the loader in **react** mode when you want the tagged template rewritten to `React.createElement` calls at build time. The loader appends helper shims (`__jsxReact`, `__jsxReactMergeProps`) to each transformed module and expects `React` to be in scope.
+- Use the loader in **react** mode when you want the tagged template rewritten to `React.createElement` calls at build time. The loader hoists helper shims (`__jsxReact`, `__jsxReactMergeProps`) to the top of each transformed module (right after any shebang) and expects `React` to be in scope.
 
 ## Example project layout
 
@@ -60,7 +60,7 @@ export default defineConfig({
 })
 ```
 
-- Only files containing `reactJsx` are mutated; helpers are appended once per transformed module.
+- Only files containing `reactJsx` are mutated; helpers are hoisted to the top of each transformed module (right after any shebang) once per module.
 - If you need mixed modes, set `tagModes: { reactJsx: 'react', jsx: 'runtime' }`.
 
 ## Author components with `reactJsx` (UI)
