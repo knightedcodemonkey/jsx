@@ -1060,14 +1060,6 @@ export default function jsxLoader(
     const defaultMode = userSpecifiedMode ?? DEFAULT_MODE
     const userConfiguredTags = new Set<string>()
 
-    if (webTarget && userSpecifiedMode === null) {
-      warn?.(
-        new Error(
-          '[jsx-loader] Defaulting to react mode on web targets to avoid bundling the Node-only runtime parser.',
-        ),
-      )
-    }
-
     if (configuredTagModes) {
       Object.entries(configuredTagModes).forEach(([tagName, mode]) => {
         const parsed = parseLoaderMode(mode)
