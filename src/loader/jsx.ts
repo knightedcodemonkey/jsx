@@ -17,6 +17,9 @@ import {
   type TemplateDiagnostics,
   type TemplateExpressionRange,
 } from '../internal/template-diagnostics.js'
+import { compileDomTemplate, DOM_HELPER_SNIPPETS } from './dom-template-builder.js'
+import { DEFAULT_MODE, parseLoaderMode, type LoaderMode } from './modes.js'
+import type { DomHelperKind } from './helpers/dom-snippets.js'
 
 type LoaderCallback = (
   error: Error | null,
@@ -38,8 +41,6 @@ type AnyNode = {
   type: string
   [key: string]: unknown
 }
-
-type LoaderMode = 'runtime' | 'react'
 
 type LoaderOptions = {
   /**
@@ -342,7 +343,7 @@ type TransformConfig = {
   tagModes: Map<string, LoaderMode>
 }
 
-type HelperKind = 'react'
+type HelperKind = 'react' | DomHelperKind
 
 type TransformResult = {
   code: string
@@ -371,7 +372,6 @@ const TEMPLATE_PARSER_OPTIONS: ParserOptions = {
 }
 
 const DEFAULT_TAGS = ['jsx', 'reactJsx']
-const DEFAULT_MODE: LoaderMode = 'runtime'
 
 const WEB_TARGETS = new Set(['web', 'webworker', 'electron-renderer', 'node-webkit'])
 
@@ -382,20 +382,7 @@ const HELPER_SNIPPETS: Record<HelperKind, string> = {
   react: `const __jsxReactMergeProps = (...sources) => Object.assign({}, ...sources)
 const __jsxReact = (type, props, ...children) => React.createElement(type, props, ...children)
 `,
-}
-
-const parseLoaderMode = (value: unknown): LoaderMode | null => {
-  if (typeof value !== 'string') {
-    return null
-  }
-
-  switch (value) {
-    case 'runtime':
-    case 'react':
-      return value
-    default:
-      return null
-  }
+  ...DOM_HELPER_SNIPPETS,
 }
 
 const escapeTemplateChunk = (chunk: string) =>
@@ -983,6 +970,21 @@ const transformSource = (
         )
         helperKinds.add('react')
         magic.overwrite(node.start as number, node.end as number, compiled)
+        mutated = true
+        return
+      }
+
+      if (mode === 'dom') {
+        const result = compileDomTemplate(
+          templateSource.source,
+          templateSource.placeholders,
+          config.resourcePath,
+          tagName,
+          templateStrings,
+          templateSource.diagnostics,
+        )
+        result.helpers.forEach(helper => helperKinds.add(helper))
+        magic.overwrite(node.start as number, node.end as number, result.code)
         mutated = true
         return
       }
