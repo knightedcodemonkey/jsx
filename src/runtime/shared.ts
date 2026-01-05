@@ -12,6 +12,7 @@ import type {
   TemplateDiagnostics,
   TemplateExpressionRange,
 } from '../internal/template-diagnostics.js'
+import { normalizeJsxText } from '../shared/normalize-text.js'
 
 export { formatTaggedTemplateParserError } from '../internal/template-diagnostics.js'
 export type {
@@ -146,21 +147,8 @@ export const normalizeJsxTextSegments = (
   value: string,
   placeholders: Map<string, unknown>,
 ) => {
-  const collapsed = value.replace(/\r/g, '').replace(/\n\s+/g, ' ')
-  const leadingWhitespace = value.match(/^\s*/)?.[0] ?? ''
-  const trailingWhitespace = value.match(/\s*$/)?.[0] ?? ''
-  const trimStart = /\n/.test(leadingWhitespace)
-  const trimEnd = /\n/.test(trailingWhitespace)
-
-  let normalized = collapsed
-  if (trimStart) {
-    normalized = normalized.replace(/^\s+/, '')
-  }
-  if (trimEnd) {
-    normalized = normalized.replace(/\s+$/, '')
-  }
-
-  if (normalized.length === 0 || normalized.trim().length === 0) {
+  const normalized = normalizeJsxText(value)
+  if (!normalized) {
     return [] as Array<string | unknown>
   }
 

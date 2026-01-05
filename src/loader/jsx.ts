@@ -20,6 +20,7 @@ import {
 import { compileDomTemplate, DOM_HELPER_SNIPPETS } from './dom-template-builder.js'
 import { DEFAULT_MODE, parseLoaderMode, type LoaderMode } from './modes.js'
 import type { DomHelperKind } from './helpers/dom-snippets.js'
+import { normalizeJsxText } from '../shared/normalize-text.js'
 
 type LoaderCallback = (
   error: Error | null,
@@ -619,21 +620,8 @@ const normalizeJsxTextSegments = (
   value: string,
   placeholders: Map<string, string>,
 ): JsxTextSegment[] => {
-  const collapsed = value.replace(/\r/g, '').replace(/\n\s+/g, ' ')
-  const leadingWhitespace = value.match(/^\s*/)?.[0] ?? ''
-  const trailingWhitespace = value.match(/\s*$/)?.[0] ?? ''
-  const trimStart = /\n/.test(leadingWhitespace)
-  const trimEnd = /\n/.test(trailingWhitespace)
-
-  let normalized = collapsed
-  if (trimStart) {
-    normalized = normalized.replace(/^\s+/, '')
-  }
-  if (trimEnd) {
-    normalized = normalized.replace(/\s+$/, '')
-  }
-
-  if (normalized.length === 0 || normalized.trim().length === 0) {
+  const normalized = normalizeJsxText(value)
+  if (!normalized) {
     return [] as JsxTextSegment[]
   }
 
