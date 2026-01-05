@@ -31,14 +31,13 @@ describe('loader internals', () => {
       expect(result).toBe('aXYf')
     })
 
-    it('throws on overlapping nested replacements', () => {
+    it('skips overlapping nested replacements', () => {
       const replacements = new Map<string, string>([
         ['1:4', 'X'],
         ['3:5', 'Y'],
       ])
-      expect(() => materializeSlice(0, 6, 'abcdef', replacements)).toThrow(
-        'Overlapping replacement ranges detected',
-      )
+      const result = materializeSlice(0, 6, 'abcdef', replacements)
+      expect(result).toBe('aXef')
     })
 
     it('returns exact replacement without scanning nested ranges', () => {

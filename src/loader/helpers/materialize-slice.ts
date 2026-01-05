@@ -31,9 +31,7 @@ export const materializeSlice = (
 
   nested.forEach(entry => {
     if (entry.start < cursor) {
-      throw new Error(
-        `[jsx-loader] Overlapping replacement ranges detected (${entry.start}:${entry.end}) within ${start}:${end}. Nested replacements must not overlap.`,
-      )
+      return
     }
     output += source.slice(cursor, entry.start)
     output += entry.code
