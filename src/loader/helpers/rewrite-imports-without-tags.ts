@@ -79,9 +79,7 @@ export const rewriteImportsWithoutTags = (
     const sourceLiteral = node.source as { raw?: string; start?: number; end?: number }
     const sourceText = sourceLiteral.raw
       ? sourceLiteral.raw
-      : /* c8 ignore next */
-        originalSource.slice(sourceLiteral.start ?? 0, sourceLiteral.end ?? 0)
-
+      : originalSource.slice(sourceLiteral.start ?? 0, sourceLiteral.end ?? 0)
     const rewritten = `${keyword} ${bindings.join(', ')} from ${sourceText}`
     magic.overwrite(node.start as number, node.end as number, rewritten)
     mutated = true
