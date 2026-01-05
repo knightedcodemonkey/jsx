@@ -281,6 +281,154 @@ describe('jsx loader', () => {
     expect(transformed).toContain('" times"')
   })
 
+  it('creates namespaced SVG nodes in dom mode', async () => {
+    const source = [
+      'const view = jsx`',
+      '  <svg><circle cx="5" cy="5" r="2" /></svg>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'dom' })
+
+    expect(transformed).toContain(
+      'document.createElementNS(\'http://www.w3.org/2000/svg\', "svg")',
+    )
+    expect(transformed).toContain(
+      'document.createElementNS(\'http://www.w3.org/2000/svg\', "circle")',
+    )
+  })
+
+  it('handles spread attributes and children in dom mode', async () => {
+    const source = [
+      'const props = { role: "note" }',
+      'const kids = [document.createTextNode("hi")]',
+      'const view = jsx`',
+      '  <section {...${props}}>',
+      '    {...${kids}}',
+      '  </section>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'dom' })
+
+    expect(transformed).toContain('__jsxDomAssignProps(')
+    expect(transformed).toContain('__jsxDomAppend(__jsxDom_el_0, kids)')
+  })
+
+  it('resolves interpolated tag expressions in dom mode', async () => {
+    const source = [
+      'const tag = "article"',
+      'const view = jsx`<${tag} data-id="demo" />`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'dom' })
+
+    expect(transformed).toContain('document.createElement(tag)')
+    expect(transformed).toContain('__jsxDomSetProp(__jsxDom_el_0, "data-id", "demo",')
+  })
+
+  it('supports member and namespaced tags in dom mode', async () => {
+    const source = [
+      'const view = jsx`',
+      '  <>',
+      '    <ui.Card.Section />',
+      '    <svg:foreignObject />',
+      '  </>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'dom' })
+
+    expect(transformed).toContain('document.createElement("ui.Card.Section")')
+    expect(transformed).toContain('document.createElement("svg:foreignObject")')
+  })
+
+  it('throws when a dom tag placeholder cannot be resolved', async () => {
+    const source = ['const view = jsx`<__JSX_LOADER_TAG_EXPR_0__ />`'].join('\n')
+
+    await expect(runLoader(source, { mode: 'dom' })).rejects.toThrow(
+      'Unable to resolve placeholder for tag expression.',
+    )
+  })
+
+  it('requires a JSX root when compiling dom templates', async () => {
+    const source = ['const view = jsx`', '  ', '`'].join('\n')
+
+    await expect(runLoader(source, { mode: 'dom' })).rejects.toThrow(
+      'single JSX root node',
+    )
+  })
+
+  it('throws on complex inline expressions in dom mode', async () => {
+    const source = [
+      'const items = [1, 2, 3]',
+      'const view = jsx`',
+      '  <ul>{items.map(i => <li>{i}</li>)}</ul>',
+      '`',
+    ].join('\n')
+
+    await expect(runLoader(source, { mode: 'dom' })).rejects.toThrow(
+      'Unable to inline complex expressions in dom mode.',
+    )
+  })
+
+  it('stringifies namespaced attributes in dom mode', async () => {
+    const source = ['const view = jsx`<svg:foreignObject xml:lang="fr" />`'].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'dom' })
+
+    expect(transformed).toContain('document.createElement("svg:foreignObject")')
+    expect(transformed).toContain('__jsxDomSetProp(__jsxDom_el_0, "xml:lang", "fr"')
+  })
+
+  it('compiles inline JSX expressions inside dom children', async () => {
+    const source = [
+      'const view = jsx`',
+      '  <section>{<span>Hi</span>}</section>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'dom' })
+
+    expect(transformed).toContain('document.createElement("span")')
+    expect(transformed).toContain('__jsxDomAppend(__jsxDom_el_0, (() => {')
+  })
+
+  it('compiles literal expression containers in dom mode', async () => {
+    const source = ['const view = jsx`', '  <section>{"literal"}</section>', '`'].join(
+      '\n',
+    )
+
+    const transformed = await runLoader(source, { mode: 'dom' })
+
+    expect(transformed).toContain('__jsxDomAppend(__jsxDom_el_0, "literal")')
+  })
+
+  it('supports boolean attributes in dom mode', async () => {
+    const source = ['const view = jsx`<button disabled />`'].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'dom' })
+
+    expect(transformed).toContain('__jsxDomSetProp(__jsxDom_el_0, "disabled", true')
+  })
+
+  it('evaluates attribute expression containers in dom mode', async () => {
+    const source = [
+      'const count = 3',
+      'const view = jsx`<button data-count={${count}} />`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'dom' })
+
+    expect(transformed).toContain('__jsxDomSetProp(__jsxDom_el_0, "data-count", count')
+  })
+
+  it('surfaces parser errors for dom templates', async () => {
+    const source = ['const view = jsx`', '  <div>', '`'].join('\n')
+
+    await expect(runLoader(source, { mode: 'dom' })).rejects.toThrow('[jsx-loader]')
+  })
+
   it('keeps implicit runtime mode on web targets but warns about the browser runtime parser', async () => {
     const source = [
       "const title = 'Hello'",

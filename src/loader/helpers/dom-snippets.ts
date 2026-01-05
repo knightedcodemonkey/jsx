@@ -93,12 +93,23 @@ const __jsxDomEvent = (el, propName, value) => {
   return true
 }
 
+const __jsxDomNamespaceForAttr = (raw, namespace) => {
+  if (!raw.includes(':')) return null
+  const prefix = raw.split(':', 1)[0]
+  if (prefix === 'xml') return 'http://www.w3.org/XML/1998/namespace'
+  if (prefix === 'xlink') return 'http://www.w3.org/1999/xlink'
+  if (namespace === 'svg') return 'http://www.w3.org/2000/svg'
+  if (namespace === 'math') return 'http://www.w3.org/1998/Math/MathML'
+  return null
+}
+
 const __jsxDomSetProp = (el, name, value, namespace) => {
   if (value === null || value === undefined) return
   if (name === 'dangerouslySetInnerHTML' && value && typeof value === 'object' && '__html' in value) {
     el.innerHTML = String(value.__html ?? '')
     return
   }
+  const ns = __jsxDomNamespaceForAttr(name, namespace)
   if (name === 'ref') {
     if (typeof value === 'function') { value(el); return }
     if (value && typeof value === 'object') { value.current = el; return }
@@ -107,8 +118,13 @@ const __jsxDomSetProp = (el, name, value, namespace) => {
   if (name === 'style') { __jsxDomStyle(el, value); return }
   if (__jsxDomEvent(el, name, value)) return
   if (typeof value === 'boolean') {
-    if (value) el.setAttribute(name, '')
-    else el.removeAttribute(name)
+    if (value) {
+      if (ns) el.setAttributeNS(ns, name, '')
+      else el.setAttribute(name, '')
+    } else {
+      if (ns) el.removeAttributeNS(ns, name)
+      else el.removeAttribute(name)
+    }
     if (name in el) { try { el[name] = value } catch {}
     }
     return
@@ -118,7 +134,8 @@ const __jsxDomSetProp = (el, name, value, namespace) => {
     try { (el as any)[name] = value } catch {}
     return
   }
-  el.setAttribute(name, value as any)
+  if (ns) el.setAttributeNS(ns, name, value as any)
+  else el.setAttribute(name, value as any)
 }
 
 const __jsxDomAssignProps = (el, props, namespace) => {

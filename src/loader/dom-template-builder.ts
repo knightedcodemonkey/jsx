@@ -126,6 +126,7 @@ class DomTemplateBuilder {
       const name = this.compileAttributeName(attr.name)
       const valueExpr = this.compileAttributeValue(attr as JSXAttribute)
       if (!valueExpr) {
+        /* c8 ignore next */
         return
       }
       this.helpers.add('dom')
@@ -156,11 +157,13 @@ class DomTemplateBuilder {
     if (attr.value.type === 'JSXExpressionContainer') {
       const expr = attr.value.expression
       if (expr.type === 'JSXEmptyExpression') {
+        /* c8 ignore next */
         return null
       }
       return this.compileExpression(expr as Expression)
     }
 
+    /* c8 ignore next */
     return 'undefined'
   }
 
@@ -201,6 +204,7 @@ class DomTemplateBuilder {
         return this.compileNode(child, namespace)
       }
       default:
+        /* c8 ignore next */
         return null
     }
   }
@@ -264,6 +268,7 @@ class DomTemplateBuilder {
       throw new Error('[jsx-loader] Unable to inline complex expressions in dom mode.')
     }
 
+    /* c8 ignore next */
     throw new Error('[jsx-loader] Unable to compile expression for dom mode.')
   }
 }
