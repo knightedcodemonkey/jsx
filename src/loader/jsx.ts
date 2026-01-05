@@ -18,6 +18,8 @@ import {
   type TemplateExpressionRange,
 } from '../internal/template-diagnostics.js'
 import { compileDomTemplate, DOM_HELPER_SNIPPETS } from './dom-template-builder.js'
+import { materializeSlice } from './helpers/materialize-slice.js'
+import { rewriteImportsWithoutTags } from './helpers/rewrite-imports-without-tags.js'
 import { DEFAULT_MODE, parseLoaderMode, type LoaderMode } from './modes.js'
 import type { DomHelperKind } from './helpers/dom-snippets.js'
 import { normalizeJsxText } from '../shared/normalize-text.js'
@@ -683,53 +685,6 @@ const materializeTemplateStrings = (
   return templates
 }
 
-const parseRangeKey = (key: string): [number, number] | null => {
-  const [start, end] = key.split(':').map(entry => Number.parseInt(entry, 10))
-  return Number.isFinite(start) && Number.isFinite(end) ? [start, end] : null
-}
-
-const materializeSlice = (
-  start: number,
-  end: number,
-  source: string,
-  replacements: Map<string, string>,
-) => {
-  const exact = replacements.get(`${start}:${end}`)
-  if (exact !== undefined) {
-    return exact
-  }
-
-  const nested: Array<{ start: number; end: number; code: string }> = []
-  replacements.forEach((code, key) => {
-    const range = parseRangeKey(key)
-    if (!range) return
-    const [rStart, rEnd] = range
-    if (rStart >= start && rEnd <= end) {
-      nested.push({ start: rStart, end: rEnd, code })
-    }
-  })
-
-  if (!nested.length) {
-    return source.slice(start, end)
-  }
-
-  nested.sort((a, b) => a.start - b.start)
-  let cursor = start
-  let output = ''
-
-  nested.forEach(entry => {
-    if (entry.start < cursor) {
-      return
-    }
-    output += source.slice(cursor, entry.start)
-    output += entry.code
-    cursor = entry.end
-  })
-
-  output += source.slice(cursor, end)
-  return output
-}
-
 const buildTemplateSource = (
   quasis: Array<Record<string, unknown>>,
   expressions: Array<Record<string, unknown>>,
@@ -918,104 +873,6 @@ const isLoaderPlaceholderIdentifier = (node: AnyNode | undefined) => {
     node.name.startsWith(TEMPLATE_EXPR_PLACEHOLDER_PREFIX) ||
     node.name.startsWith(TAG_PLACEHOLDER_PREFIX)
   )
-}
-
-const formatImportSpecifier = (spec: AnyNode) => {
-  const node = spec as {
-    type: string
-    local?: { name?: string }
-    imported?: { name?: string; value?: string }
-  }
-
-  if (node.type === 'ImportDefaultSpecifier') {
-    return node.local?.name as string
-  }
-
-  if (node.type === 'ImportNamespaceSpecifier') {
-    return `* as ${node.local?.name as string}`
-  }
-
-  if (node.type === 'ImportSpecifier') {
-    const imported = (node.imported?.name as string | undefined) ?? ''
-    const local = (node.local?.name as string | undefined) ?? imported
-    return imported === local ? imported : `${imported} as ${local}`
-  }
-
-  return ''
-}
-
-const rewriteImportsWithoutTags = (
-  program: Program,
-  magic: MagicString,
-  inlineTagNames: Set<string>,
-  originalSource: string,
-) => {
-  if (!inlineTagNames.size) {
-    return false
-  }
-
-  let mutated = false
-
-  program.body.forEach(node => {
-    if (node.type !== 'ImportDeclaration') {
-      return
-    }
-
-    const specifiers = node.specifiers as unknown as AnyNode[]
-    const kept: AnyNode[] = []
-    let removed = false
-
-    specifiers.forEach(spec => {
-      const localName = (spec as { local?: { name?: string } }).local?.name as
-        | string
-        | undefined
-      if (spec.type === 'ImportSpecifier' && localName && inlineTagNames.has(localName)) {
-        removed = true
-        return
-      }
-      kept.push(spec)
-    })
-
-    if (!removed) {
-      return
-    }
-
-    if (!kept.length) {
-      magic.remove(node.start as number, node.end as number)
-      mutated = true
-      return
-    }
-
-    const keyword = node.importKind === 'type' ? 'import type' : 'import'
-    const bindings: string[] = []
-    const defaultSpec = kept.find(spec => spec.type === 'ImportDefaultSpecifier')
-    const namespaceSpec = kept.find(spec => spec.type === 'ImportNamespaceSpecifier')
-    const namedSpecs = kept.filter(spec => spec.type === 'ImportSpecifier')
-
-    if (defaultSpec) {
-      bindings.push(formatImportSpecifier(defaultSpec))
-    }
-
-    if (namespaceSpec) {
-      bindings.push(formatImportSpecifier(namespaceSpec))
-    }
-
-    if (namedSpecs.length) {
-      bindings.push(`{ ${namedSpecs.map(formatImportSpecifier).join(', ')} }`)
-    }
-
-    const sourceLiteral = node.source as { raw?: string; start?: number; end?: number }
-    const sourceText = sourceLiteral.raw
-      ? sourceLiteral.raw
-      : /* c8 ignore next */
-        originalSource.slice(sourceLiteral.start ?? 0, sourceLiteral.end ?? 0)
-
-    const rewritten = `${keyword} ${bindings.join(', ')} from ${sourceText}`
-    magic.overwrite(node.start as number, node.end as number, rewritten)
-    mutated = true
-  })
-
-  return mutated
 }
 
 const transformSource = (
