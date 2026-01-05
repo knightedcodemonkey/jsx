@@ -251,6 +251,36 @@ describe('jsx loader', () => {
     )
   })
 
+  it('compiles templates to DOM helpers when mode is dom', async () => {
+    const source = [
+      "const label = 'Ready'",
+      'const view = jsx`',
+      '  <button class="cta">${label}</button>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'dom' })
+
+    expect(transformed).toContain('const __jsxDomAppend = (parent, child) =>')
+    expect(transformed).toContain('document.createElement("button")')
+    expect(transformed).toContain('__jsxDomSetProp(')
+    expect(transformed).not.toContain('__jsxReact(')
+  })
+
+  it('preserves inline spaces around expressions in dom mode', async () => {
+    const source = [
+      'const count = 0',
+      'const view = jsx`',
+      '  <button>Clicked ${count} times</button>',
+      '`',
+    ].join('\n')
+
+    const transformed = await runLoader(source, { mode: 'dom' })
+
+    expect(transformed).toContain('"Clicked "')
+    expect(transformed).toContain('" times"')
+  })
+
   it('keeps implicit runtime mode on web targets but warns about the browser runtime parser', async () => {
     const source = [
       "const title = 'Hello'",
@@ -298,6 +328,35 @@ describe('jsx loader', () => {
     )
 
     expect(transformed).toContain('__jsxReact("button", null, title)')
+    expect(warning).toBeUndefined()
+  })
+
+  it('does not warn on web targets when jsx is explicitly dom and reactJsx is react', async () => {
+    const source = [
+      "const title = 'Hello'",
+      'const view = jsx`',
+      '  <button>{title}</button>',
+      '`',
+    ].join('\n')
+
+    let warning: unknown
+    const transformed = await runLoader(
+      source,
+      {
+        tagModes: {
+          jsx: 'dom',
+          reactJsx: 'react',
+        },
+      },
+      {
+        target: 'web',
+        emitWarning: value => {
+          warning = value
+        },
+      },
+    )
+
+    expect(transformed).toContain('document.createElement("button")')
     expect(warning).toBeUndefined()
   })
 

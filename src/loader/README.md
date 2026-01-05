@@ -66,24 +66,24 @@ const config: Configuration = {
 export default config
 ```
 
-By default the loader transforms both ` jsx`` ` (DOM runtime) and `  reactJsx`` ` (React runtime) calls.
+By default the loader transforms both ` jsx`` ` (DOM runtime) and `  reactJsx`` ` (React runtime) calls. You can also compile `jsx` to DOM at build time via the `dom` mode (see options below) to avoid shipping the runtime parser in browser bundles.
 
 > [!TIP]
 > Building React SSR with the loader? See [docs/ssr-rendered-bundle.md](../../docs/ssr-rendered-bundle.md) for an end-to-end guide that uses `reactJsx` in server bundles.
 
 ### Loader options
 
-| Option     | Type                                   | Default               | Description                                                                                                                                                                                                                                |
-| ---------- | -------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `tags`     | `string[]`                             | `['jsx', 'reactJsx']` | Names of tagged template helpers to transform. Add aliases if you re-export the helpers under custom names.                                                                                                                                |
-| `mode`     | `'runtime' \| 'react'`                 | `'runtime'`           | Sets the default transformation target for every tag (`jsx` runtime vs React createElement output). On web targets the loader warns when defaulting to runtime so you can opt into `react` to avoid bundling the Node-only runtime parser. |
-| `tagModes` | `Record<string, 'runtime' \| 'react'>` | `undefined`           | Per-tag override of `mode`. Use this when some tags should emit DOM helpers and others should emit React.                                                                                                                                  |
-| `tag`      | `string`                               | `undefined`           | Legacy single-tag option. Prefer `tags`, but this remains for backward compatibility.                                                                                                                                                      |
+| Option     | Type                                            | Default               | Description                                                                                                                                                                              |
+| ---------- | ----------------------------------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tags`     | `string[]`                                      | `['jsx', 'reactJsx']` | Names of tagged template helpers to transform. Add aliases if you re-export the helpers under custom names.                                                                              |
+| `mode`     | `'runtime' \| 'react' \| 'dom'`                 | `'runtime'`           | Sets the default transformation target for every tag. `runtime` keeps the tagged template, `react` emits `React.createElement` calls, `dom` emits DOM creation code (no runtime parser). |
+| `tagModes` | `Record<string, 'runtime' \| 'react' \| 'dom'>` | `undefined`           | Per-tag override of `mode`. Common split: `{ jsx: 'dom', reactJsx: 'react' }` to get DOM nodes for `jsx` and React elements for `reactJsx` without runtime parsing in web bundles.       |
+| `tag`      | `string`                                        | `undefined`           | Legacy single-tag option. Prefer `tags`, but this remains for backward compatibility.                                                                                                    |
 
-### Browser targets and runtime mode
+### Browser targets and modes
 
-- The runtime parser is Node-oriented (WASI) and will try to import `node:module` if bundled for the browser. The loader will emit a warning on web-like targets (e.g., `web`, `webworker`) when runtime mode is only implied so you can switch to `react` if needed.
-- If you need runtime mode in the browser, explicitly set `mode: 'runtime'` and ensure you are serving a web-safe parser path yourself (current package does not ship one). Otherwise, prefer `mode: 'react'` for client bundles.
+- The runtime parser is Node-oriented (WASI) and will try to import `node:module` if bundled for the browser. The loader emits a warning on web-like targets when `runtime` is only implied. Explicit `mode`/`tagModes` for `dom` or `react` will not warn.
+- If you need runtime mode in the browser, explicitly set `mode: 'runtime'` and ensure you serve a web-safe parser; otherwise prefer `mode: 'react'` or `mode: 'dom'` for client bundles.
 - The loader emits warnings through `emitWarning` when available; without it the transform still proceeds unchanged.
 
 ## Writing templates

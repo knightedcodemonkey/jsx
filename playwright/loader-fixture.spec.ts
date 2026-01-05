@@ -29,6 +29,7 @@ test.describe('loader rspack fixture', () => {
     await expect(page.locator(selectors.hybridReactTreeAside)).toHaveCount(1)
     await expect(page.locator(selectors.hybridNestedSlot)).toBeVisible()
     await expect(page.locator(selectors.hybridNestedItem)).toHaveCount(1)
+    await expect(page.locator(selectors.hybridNestedItem)).toContainText('Hybrid ready')
 
     const litParagraph = page.locator(selectors.litParagraph)
     await expect(litParagraph).toHaveText(/Works with Lit \+ React/)

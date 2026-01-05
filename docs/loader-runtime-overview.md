@@ -5,9 +5,12 @@ This document explains how the `@knighted/jsx` loader cooperates with the runtim
 ## End-to-end flow
 
 1. **Authoring** – you write JSX inside a tagged template literal (for example `jsx` or `reactJsx`).
-2. **Loader pass (optional)** – when bundling with Webpack/Rspack/Next/etc., the loader parses the template, fixes up JSX semantics, and emits normal JavaScript. Two transformation modes are available:
-   - `runtime` (default) – keeps the tagged template and lets the runtime evaluate it later.
-   - `react` – replaces the tagged template with `React.createElement` calls (via helper shims) so the runtime never touches the template.
+2. **Loader pass (optional)** – when bundling with Webpack/Rspack/Next/etc., the loader parses the template, fixes up JSX semantics, and emits normal JavaScript. Transformation modes:
+
+- `runtime` (default) – keeps the tagged template and lets the runtime evaluate it later.
+- `react` – replaces the tagged template with `React.createElement` calls (via helper shims) so the runtime never touches the template.
+- `dom` – emits DOM construction code (no tagged template or runtime parser) so `jsx` produces real DOM nodes at build time.
+
 3. **Runtime evaluation** – at execution time the template tag function receives the raw `strings`/`values` arrays from JavaScript and turns the JSX tree into DOM nodes (for `jsx`) or React elements (for `reactJsx`).
 
 ## Default `runtime` mode example
@@ -73,6 +76,31 @@ const __jsxReact = (type, props, ...children) =>
 
 Because the output is already `React.createElement`-compatible, React can render it without involving the runtime `reactJsx` helper.
 
+## DOM mode example
+
+Use `dom` when you want `jsx` templates to emit DOM nodes at build time (no runtime parser) while keeping `reactJsx` compiled to React helpers:
+
+```js
+// rspack.config.js (excerpt)
+{
+  loader: '@knighted/jsx/loader',
+  options: {
+    tagModes: {
+      jsx: 'dom',
+      reactJsx: 'react',
+    },
+  },
+}
+```
+
+Given:
+
+```ts
+const badge = jsx`<button class="cta">Launch</button>`
+```
+
+The loader emits DOM creation code plus small helpers (class/style/props/events), so the resulting expression returns an `HTMLElement` without shipping the runtime parser.
+
 ## Placeholder lifecycle
 
 | Stage                     | What exists                         | Notes                                                                                         |
@@ -94,7 +122,8 @@ When embedding React components inside Lit (or any framework that expects DOM no
 ## Choosing between modes
 
 - Stick with `runtime` when you need the tagged template to produce DOM nodes at execution time (browser scripts, Lit components, SSR DOM shims, etc.).
+- Use `dom` when you want DOM nodes without the runtime parser—ideal for bundlers/loader users targeting the web.
 - Use `react` when your tagged template should behave like authored JSX inside React components. This avoids shipping the runtime interpreter and eliminates placeholder artifacts entirely.
-- Mix and match with `tagModes` to migrate incrementally: e.g., lit templates keep `runtime` while `reactJsx` tags compile to React helpers.
+- Mix and match with `tagModes` to migrate incrementally: e.g., lit templates keep `runtime` or move to `dom`, while `reactJsx` tags compile to React helpers.
 
 Having this mental model handy makes debugging much easier: if something odd appears in your bundle, remember whether you expect to see a tagged template literal (runtime mode) or `React.createElement` calls (react mode).
