@@ -18,8 +18,11 @@ import {
   type TemplateExpressionRange,
 } from '../internal/template-diagnostics.js'
 import { compileDomTemplate, DOM_HELPER_SNIPPETS } from './dom-template-builder.js'
+import { materializeSlice } from './helpers/materialize-slice.js'
+import { rewriteImportsWithoutTags } from './helpers/rewrite-imports-without-tags.js'
 import { DEFAULT_MODE, parseLoaderMode, type LoaderMode } from './modes.js'
 import type { DomHelperKind } from './helpers/dom-snippets.js'
+import { normalizeJsxText } from '../shared/normalize-text.js'
 
 type LoaderCallback = (
   error: Error | null,
@@ -619,21 +622,8 @@ const normalizeJsxTextSegments = (
   value: string,
   placeholders: Map<string, string>,
 ): JsxTextSegment[] => {
-  const collapsed = value.replace(/\r/g, '').replace(/\n\s+/g, ' ')
-  const leadingWhitespace = value.match(/^\s*/)?.[0] ?? ''
-  const trailingWhitespace = value.match(/\s*$/)?.[0] ?? ''
-  const trimStart = /\n/.test(leadingWhitespace)
-  const trimEnd = /\n/.test(trailingWhitespace)
-
-  let normalized = collapsed
-  if (trimStart) {
-    normalized = normalized.replace(/^\s+/, '')
-  }
-  if (trimEnd) {
-    normalized = normalized.replace(/\s+$/, '')
-  }
-
-  if (normalized.length === 0 || normalized.trim().length === 0) {
+  const normalized = normalizeJsxText(value)
+  if (!normalized) {
     return [] as JsxTextSegment[]
   }
 
@@ -700,6 +690,7 @@ const buildTemplateSource = (
   expressions: Array<Record<string, unknown>>,
   source: string,
   tag: string,
+  replacements: Map<string, string>,
 ) => {
   const placeholderMap = new Map<string, string>()
   const tagPlaceholderMap = new Map<string, string>()
@@ -768,7 +759,7 @@ const buildTemplateSource = (
     const nextValue = nextChunk?.value as { cooked?: string; raw?: string } | undefined
     const rightText = nextValue?.cooked ?? nextValue?.raw ?? ''
     const context = getTemplateExpressionContext(chunk, rightText)
-    const code = source.slice(start, end)
+    const code = materializeSlice(start, end, source, replacements)
     const marker = registerMarker(code, context.type === 'tag')
 
     const appendMarker = (wrapper?: (identifier: string) => string) => {
@@ -914,6 +905,8 @@ const transformSource = (
   const magic = new MagicString(source)
   let mutated = false
   const helperKinds = new Set<HelperKind>()
+  const replacements = new Map<string, string>()
+  const inlineTags = new Set<string>()
 
   taggedTemplates
     .sort((a, b) => (b.node.start as number) - (a.node.start as number))
@@ -930,6 +923,7 @@ const transformSource = (
         quasi.expressions,
         source,
         tagName,
+        replacements,
       )
       const templateStrings = materializeTemplateStrings(quasi.quasis)
 
@@ -955,6 +949,7 @@ const transformSource = (
         const replacement = `${tagSource}\`${restored}\``
 
         magic.overwrite(node.start as number, node.end as number, replacement)
+        replacements.set(`${node.start}:${node.end}`, replacement)
         mutated = true
         return
       }
@@ -970,7 +965,9 @@ const transformSource = (
         )
         helperKinds.add('react')
         magic.overwrite(node.start as number, node.end as number, compiled)
+        replacements.set(`${node.start}:${node.end}`, compiled)
         mutated = true
+        inlineTags.add(tagName)
         return
       }
 
@@ -985,7 +982,9 @@ const transformSource = (
         )
         result.helpers.forEach(helper => helperKinds.add(helper))
         magic.overwrite(node.start as number, node.end as number, result.code)
+        replacements.set(`${node.start}:${node.end}`, result.code)
         mutated = true
+        inlineTags.add(tagName)
         return
       }
 
@@ -996,6 +995,10 @@ const transformSource = (
         `[jsx-loader] Transformation mode "${mode}" not implemented yet for tag "${tagName}".`,
       )
     })
+
+  if (rewriteImportsWithoutTags(ast.program, magic, inlineTags, source)) {
+    mutated = true
+  }
 
   const helperSource = Array.from(helperKinds)
     .map(kind => HELPER_SNIPPETS[kind])
