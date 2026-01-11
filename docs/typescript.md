@@ -38,7 +38,7 @@ Use one `tsconfig.json` when the whole project can share the same JSX compiler o
 
 - `jsxImportSource` points TypeScript at the packaged runtime typings so `.tsx` helpers get DOM-friendly diagnostics.
 - The language-service plugin enforces DOM vs React rules for tagged templates in `.ts` files. Add extra keys in `tagModes` if you alias `jsx`/`reactJsx` to different identifiers.
-- React components still compile and run through React’s own runtime; the setting only affects type checking.
+- React components still compile and run through React’s own runtime; the setting only affects type checking. The `reactJsx` helper re-uses React’s intrinsic element typings (props/events/refs), and the `@knighted/jsx/react` entry exports helper types if you need explicit annotations in your code.
 
 ## Mixed React build + DOM helper configs
 
