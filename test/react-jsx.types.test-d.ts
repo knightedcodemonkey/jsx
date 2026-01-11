@@ -51,4 +51,4 @@ type DemoPropsArePropsWithChildren = Expect<
   Equal<DemoComponentProps, React.PropsWithChildren<DemoProps>>
 >
 
-const renderable: ReactJsxRenderable = null
+type RenderableAllowsNull = Expect<null extends ReactJsxRenderable ? true : false>
