@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.7.2] - 2026-01-11
+
 ### Changed
 
 - Improve `reactJsx` typings by exporting React-aligned intrinsic element, event, and ref helper types (backward compatible; loader react mode unchanged).
