@@ -21,13 +21,27 @@ import {
   Fragment,
   createElement,
   type ComponentType,
+  type DOMAttributes,
+  type EventHandler,
+  type JSX as ReactJSX,
+  type PropsWithChildren,
   type ReactElement,
   type ReactNode,
+  type Ref,
+  type SyntheticEvent,
 } from 'react'
 
 export type ReactJsxComponent<Props = Record<string, unknown>> = ComponentType<
-  Props & { children?: ReactNode }
+  PropsWithChildren<Props>
 >
+
+export type ReactJsxRenderable = ReactNode
+export type ReactJsxRef<T> = Ref<T>
+export type ReactJsxEventHandler<E extends SyntheticEvent> = EventHandler<E>
+export type ReactJsxDomAttributes<T = unknown> = DOMAttributes<T>
+export type ReactJsxIntrinsicElements = ReactJSX.IntrinsicElements
+export type ReactJsxIntrinsicElement<Tag extends keyof ReactJsxIntrinsicElements> =
+  ReactJsxIntrinsicElements[Tag]
 
 type ReactJsxContext = TemplateContext<ReactJsxComponent>
 

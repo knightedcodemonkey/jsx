@@ -41,6 +41,7 @@ document.querySelector('#mount')?.append(badge)
 
 - Returns a React element tree. You still render via `createRoot`, `renderToString`, etc.
 - Identical template semantics to `jsx`, but expressions inside braces become arguments to `React.createElement` instead of DOM setters.
+- Intrinsic props, events, and `ref` follow React’s JSX intrinsic element typings, and helper types are exported from `@knighted/jsx/react` for annotations when needed.
 - Hooks/state work because you typically invoke `reactJsx` inside components or pass the elements to React.
 
 Example:

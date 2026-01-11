@@ -96,6 +96,8 @@ createRoot(document.getElementById('root')!).render(reactJsx`<${App} />`)
 
 The React runtime shares the same template semantics as `jsx`, except it returns React elements (via `React.createElement`) so you can embed other React components with `<${MyComponent} />` and use hooks/state as usual. The helper lives in a separate subpath so DOM-only consumers never pay the React dependency cost.
 
+Intrinsic props, events, and refs follow React’s JSX intrinsic element typings (React 18/19), and helper types like `ReactJsxIntrinsicElements`, `ReactJsxRef`, and `ReactJsxDomAttributes` are exported from `@knighted/jsx/react` when you need annotations.
+
 ### DOM-specific props
 
 - `style` accepts either a string or an object. Object values handle CSS custom properties (`--token`) automatically.
