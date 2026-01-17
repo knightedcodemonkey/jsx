@@ -4,13 +4,13 @@
 [![codecov](https://codecov.io/gh/knightedcodemonkey/jsx/graph/badge.svg?token=tjxuFwcwkr)](https://codecov.io/gh/knightedcodemonkey/jsx)
 [![NPM version](https://img.shields.io/npm/v/@knighted/jsx.svg)](https://www.npmjs.com/package/@knighted/jsx)
 
-A runtime JSX template tag backed by the [`oxc-parser`](https://github.com/oxc-project/oxc) WebAssembly build. Use real JSX syntax directly inside template literals and turn the result into live DOM nodes (or values returned from your own components) without running a bundler. One syntax works everywhere—browser scripts, SSR utilities, and bundler pipelines—no separate transpilation step required.
+A runtime JSX template tag backed by the [`oxc-parser`](https://github.com/oxc-project/oxc) WebAssembly build. Use real JSX syntax directly inside template literals and turn the result into live DOM nodes (or values returned from your own components) without running a bundler. Prefer a build step? The loader can precompile templates so your runtime ships without loading the WASM parser. One syntax works everywhere—browser scripts, SSR utilities, and bundler pipelines—no separate transpilation step required.
 
 ## Key features
 
 - **Parse true JSX with no build step** – template literals go through `oxc-parser`, so fragments, spreads, and SVG namespaces all work as expected.
 - **DOM + React runtimes** – choose `jsx` for DOM nodes or `reactJsx` for React elements, and mix them freely (even on the server).
-- **Loader + SSR support** – ship tagged templates through Webpack/Rspack, Next.js, or plain Node by using the loader and the `@knighted/jsx/node` entry.
+- **Loader + SSR support** – ship tagged templates through Webpack/Rspack, Next.js, or plain Node by using the loader and the `@knighted/jsx/node` entry (loader builds remove the WASM requirement at runtime).
 
 ## Quick links
 
@@ -145,7 +145,7 @@ document.body.append(view)
 
 ## Loader integration
 
-Use the published loader entry (`@knighted/jsx/loader`) when you want your bundler to rewrite tagged template literals at build time. The loader finds every ` jsx`` ` (and, by default, ` reactJsx`` ` ) invocation, rebuilds the template with real JSX semantics, and hands back transformed source that can run in any environment.
+Use the published loader entry (`@knighted/jsx/loader`) when you want your bundler to rewrite tagged template literals at build time. The loader finds every ` jsx`` ` (and, by default, ` reactJsx`` ` ) invocation, rebuilds the template with real JSX semantics, and hands back transformed source that can run in any environment without loading the WASM parser at runtime.
 
 ```js
 // rspack.config.js / webpack.config.js
