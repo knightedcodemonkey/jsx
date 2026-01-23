@@ -1,6 +1,6 @@
 {
   "name": "@knighted/jsx",
-  "version": "1.7.3",
+  "version": "1.7.4",
   "description": "Runtime JSX tagged template that renders DOM or React trees anywhere with or without a build step.",
   "keywords": [
     "jsx runtime",
