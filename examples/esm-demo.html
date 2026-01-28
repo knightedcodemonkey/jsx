@@ -3,7 +3,17 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>@knighted/jsx &mdash; esm.sh demo</title>
+    <title>@knighted/jsx &mdash; CDN demo</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+    <link
+      rel="modulepreload"
+      href="https://cdn.jsdelivr.net/npm/@knighted/jsx@1.7.5/lite/+esm"
+    />
+    <link
+      rel="modulepreload"
+      href="https://cdn.jsdelivr.net/npm/@knighted/jsx@1.7.5/react/+esm"
+    />
     <style>
       :root {
         font-family:
@@ -436,7 +446,7 @@
   <body>
     <main id="app">
       <header>
-        <h1>@knighted/jsx + esm.sh</h1>
+        <h1>@knighted/jsx + CDN</h1>
         <p>
           Use @knighted/jsx in any modern runtime—browser, Node, or CDN—without a build
           step.
@@ -446,14 +456,14 @@
         <div class="loading-spinner" aria-hidden="true"></div>
         <div>
           <p><strong>Loading demo modules…</strong></p>
-          <p>esm.sh dependencies stream in on first visit.</p>
+          <p>CDN dependencies stream in on first visit.</p>
         </div>
       </section>
     </main>
 
     <script type="module">
-      import { jsx } from 'https://esm.sh/@knighted/jsx@latest/lite'
-      import { reactJsx } from 'https://esm.sh/@knighted/jsx@latest/react'
+      import { jsx } from 'https://cdn.jsdelivr.net/npm/@knighted/jsx@1.7.5/lite/+esm'
+      import { reactJsx } from 'https://cdn.jsdelivr.net/npm/@knighted/jsx@1.7.5/react/+esm'
       import { useEffect, useRef, useState } from 'https://esm.sh/react@19'
       import { createRoot } from 'https://esm.sh/react-dom@19/client'
       import { LitElement, css, html } from 'https://esm.sh/lit@3'
@@ -1058,7 +1068,7 @@
               <h2>Pick the runtime that matches your target</h2>
               <p>
                 Each subpath ships a pre-minified helper so you can import exactly what you need from
-                npm or esm.sh.
+                npm or a CDN.
               </p>
             </header>
             <div class="lite-metric-grid">
@@ -1108,7 +1118,7 @@
               </p>
             </header>
             <p>
-              The panel below mounts React 19 + react-dom directly from esm.sh and keeps state with hooks.
+              The panel below mounts React 19 + react-dom directly from a CDN and keeps state with hooks.
             </p>
             <div class="react-mount" id="react-runtime-demo"></div>
             <p>
@@ -1149,7 +1159,7 @@
             <header>
               <h2>Combine Lit + React</h2>
               <p>
-                Stream Lit from esm.sh, register a custom element, and let React drive it with shared state.
+                Stream Lit from a CDN, register a custom element, and let React drive it with shared state.
               </p>
             </header>
             <p>
