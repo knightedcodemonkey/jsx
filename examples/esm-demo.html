@@ -14,6 +14,13 @@
       rel="modulepreload"
       href="https://cdn.jsdelivr.net/npm/@knighted/jsx@1.7.5/react/+esm"
     />
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/react@19.2.4/+esm" />
+    <link
+      rel="modulepreload"
+      href="https://cdn.jsdelivr.net/npm/react-dom@19.2.4/client/+esm"
+    />
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/lit@3/+esm" />
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/shiki@1.1.7/+esm" />
     <style>
       :root {
         font-family:
@@ -464,10 +471,14 @@
     <script type="module">
       import { jsx } from 'https://cdn.jsdelivr.net/npm/@knighted/jsx@1.7.5/lite/+esm'
       import { reactJsx } from 'https://cdn.jsdelivr.net/npm/@knighted/jsx@1.7.5/react/+esm'
-      import { useEffect, useRef, useState } from 'https://esm.sh/react@19'
-      import { createRoot } from 'https://esm.sh/react-dom@19/client'
-      import { LitElement, css, html } from 'https://esm.sh/lit@3'
-      import { codeToHtml } from 'https://esm.sh/shiki@1.1.7'
+      import {
+        useEffect,
+        useRef,
+        useState,
+      } from 'https://cdn.jsdelivr.net/npm/react@19.2.4/+esm'
+      import { createRoot } from 'https://cdn.jsdelivr.net/npm/react-dom@19.2.4/client/+esm'
+      import { LitElement, css, html } from 'https://cdn.jsdelivr.net/npm/lit@3/+esm'
+      import { codeToHtml } from 'https://cdn.jsdelivr.net/npm/shiki@1.1.7/+esm'
 
       const app = document.getElementById('app')
       const loadingCard = document.getElementById('demo-loading')
