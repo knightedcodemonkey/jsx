@@ -1,0 +1,1232 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@knighted/jsx &mdash; E2E fixture</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+    <link rel="modulepreload" href="/dist/lite/index.js" />
+    <link rel="modulepreload" href="/dist/react/index.js" />
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/react@19.2.4/+esm" />
+    <link
+      rel="modulepreload"
+      href="https://cdn.jsdelivr.net/npm/react-dom@19.2.4/client/+esm"
+    />
+    <link
+      rel="modulepreload"
+      href="https://cdn.jsdelivr.net/npm/property-information@7.1.0/+esm"
+    />
+    <link
+      rel="modulepreload"
+      href="https://cdn.jsdelivr.net/npm/oxc-parser@0.105.0/+esm"
+    />
+    <link
+      rel="modulepreload"
+      href="https://cdn.jsdelivr.net/npm/@oxc-parser/binding-wasm32-wasi@0.105.0/+esm"
+    />
+    <link
+      rel="modulepreload"
+      href="https://cdn.jsdelivr.net/npm/@oxc-project/types@0.105.0/+esm"
+    />
+    <link
+      rel="modulepreload"
+      href="https://cdn.jsdelivr.net/npm/@napi-rs/wasm-runtime@1.1.0/+esm"
+    />
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/lit@3/+esm" />
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/shiki@1.1.7/+esm" />
+    <script type="importmap">
+      {
+        "imports": {
+          "@knighted/jsx/lite": "/dist/lite/index.js",
+          "@knighted/jsx/react": "/dist/react/index.js",
+          "react": "https://cdn.jsdelivr.net/npm/react@19.2.4/+esm",
+          "react-dom/client": "https://cdn.jsdelivr.net/npm/react-dom@19.2.4/client/+esm",
+          "lit": "https://cdn.jsdelivr.net/npm/lit@3/+esm",
+          "shiki": "https://cdn.jsdelivr.net/npm/shiki@1.1.7/+esm",
+          "property-information": "https://cdn.jsdelivr.net/npm/property-information@7.1.0/+esm",
+          "oxc-parser": "https://cdn.jsdelivr.net/npm/oxc-parser@0.105.0/+esm",
+          "@oxc-parser/binding-wasm32-wasi": "https://cdn.jsdelivr.net/npm/@oxc-parser/binding-wasm32-wasi@0.105.0/+esm",
+          "@oxc-project/types": "https://cdn.jsdelivr.net/npm/@oxc-project/types@0.105.0/+esm",
+          "@napi-rs/wasm-runtime": "https://cdn.jsdelivr.net/npm/@napi-rs/wasm-runtime@1.1.0/+esm"
+        }
+      }
+    </script>
+    <style>
+      :root {
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        color: #111;
+        background: #f7f7f8;
+        line-height: 1.5;
+      }
+
+      body {
+        margin: 0;
+        padding: 2rem;
+      }
+
+      h1 {
+        margin-top: 0;
+        font-size: clamp(1.75rem, 3vw, 2.5rem);
+      }
+
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      .card {
+        background: white;
+        border-radius: 1rem;
+        padding: 1.5rem;
+        box-shadow: 0 15px 45px rgba(15, 23, 42, 0.08);
+      }
+
+      .loading-card {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        color: #4b5563;
+      }
+
+      .loading-spinner {
+        width: 2.75rem;
+        height: 2.75rem;
+        border-radius: 50%;
+        border: 3px solid rgba(37, 99, 235, 0.2);
+        border-top-color: #2563eb;
+        animation: spinner 1s linear infinite;
+        flex-shrink: 0;
+      }
+
+      @keyframes spinner {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .list {
+        padding-left: 1.5rem;
+      }
+
+      .counter-button {
+        margin-top: 1rem;
+        padding: 0.75rem 1.25rem;
+        border: none;
+        border-radius: 999px;
+        background: #111;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .counter-value {
+        font-size: 2rem;
+        font-weight: 700;
+      }
+
+      .eyebrow {
+        font-size: 0.75rem;
+        letter-spacing: 0.35em;
+        text-transform: uppercase;
+        color: #6b7280;
+        margin: 0 0 0.5rem;
+      }
+
+      .overview-card {
+        border-left: 4px solid #6366f1;
+        background-image: linear-gradient(
+          120deg,
+          rgba(99, 102, 241, 0.08),
+          rgba(14, 165, 233, 0.08)
+        );
+      }
+
+      .capability-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .capability-item {
+        border-radius: 1rem;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        padding: 1rem;
+        background: #f9fafb;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+      }
+
+      .capability-item:last-child:nth-child(odd) {
+        grid-column: 1 / -1;
+      }
+
+      .capability-item strong {
+        display: block;
+        font-size: 0.9rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #1d4ed8;
+        margin-bottom: 0.35rem;
+      }
+
+      .capability-item p {
+        margin: 0;
+        color: #1f2937;
+      }
+
+      .dom-card {
+        border-left: 4px solid #16a34a;
+      }
+
+      .demo-link {
+        color: #2563eb;
+        text-decoration: none;
+        font-weight: 600;
+      }
+
+      .demo-link:hover {
+        text-decoration: underline;
+      }
+
+      .lite-metric-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        margin-top: 1.5rem;
+      }
+
+      .lite-metric {
+        border-radius: 1rem;
+        border: 1px solid rgba(37, 99, 235, 0.2);
+        background: linear-gradient(
+          135deg,
+          rgba(37, 99, 235, 0.06),
+          rgba(14, 165, 233, 0.08)
+        );
+        padding: 1rem;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+      }
+
+      .lite-metric header {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        margin-bottom: 0.4rem;
+      }
+
+      .lite-metric header strong {
+        font-size: 0.9rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #1d4ed8;
+      }
+
+      .lite-metric header span {
+        font-size: 0.95rem;
+        color: #0f172a;
+      }
+
+      .lite-metric-size {
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin: 0 0 0.35rem;
+        color: #111827;
+      }
+
+      .lite-metric-note {
+        margin: 0;
+        color: #1f2937;
+      }
+
+      .source-panel {
+        margin-top: 1rem;
+        border-radius: 0.9rem;
+        border: 1px solid rgba(15, 23, 42, 0.12);
+        background: #f9fafb;
+        overflow: hidden;
+      }
+
+      .source-panel summary {
+        cursor: pointer;
+        padding: 0.75rem 1.25rem;
+        font-weight: 600;
+        color: #1d4ed8;
+        list-style: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+      }
+
+      .source-panel summary span {
+        text-decoration: underline;
+      }
+
+      .source-panel summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .source-panel summary::after {
+        content: '↴';
+        font-size: 1.15rem;
+        transition: transform 0.25s ease;
+      }
+
+      .source-panel[open] summary::after {
+        transform: rotate(180deg);
+      }
+
+      .source-panel-body {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.35s ease;
+        border-top: 1px solid rgba(15, 23, 42, 0.08);
+        background: #fff;
+      }
+
+      .source-panel[open] .source-panel-body {
+        max-height: 30rem;
+        overflow-y: auto;
+      }
+
+      .source-panel pre {
+        margin: 0;
+        padding: 1rem 1.25rem;
+        background: transparent;
+      }
+
+      .source-code {
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        font-size: 0.85rem;
+        line-height: 1.5;
+        white-space: pre;
+        overflow-x: auto;
+        word-break: normal;
+      }
+
+      .source-code.shiki {
+        border-radius: 0;
+        background: transparent;
+      }
+
+      .source-code.shiki code {
+        font-family: inherit;
+        background: none;
+        border-radius: 0;
+        padding: 0;
+        color: inherit;
+      }
+
+      code {
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        font-size: 0.9em;
+        background: rgba(15, 23, 42, 0.08);
+        border-radius: 0.35rem;
+        padding: 0.05rem 0.35rem;
+        color: #0f172a;
+      }
+
+      @media (max-width: 640px) {
+        .lite-metric header {
+          gap: 0.35rem;
+        }
+
+        .lite-metric header strong {
+          word-break: break-word;
+          font-size: 0.85rem;
+        }
+
+        .lite-metric-size {
+          font-size: 0.95rem;
+        }
+
+        .source-panel pre {
+          font-size: 0.8rem;
+        }
+      }
+
+      .react-card {
+        border-left: 4px solid #2563eb;
+      }
+
+      .lit-react-card {
+        border-left-color: #f97316;
+      }
+
+      .lit-react-card .react-mount {
+        border-color: rgba(249, 115, 22, 0.35);
+        background: linear-gradient(
+          135deg,
+          rgba(249, 115, 22, 0.08),
+          rgba(234, 179, 8, 0.08)
+        );
+      }
+
+      .react-mount {
+        min-height: 220px;
+        border-radius: 1rem;
+        border: 1px dashed rgba(37, 99, 235, 0.4);
+        padding: 1rem;
+        background: linear-gradient(
+          135deg,
+          rgba(37, 99, 235, 0.05),
+          rgba(14, 165, 233, 0.05)
+        );
+      }
+
+      .react-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+      }
+
+      .react-panel h3 {
+        margin: 0;
+      }
+
+      .react-panel button {
+        align-self: flex-start;
+        padding: 0.65rem 1.2rem;
+        border-radius: 999px;
+        border: none;
+        background: #2563eb;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .react-metrics {
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+        font-weight: 600;
+        margin: 0.35rem 0 0.85rem;
+      }
+
+      .react-metrics span {
+        padding: 0.3rem 0.65rem;
+        border-radius: 999px;
+        background: rgba(37, 99, 235, 0.12);
+        color: #1d4ed8;
+        font-size: 0.85rem;
+      }
+
+      .hybrid-card {
+        border-left: 4px solid #f59e0b;
+      }
+
+      .hybrid-react-cluster {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .hybrid-react-badge {
+        border-radius: 1rem;
+        padding: 1rem 1.25rem;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(37, 99, 235, 0.2);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+      }
+
+      .hybrid-react-badge header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .hybrid-react-badge header strong {
+        font-size: 0.95rem;
+        color: #2563eb;
+      }
+
+      .hybrid-react-badge .handshake-count {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+      }
+
+      .hybrid-react-badge button {
+        margin-top: 0.75rem;
+        border: none;
+        border-radius: 999px;
+        padding: 0.55rem 1.15rem;
+        background: #2563eb;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .hybrid-react-badge[data-connected='false'] {
+        border-color: rgba(234, 88, 12, 0.35);
+        background: rgba(251, 146, 60, 0.08);
+      }
+
+      lit-hosts-react {
+        display: block;
+        margin-top: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="app">
+      <header>
+        <h1>@knighted/jsx + CDN</h1>
+        <p>
+          Use @knighted/jsx in any modern runtime—browser, Node, or CDN—without a build
+          step.
+        </p>
+      </header>
+      <section id="demo-loading" class="card loading-card" aria-live="polite">
+        <div class="loading-spinner" aria-hidden="true"></div>
+        <div>
+          <p><strong>Loading demo modules…</strong></p>
+          <p>CDN dependencies stream in on first visit.</p>
+        </div>
+      </section>
+    </main>
+
+    <script type="module">
+      import { jsx } from '@knighted/jsx/lite'
+      import { reactJsx } from '@knighted/jsx/react'
+      import { useEffect, useRef, useState } from 'react'
+      import { createRoot } from 'react-dom/client'
+      import { LitElement, css, html } from 'lit'
+      import { codeToHtml } from 'shiki'
+
+      const app = document.getElementById('app')
+      const loadingCard = document.getElementById('demo-loading')
+      const capabilityHighlights = [
+        {
+          label: 'DOM template tag',
+          detail:
+            'Render real DOM nodes anywhere the browser runs, no transpilation required.',
+        },
+        {
+          label: 'React runtime',
+          detail: jsx`<span>Call <code>reactJsx</code> to emit React elements with full hook + hydration support.</span>`,
+        },
+        {
+          label: 'Node + SSR',
+          detail:
+            'Use @knighted/jsx/node to bootstrap linkedom/jsdom and reuse templates on the server.',
+        },
+        {
+          label: 'Bundler + loader',
+          detail:
+            'Drop @knighted/jsx/loader into Rspack/Webpack to rewrite template literals at build time.',
+        },
+        {
+          label: 'Lite entrypaths',
+          detail:
+            'Ship pre-minified helpers scoped to DOM, React, or Node by importing the /lite variants.',
+        },
+      ]
+      const liteEntryMetrics = [
+        {
+          entry: '@knighted/jsx/lite',
+          context: 'DOM runtime helpers',
+          raw: '~10.3 kB raw',
+          gzip: '~4.3 kB min+gzip',
+          note: 'Great for browser demos or DOM-like shims without bundlers.',
+        },
+        {
+          entry: '@knighted/jsx/react/lite',
+          context: 'React runtime helpers',
+          raw: '~6.8 kB raw',
+          gzip: '~3.0 kB min+gzip',
+          note: 'Emits React elements so hooks and React 19 streaming just work.',
+        },
+        {
+          entry: '@knighted/jsx/node/lite',
+          context: 'Node DOM entry',
+          raw: '~11.5 kB raw',
+          gzip: '~4.8 kB min+gzip',
+          note: 'Bundles the DOM shim bootstrap for headless SSR scripts.',
+        },
+        {
+          entry: '@knighted/jsx/node/react/lite',
+          context: 'Node React entry',
+          raw: '~6.8 kB raw',
+          gzip: '~3.0 kB min+gzip',
+          note: jsx`<span>Combines the <code>reactJsx</code> helper with the DOM shim for hybrid SSR pipelines.</span>`,
+        },
+      ]
+      const counterSource = [
+        "import { jsx } from '@knighted/jsx'",
+        '',
+        'const Counter = ({ start = 0 }) => {',
+        '  let value = start',
+        '  const valueLabel = jsx`<span class="counter-value">${value}</span>`',
+        '',
+        '  const increment = () => {',
+        '    value += 1',
+        '    valueLabel.textContent = String(value)',
+        '  }',
+        '',
+        '  return jsx`',
+        '    <section class="card dom-card">',
+        '      <header>',
+        '        <p class="eyebrow">DOM helper</p>',
+        '        <h2>Stateful counter rendered with <code>jsx</code></h2>',
+        '      </header>',
+        '      <p>No React, no framework—just the DOM API and the <code>jsx</code> tag.</p>',
+        '      <p>Current total: ${valueLabel}</p>',
+        '      <button onClick={${increment}}>Increment</button>',
+        '    </section>',
+        '  `',
+        '}',
+        '',
+        'document.body.append(Counter({ start: 0 }))',
+      ].join('\n')
+      const reactRuntimeSource = [
+        "import { reactJsx } from '@knighted/jsx/react'",
+        "import { useState } from 'react'",
+        "import { createRoot } from 'react-dom/client'",
+        '',
+        'const ReactRuntimePanel = () => {',
+        '  const [clicks, setClicks] = useState(0)',
+        '',
+        '  return reactJsx`',
+        '    <div className="react-panel">',
+        '      <p className="eyebrow">React runtime</p>',
+        '      <h3><code>reactJsx</code> + React 19</h3>',
+        '      <div className="react-metrics">',
+        '        ${reactMetrics.map(label => reactJsx`<span key={${label}}>${label}</span>`)}',
+        '      </div>',
+        "      <p>Button clicks:{' '}<strong>${clicks}</strong></p>",
+        '      <button onClick={${() => setClicks(value => value + 1)}}>',
+        '        Trigger React state',
+        '      </button>',
+        '    </div>',
+        '  `',
+        '}',
+        '',
+        "const host = document.getElementById('react-runtime-demo')",
+        'if (host) {',
+        '  createRoot(host).render(',
+        '    reactJsx`',
+        '      <${ReactRuntimePanel} />',
+        '    `,',
+        '  )',
+        '}',
+      ].join('\n')
+      const litHostsSource = [
+        "import { jsx } from '@knighted/jsx'",
+        "import { reactJsx } from '@knighted/jsx/react'",
+        "import { useState } from 'react'",
+        "import { createRoot } from 'react-dom/client'",
+        "import { LitElement, html } from 'lit'",
+        '',
+        'const HybridReactBadge = ({ label }) => {',
+        '  const [handshakes, setHandshakes] = useState(1)',
+        '  const [connected, setConnected] = useState(true)',
+        '  const toggleConnection = () => {',
+        '    setHandshakes(value => value + 1)',
+        '    setConnected(value => !value)',
+        '  }',
+        '',
+        '  return reactJsx`',
+        '    <div className="hybrid-react-badge" data-connected={${String(connected)}}>',
+        '      <header>',
+        '        <p className="eyebrow">React child</p>',
+        "        <strong>${connected ? 'Connected' : 'Paused'}</strong>",
+        '      </header>',
+        '      <p className="handshake-count">${handshakes}</p>',
+        '      <button type="button" onClick={${toggleConnection}}>',
+        "        ${connected ? 'Pause bridge' : 'Resume bridge'}",
+        '      </button>',
+        '    </div>',
+        '  `',
+        '}',
+        '',
+        'class LitHostsReactElement extends LitElement {',
+        '  renderReactTree(tree) {',
+        '    if (!this.reactHost) {',
+        "      this.reactHost = document.createElement('div')",
+        '    }',
+        '',
+        '    if (!this.reactRoot && this.reactHost) {',
+        '      this.reactRoot = createRoot(this.reactHost)',
+        '    }',
+        '',
+        '    this.reactRoot?.render(tree)',
+        '    return this.reactHost',
+        '  }',
+        '',
+        '  render() {',
+        '    const reactTree = reactJsx`',
+        '      <div className="hybrid-react-cluster">',
+        '        <${HybridReactBadge} label={${this.title}} />',
+        '        <p className="react-status">Rendered with <code>reactJsx</code></p>',
+        '      </div>',
+        '    `',
+        '',
+        '    return html`',
+        '      <article class="hybrid-shell">',
+        '        <div class="react-slot">${this.renderReactTree(reactTree)}</div>',
+        '        <div class="nested-slot">',
+        '          ${jsx`',
+        '            <ul class="list">',
+        '              <li>Lit renders DOM nodes via the <code>jsx</code> helper.</li>',
+        '              <li>The React subtree above mounts with <code>reactJsx</code>.</li>',
+        '            </ul>',
+        '          `}',
+        '        </div>',
+        '      </article>',
+        '    `',
+        '  }',
+        '}',
+        '',
+        "if (!customElements.get('lit-hosts-react')) {",
+        "  customElements.define('lit-hosts-react', LitHostsReactElement)",
+        '}',
+        '',
+        'document.body.append(',
+        '  jsx`<lit-hosts-react title="Lit hosts React"></lit-hosts-react>`',
+        ')',
+      ].join('\n')
+      const litBridgeSource = [
+        "import { reactJsx } from '@knighted/jsx/react'",
+        "import { useEffect, useRef, useState } from 'react'",
+        "import { createRoot } from 'react-dom/client'",
+        '',
+        'const LitReactBridgePanel = () => {',
+        '  const [syncCount, setSyncCount] = useState(2)',
+        '  const meterRef = useRef(null)',
+        '',
+        '  useEffect(() => {',
+        '    if (!meterRef.current) {',
+        '      return',
+        '    }',
+        '    meterRef.current.count = syncCount',
+        "    meterRef.current.status = syncCount % 2 === 0 ? 'Even handshake' : 'Odd handshake'",
+        '  }, [syncCount])',
+        '',
+        '  return reactJsx`',
+        '    <div className="react-panel">',
+        '      <lit-react-meter ref={${meterRef}} />',
+        '      <button onClick={${() => setSyncCount(value => value + 1)}}>',
+        '        Sync Lit with React state',
+        '      </button>',
+        '    </div>',
+        '  `',
+        '}',
+        '',
+        "const bridgeHost = document.getElementById('lit-react-bridge-demo')",
+        'if (bridgeHost) {',
+        '  createRoot(bridgeHost).render(',
+        '    reactJsx`',
+        '      <${LitReactBridgePanel} />',
+        '    `,',
+        '  )',
+        '}',
+      ].join('\n')
+      const renderSourcePanel = ({ label, code, language = 'tsx' }) =>
+        jsx`
+          <details class="source-panel">
+            <summary>
+              <span>View source · ${label}</span>
+            </summary>
+            <div class="source-panel-body">
+              <pre class="source-code" data-lang={${language}}>{${code}}</pre>
+            </div>
+          </details>
+        `
+      const Counter = ({ start = 0 }) => {
+        let value = start
+        const valueLabel = jsx`<span class="counter-value">${value}</span>`
+        const increment = () => {
+          value += 1
+          valueLabel.textContent = String(value)
+        }
+
+        return jsx`
+          <section class="card dom-card">
+            <header>
+              <p class="eyebrow">DOM helper</p>
+              <h2>Stateful counter rendered with <code>jsx</code></h2>
+            </header>
+            <p>No React, no framework—just the DOM API and the <code>jsx</code> tag.</p>
+            <p>Current total: ${valueLabel}</p>
+            <button class="counter-button" onClick={${increment}}>
+              Increment
+            </button>
+            ${renderSourcePanel({
+              label: 'DOM counter',
+              code: counterSource,
+              language: 'tsx',
+            })}
+          </section>
+        `
+      }
+      const reactMetrics = ['Hooks ready', 'Fragments inline', 'Suspense friendly']
+      const ReactBadge = ({ label }) =>
+        reactJsx`
+          <span>${label}</span>
+        `
+      const HybridReactBadge = ({ label }) => {
+        const [handshakes, setHandshakes] = useState(1)
+        const [connected, setConnected] = useState(true)
+        const toggleConnection = () => {
+          setHandshakes(value => value + 1)
+          setConnected(value => !value)
+        }
+
+        return reactJsx`
+          <div className="hybrid-react-badge" data-connected={${String(connected)}}>
+            <header>
+              <p className="eyebrow">React child</p>
+              <strong>${connected ? 'Connected' : 'Paused'}</strong>
+            </header>
+            <p className="handshake-count">${handshakes}</p>
+            <p>Handshakes with the Lit parent since mount.</p>
+            <button type="button" onClick={${toggleConnection}}>
+              ${connected ? 'Pause bridge' : 'Resume bridge'}
+            </button>
+          </div>
+        `
+      }
+
+      class LitReactMeter extends LitElement {
+        static properties = {
+          count: { type: Number },
+          status: { type: String },
+        }
+
+        static styles = css`
+          :host {
+            display: block;
+            border-radius: 1rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            padding: 1rem 1.25rem;
+            background: white;
+            box-shadow: 0 15px 40px rgba(15, 23, 42, 0.08);
+          }
+
+          .meter-status {
+            font-size: 0.75rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: #fb923c;
+            margin: 0 0 0.4rem;
+          }
+
+          .meter-count {
+            font-size: 2.25rem;
+            font-weight: 700;
+            margin: 0 0 0.5rem;
+            color: #111827;
+          }
+
+          .meter-subtext {
+            font-size: 0.95rem;
+            margin: 0;
+            color: #4b5563;
+          }
+        `
+
+        constructor() {
+          super()
+          this.count = 0
+          this.status = 'Bridge idle'
+        }
+
+        render() {
+          return html`
+            <p class="meter-status">${this.status}</p>
+            <p class="meter-count">${this.count}</p>
+            <p class="meter-subtext">
+              <slot></slot>
+            </p>
+          `
+        }
+      }
+
+      const highlightSourcePanels = async () => {
+        const sourceNodes = document.querySelectorAll('.source-code')
+        if (!sourceNodes.length) {
+          return
+        }
+
+        await Promise.all(
+          Array.from(sourceNodes).map(async node => {
+            const language = node.dataset.lang || 'tsx'
+            const rawSample = node.textContent || ''
+            const codeSample = rawSample.replace(/^\s+/, '')
+            if (!codeSample.trim()) {
+              return
+            }
+
+            try {
+              const highlighted = await codeToHtml(codeSample, {
+                lang: language,
+                theme: 'github-light',
+              })
+              const template = document.createElement('template')
+              template.innerHTML = highlighted
+              const shikiPre = template.content.querySelector('pre')
+              if (!shikiPre) {
+                return
+              }
+
+              node.classList.add('shiki')
+              const shikiStyle = shikiPre.getAttribute('style')
+              if (shikiStyle) {
+                node.setAttribute('style', shikiStyle)
+              }
+              node.innerHTML = shikiPre.innerHTML
+              delete node.dataset.lang
+            } catch (error) {
+              console.warn('Failed to highlight source panel', error)
+            }
+          }),
+        )
+      }
+
+      if (!customElements.get('lit-react-meter')) {
+        customElements.define('lit-react-meter', LitReactMeter)
+      }
+
+      class LitHostsReactElement extends LitElement {
+        static properties = {
+          title: { type: String },
+          subtitle: { type: String },
+        }
+
+        static styles = css`
+          :host {
+            display: block;
+          }
+
+          .hybrid-shell {
+            border-radius: 1.25rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            padding: 1.5rem;
+            background: white;
+            box-shadow: 0 15px 45px rgba(15, 23, 42, 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+          }
+
+          .hybrid-shell header h3 {
+            margin: 0.25rem 0 0;
+          }
+
+          .react-slot {
+            padding: 1rem;
+            border-radius: 1rem;
+            background: rgba(37, 99, 235, 0.08);
+            border: 1px dashed rgba(37, 99, 235, 0.35);
+          }
+
+          .react-slot :is(button, span) {
+            font-weight: 600;
+            border-radius: 999px;
+            padding: 0.4rem 0.9rem;
+            border: none;
+            background: white;
+          }
+
+          .nested-slot {
+            border-radius: 0.85rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            padding: 1rem;
+            background: #f9fafb;
+          }
+
+          .nested-slot ul {
+            margin: 0;
+          }
+
+          .hybrid-shell footer {
+            font-size: 0.9rem;
+            color: #4b5563;
+            margin: 0;
+          }
+        `
+
+        constructor() {
+          super()
+          this.title = 'Lit hosts React'
+          this.subtitle = 'renders the React subtree while Lit owns the shell.'
+          this.reactRoot = null
+          this.reactHost = null
+        }
+
+        renderReactTree(tree) {
+          if (!this.reactHost) {
+            this.reactHost = document.createElement('div')
+          }
+
+          if (!this.reactRoot && this.reactHost) {
+            this.reactRoot = createRoot(this.reactHost)
+          }
+
+          this.reactRoot?.render(tree)
+          return this.reactHost
+        }
+
+        disconnectedCallback() {
+          this.reactRoot?.unmount()
+          this.reactRoot = null
+          this.reactHost = null
+          super.disconnectedCallback()
+        }
+
+        render() {
+          const reactTree = reactJsx`
+            <div className="hybrid-react-cluster">
+              <${HybridReactBadge} label={${this.title}} />
+              <p className="react-status">Rendered with <code>reactJsx</code></p>
+            </div>
+          `
+          const reactNode = this.renderReactTree(reactTree)
+
+          return html`
+            <article class="hybrid-shell">
+              <header>
+                <p class="eyebrow">Lit parent</p>
+                <h3>${this.title}</h3>
+                <p><code>reactJsx</code> ${this.subtitle}</p>
+              </header>
+              <div class="react-slot">${reactNode}</div>
+              <div class="nested-slot">
+                ${jsx`
+                  <ul class="list">
+                    <li>Lit renders DOM nodes via the <code>jsx</code> helper.</li>
+                    <li>The React subtree above mounts with <code>reactJsx</code>.</li>
+                  </ul>
+                `}
+              </div>
+              <footer>React output lives inside the Lit template.</footer>
+            </article>
+          `
+        }
+      }
+
+      if (!customElements.get('lit-hosts-react')) {
+        customElements.define('lit-hosts-react', LitHostsReactElement)
+      }
+
+      const ReactRuntimePanel = () => {
+        const [clicks, setClicks] = useState(0)
+
+        return reactJsx`
+          <div className="react-panel">
+            <p className="eyebrow">React runtime</p>
+            <h3><code>reactJsx</code> + React 19</h3>
+            <div className="react-metrics">
+              ${reactMetrics.map(
+                label => reactJsx`<${ReactBadge} key={${label}} label={${label}} />`,
+              )}
+            </div>
+            <p>
+              Button clicks:{' '}<strong>${clicks}</strong>
+            </p>
+            <button type="button" onClick={${() => setClicks(value => value + 1)}}>
+              Trigger React state
+            </button>
+          </div>
+        `
+      }
+
+      const LitReactBridgePanel = () => {
+        const [syncCount, setSyncCount] = useState(2)
+        const meterRef = useRef(null)
+
+        useEffect(() => {
+          if (!meterRef.current) {
+            return
+          }
+          meterRef.current.count = syncCount
+          meterRef.current.status =
+            syncCount % 2 === 0 ? 'Even handshake' : 'Odd handshake'
+        }, [syncCount])
+
+        return reactJsx`
+          <div className="react-panel">
+            <p className="eyebrow">React + Lit</p>
+            <h3>Share React state with Lit</h3>
+            <p>
+              React hooks update a Lit web component below using plain custom element refs.
+            </p>
+            <lit-react-meter ref={${meterRef}}>
+              <span>Lit renders this meter while React drives the data flow.</span>
+            </lit-react-meter>
+            <button type="button" onClick={${() => setSyncCount(value => value + 1)}}>
+              Sync Lit with React state
+            </button>
+          </div>
+        `
+      }
+      const mountReactRuntimeDemo = host => {
+        if (!host) {
+          return null
+        }
+        const root = createRoot(host)
+        root.render(
+          reactJsx`
+            <${ReactRuntimePanel} />
+          `,
+        )
+        return root
+      }
+      const mountLitReactBridgeDemo = host => {
+        if (!host) {
+          return null
+        }
+        const root = createRoot(host)
+        root.render(
+          reactJsx`
+            <${LitReactBridgePanel} />
+          `,
+        )
+        return root
+      }
+      const LiteSavings = () =>
+        jsx`
+          <section class="card lite-savings" id="lite-entrypaths">
+            <header>
+              <p class="eyebrow">Lite entrypaths</p>
+              <h2>Pick the runtime that matches your target</h2>
+              <p>
+                Each subpath ships a pre-minified helper so you can import exactly what you need from
+                npm or a CDN.
+              </p>
+            </header>
+            <div class="lite-metric-grid">
+              ${liteEntryMetrics.map(
+                metric =>
+                  jsx`<article class="lite-metric">
+                    <header>
+                      <strong>${metric.entry}</strong>
+                      <span>${metric.context}</span>
+                    </header>
+                    <p class="lite-metric-size">${metric.raw} • ${metric.gzip}</p>
+                    <p class="lite-metric-note">${metric.note}</p>
+                  </article>`,
+              )}
+            </div>
+          </section>
+        `
+      const demo = jsx`
+        <>
+          <section class="card overview-card">
+            <header>
+              <p class="eyebrow">Runtime overview</p>
+              <h2>All the ways to use @knighted/jsx</h2>
+              <p>
+                Share one tagged template workflow across DOM nodes, React trees, SSR, and bundler builds.
+              </p>
+            </header>
+            <ul class="capability-list">
+              ${capabilityHighlights.map(
+                capability =>
+                  jsx`<li class="capability-item">
+                    <strong>${capability.label}</strong>
+                    <p>${capability.detail}</p>
+                  </li>`,
+              )}
+            </ul>
+            <p>
+              <a class="demo-link" href="#lite-entrypaths">Jump to the lite entrypaths ↴</a>
+            </p>
+          </section>
+          <${Counter} start={${0}} />
+          <section class="card react-card">
+            <header>
+              <h2>Try the React runtime</h2>
+              <p>
+                The <code>reactJsx</code> helper builds React elements so you can share a single template style between DOM and React trees.
+              </p>
+            </header>
+            <p>
+              The panel below mounts React 19 + react-dom directly from a CDN and keeps state with hooks.
+            </p>
+            <div class="react-mount" id="react-runtime-demo"></div>
+            <p>
+              No bundler needed—both the DOM and React runtimes run straight from CDN imports.
+            </p>
+            ${renderSourcePanel({
+              label: 'React runtime panel',
+              code: reactRuntimeSource,
+              language: 'tsx',
+            })}
+          </section>
+          <section class="card hybrid-card">
+            <header>
+              <h2>Lit renders React via <code>reactJsx</code></h2>
+            </header>
+            <p>
+              The custom element below registers on load, mounts React with createRoot, and drops the Node back into the Lit template.
+            </p>
+            <lit-hosts-react></lit-hosts-react>
+            <p>
+              Explore the bundler variant under${' '}
+              <a
+                class="demo-link"
+                href="https://github.com/knightedcodemonkey/jsx/tree/main/test/fixtures/rspack-app"
+                target="_blank"
+                rel="noreferrer"
+              >
+                test/fixtures/rspack-app
+              </a>
+            </p>
+            ${renderSourcePanel({
+              label: 'Lit hosts React element',
+              code: litHostsSource,
+              language: 'tsx',
+            })}
+          </section>
+          <section class="card react-card lit-react-card">
+            <header>
+              <h2>Combine Lit + React</h2>
+              <p>
+                Stream Lit from a CDN, register a custom element, and let React drive it with shared state.
+              </p>
+            </header>
+            <p>
+              The bridge below mounts a React panel that references a Lit component with nothing but custom element refs.
+            </p>
+            <div class="react-mount" id="lit-react-bridge-demo"></div>
+            <p>
+              Click the sync button to watch React hooks update the Lit meter in real time.
+            </p>
+            ${renderSourcePanel({
+              label: 'Lit + React bridge',
+              code: litBridgeSource,
+              language: 'tsx',
+            })}
+          </section>
+          <${LiteSavings} />
+        </>
+      `
+
+      if (loadingCard) {
+        loadingCard.replaceWith(demo)
+      } else {
+        app?.append(demo)
+      }
+      mountReactRuntimeDemo(document.getElementById('react-runtime-demo'))
+      mountLitReactBridgeDemo(document.getElementById('lit-react-bridge-demo'))
+      highlightSourcePanels().catch(error => {
+        console.warn('Unable to run syntax highlighting', error)
+      })
+    </script>
+  </body>
+</html>

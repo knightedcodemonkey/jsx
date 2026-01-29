@@ -14,14 +14,11 @@ const overviewSelectors = {
 }
 
 /**
- * Tests the esm.sh demo page to ensure that the published package works as expected.
- *
- * NOTE: These tests rely on esm.sh serving the latest published version.
- * If a new release is pending propagation, expect these checks to fail until the CDN updates.
+ * Tests the local E2E fixture to ensure that the current build works as expected.
  */
-test.describe('esm demo via esm.sh', () => {
+test.describe('esm demo via local dist fixture', () => {
   test('renders nested DOM trees and increments counter', async ({ page }) => {
-    await page.goto('/esm-demo.html')
+    await page.goto('/test/fixtures/e2e.html')
 
     const counterButton = page.locator('.counter-button')
     const counterLabel = page.locator('.counter-value')
@@ -41,7 +38,7 @@ test.describe('esm demo via esm.sh', () => {
   })
 
   test('bridges lite tree with React + Lit hybrid widget', async ({ page }) => {
-    await page.goto('/esm-demo.html')
+    await page.goto('/test/fixtures/e2e.html')
 
     const reactPanelButton = page.locator(hybridSelectors.reactRuntimeButton)
     const reactPanelCounter = page

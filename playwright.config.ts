@@ -32,8 +32,8 @@ export default defineConfig({
   projects,
   webServer: [
     {
-      command: `npx http-server examples -p ${ESM_DEMO_PORT} -a ${HOST} --silent`,
-      url: `http://${HOST}:${ESM_DEMO_PORT}/esm-demo.html`,
+      command: `npx http-server . -p ${ESM_DEMO_PORT} -a ${HOST} --silent`,
+      url: `http://${HOST}:${ESM_DEMO_PORT}/test/fixtures/e2e.html`,
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
     },
