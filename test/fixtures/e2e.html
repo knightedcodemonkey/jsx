@@ -3,24 +3,55 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>@knighted/jsx &mdash; CDN demo</title>
+    <title>@knighted/jsx &mdash; E2E fixture</title>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
-    <link
-      rel="modulepreload"
-      href="https://cdn.jsdelivr.net/npm/@knighted/jsx@1.7.6/lite/+esm"
-    />
-    <link
-      rel="modulepreload"
-      href="https://cdn.jsdelivr.net/npm/@knighted/jsx@1.7.6/react/+esm"
-    />
+    <link rel="modulepreload" href="/dist/lite/index.js" />
+    <link rel="modulepreload" href="/dist/react/index.js" />
     <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/react@19.2.4/+esm" />
     <link
       rel="modulepreload"
       href="https://cdn.jsdelivr.net/npm/react-dom@19.2.4/client/+esm"
     />
+    <link
+      rel="modulepreload"
+      href="https://cdn.jsdelivr.net/npm/property-information@7.1.0/+esm"
+    />
+    <link
+      rel="modulepreload"
+      href="https://cdn.jsdelivr.net/npm/oxc-parser@0.105.0/+esm"
+    />
+    <link
+      rel="modulepreload"
+      href="https://cdn.jsdelivr.net/npm/@oxc-parser/binding-wasm32-wasi@0.105.0/+esm"
+    />
+    <link
+      rel="modulepreload"
+      href="https://cdn.jsdelivr.net/npm/@oxc-project/types@0.105.0/+esm"
+    />
+    <link
+      rel="modulepreload"
+      href="https://cdn.jsdelivr.net/npm/@napi-rs/wasm-runtime@1.1.0/+esm"
+    />
     <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/lit@3/+esm" />
     <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/shiki@1.1.7/+esm" />
+    <script type="importmap">
+      {
+        "imports": {
+          "@knighted/jsx/lite": "/dist/lite/index.js",
+          "@knighted/jsx/react": "/dist/react/index.js",
+          "react": "https://cdn.jsdelivr.net/npm/react@19.2.4/+esm",
+          "react-dom/client": "https://cdn.jsdelivr.net/npm/react-dom@19.2.4/client/+esm",
+          "lit": "https://cdn.jsdelivr.net/npm/lit@3/+esm",
+          "shiki": "https://cdn.jsdelivr.net/npm/shiki@1.1.7/+esm",
+          "property-information": "https://cdn.jsdelivr.net/npm/property-information@7.1.0/+esm",
+          "oxc-parser": "https://cdn.jsdelivr.net/npm/oxc-parser@0.105.0/+esm",
+          "@oxc-parser/binding-wasm32-wasi": "https://cdn.jsdelivr.net/npm/@oxc-parser/binding-wasm32-wasi@0.105.0/+esm",
+          "@oxc-project/types": "https://cdn.jsdelivr.net/npm/@oxc-project/types@0.105.0/+esm",
+          "@napi-rs/wasm-runtime": "https://cdn.jsdelivr.net/npm/@napi-rs/wasm-runtime@1.1.0/+esm"
+        }
+      }
+    </script>
     <style>
       :root {
         font-family:
@@ -469,16 +500,12 @@
     </main>
 
     <script type="module">
-      import { jsx } from 'https://cdn.jsdelivr.net/npm/@knighted/jsx@1.7.6/lite/+esm'
-      import { reactJsx } from 'https://cdn.jsdelivr.net/npm/@knighted/jsx@1.7.6/react/+esm'
-      import {
-        useEffect,
-        useRef,
-        useState,
-      } from 'https://cdn.jsdelivr.net/npm/react@19.2.4/+esm'
-      import { createRoot } from 'https://cdn.jsdelivr.net/npm/react-dom@19.2.4/client/+esm'
-      import { LitElement, css, html } from 'https://cdn.jsdelivr.net/npm/lit@3/+esm'
-      import { codeToHtml } from 'https://cdn.jsdelivr.net/npm/shiki@1.1.7/+esm'
+      import { jsx } from '@knighted/jsx/lite'
+      import { reactJsx } from '@knighted/jsx/react'
+      import { useEffect, useRef, useState } from 'react'
+      import { createRoot } from 'react-dom/client'
+      import { LitElement, css, html } from 'lit'
+      import { codeToHtml } from 'shiki'
 
       const app = document.getElementById('app')
       const loadingCard = document.getElementById('demo-loading')
