@@ -35,13 +35,13 @@ export default defineConfig({
   projects,
   webServer: [
     {
-      command: `npx http-server . -p ${ESM_DEMO_PORT} -a ${HOST} --silent`,
+      command: `npx serve . -l tcp://${HOST}:${ESM_DEMO_PORT}`,
       url: `http://${HOST}:${ESM_DEMO_PORT}/test/fixtures/e2e.html`,
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
     },
     {
-      command: `npx http-server test/fixtures/rspack-app -p ${LOADER_FIXTURE_PORT} -a ${HOST} --silent`,
+      command: `npx serve test/fixtures/rspack-app -l tcp://${HOST}:${LOADER_FIXTURE_PORT}`,
       url: `http://${HOST}:${LOADER_FIXTURE_PORT}/index.html`,
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,

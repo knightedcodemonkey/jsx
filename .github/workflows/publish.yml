@@ -32,17 +32,17 @@ jobs:
           fi
           echo "ref=$ref" >> "$GITHUB_OUTPUT"
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v6.0.1
         with:
           ref: ${{ steps.publish-ref.outputs.ref }}
       - name: Setup Node
-        uses: actions/setup-node@v4.3.0
+        uses: actions/setup-node@v6.2.0
         with:
           node-version: '24.11.1'
       - name: Install Dependencies
         run: npm ci
       - name: Save error log
-        uses: actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@v6.0.0
         if: ${{ failure() }}
         with:
           name: npm-debug-log-${{ hashFiles('package-lock.json') }}
@@ -56,7 +56,7 @@ jobs:
       - name: Pack
         run: npm pack
       - name: Publish to npm
-        uses: JS-DevTools/npm-publish@v4.1.1
+        uses: JS-DevTools/npm-publish@v4.1.5
         with:
           access: public
           tag: ${{ contains(github.ref, '-') && 'next' || 'latest' }}

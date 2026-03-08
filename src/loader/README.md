@@ -121,6 +121,6 @@ Manual preview steps:
 1. Build the library (`npm run build`) so the loader artifacts exist under `dist/`.
 2. Install the parser WASM binding (`npm run setup:wasm`) to enable JSX parsing outside Node. Pass `-- --use-stub` to `npm run build:fixture` only if you deliberately want the no-op parser stub.
 3. Run `npm run build:fixture` to emit `test/fixtures/rspack-app/dist/bundle.js` via Rspack.
-4. Serve the fixture folder (`npx http-server test/fixtures/rspack-app -p 8080`) and open it in a browser. You will see a Lit component that embeds DOM returned by `jsx` alongside a React badge rendered through `reactJsx`.
+4. Serve the fixture folder (`npx serve test/fixtures/rspack-app -l 8080`) and open it in a browser. You will see a Lit component that embeds DOM returned by `jsx` alongside a React badge rendered through `reactJsx`.
 
 The e2e test normally writes to a temporary directory and cleans up afterward. Use the steps above when you need a persistent bundle for manual inspection—the real WASM binding is required for interactive parsing; the stub exists strictly for loader smoke tests.
