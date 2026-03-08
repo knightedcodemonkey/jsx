@@ -224,6 +224,9 @@ export const evaluateExpression = <TComponent extends TemplateComponent>(
   } catch (error) {
     throw new Error(
       `Failed to evaluate expression ${source}: ${(error as Error).message}`,
+      {
+        cause: error,
+      },
     )
   }
 }
