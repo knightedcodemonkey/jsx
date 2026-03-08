@@ -1,6 +1,6 @@
 {
   "name": "@knighted/jsx",
-  "version": "1.7.7",
+  "version": "1.7.8",
   "description": "Runtime JSX tagged template that renders DOM or React trees anywhere with or without a build step.",
   "keywords": [
     "jsx runtime",
@@ -183,11 +183,15 @@
     "tar": "^7.5.10"
   },
   "peerDependencies": {
+    "@types/react": ">=18",
     "jsdom": "*",
     "linkedom": "*",
     "react": ">=18"
   },
   "peerDependenciesMeta": {
+    "@types/react": {
+      "optional": true
+    },
     "react": {
       "optional": true
     },
