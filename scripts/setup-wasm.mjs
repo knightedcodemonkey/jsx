@@ -6,7 +6,7 @@ import { extract } from 'tar'
 const npmExecPath = process.env.npm_execpath
 const npmBin = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 const PACKAGE_SPEC =
-  process.env.WASM_BINDING_PACKAGE ?? '@oxc-parser/binding-wasm32-wasi@^0.105.0'
+  process.env.WASM_BINDING_PACKAGE ?? '@oxc-parser/binding-wasm32-wasi@^0.116.0'
 const cwd = process.cwd()
 
 function runNpmPack() {

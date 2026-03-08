@@ -144,7 +144,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@knighted/duel": "^4.0.2",
-    "@oxc-project/types": "^0.105.0",
+    "@oxc-project/types": "^0.116.0",
     "@playwright/test": "^1.58.2",
     "@rspack/core": "^1.0.5",
     "@types/jsdom": "^27.0.0",
@@ -176,9 +176,9 @@
     "vitest": "^4.0.14"
   },
   "dependencies": {
-    "@napi-rs/wasm-runtime": "^1.1.0",
+    "@napi-rs/wasm-runtime": "^1.1.1",
     "magic-string": "^0.30.21",
-    "oxc-parser": "^0.105.0",
+    "oxc-parser": "^0.116.0",
     "property-information": "^7.1.0",
     "tar": "^7.5.10"
   },
@@ -199,14 +199,9 @@
     }
   },
   "optionalDependencies": {
-    "@oxc-parser/binding-darwin-arm64": "^0.105.0",
-    "@oxc-parser/binding-linux-x64-gnu": "^0.105.0",
-    "@oxc-parser/binding-wasm32-wasi": "^0.105.0"
-  },
-  "overrides": {
-    "module-lookup-amd": {
-      "glob": "^9.0.0"
-    }
+    "@oxc-parser/binding-darwin-arm64": "^0.116.0",
+    "@oxc-parser/binding-linux-x64-gnu": "^0.116.0",
+    "@oxc-parser/binding-wasm32-wasi": "^0.116.0"
   },
   "files": [
     "dist"
