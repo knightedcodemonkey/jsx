@@ -56,14 +56,6 @@ const formatParserError = (error: OxcError) => {
   return message
 }
 
-const readRange = (source: string, node: AnyNode) => {
-  const range = node.range as [number, number] | undefined
-  if (!range) {
-    throw new Error('[jsx] Unable to read source range for AST node.')
-  }
-  return source.slice(range[0], range[1])
-}
-
 class SourceJsxReactBuilder {
   constructor(
     private readonly source: string,
@@ -137,12 +129,13 @@ class SourceJsxReactBuilder {
     attributes.forEach(attribute => {
       if (attribute.type === 'JSXSpreadAttribute') {
         flushStatics()
-        segments.push(this.compileExpression(attribute.argument))
+        const spreadValue = this.compileExpression(attribute.argument)
+        segments.push(`(${spreadValue} ?? {})`)
         return
       }
 
       const name = this.compileAttributeName(attribute.name)
-      let value = 'true'
+      let value: string
 
       if (!attribute.value) {
         value = 'true'
@@ -153,6 +146,8 @@ class SourceJsxReactBuilder {
           return
         }
         value = this.compileExpression(attribute.value.expression)
+      } else {
+        value = 'undefined'
       }
 
       staticEntries.push(`${JSON.stringify(name)}: ${value}`)
@@ -214,7 +209,39 @@ class SourceJsxReactBuilder {
       return this.compileNode(node)
     }
 
-    return readRange(this.source, node as unknown as AnyNode)
+    const range = (node as unknown as AnyNode).range as [number, number] | undefined
+    if (!range) {
+      throw new Error('[jsx] Unable to read source range for expression node.')
+    }
+
+    const nestedJsxRoots = collectRootJsxNodes(node)
+    if (!nestedJsxRoots.length) {
+      return this.source.slice(range[0], range[1])
+    }
+
+    const expressionSource = this.source.slice(range[0], range[1])
+    const magic = new MagicString(expressionSource)
+
+    nestedJsxRoots
+      .sort(
+        (a, b) =>
+          ((b.range as [number, number])[0] ?? 0) -
+          ((a.range as [number, number])[0] ?? 0),
+      )
+      .forEach(jsxNode => {
+        const jsxRange = jsxNode.range as [number, number] | undefined
+        if (!jsxRange) {
+          throw new Error('[jsx] Unable to read source range for nested JSX node.')
+        }
+
+        magic.overwrite(
+          jsxRange[0] - range[0],
+          jsxRange[1] - range[0],
+          this.compileNode(jsxNode),
+        )
+      })
+
+    return magic.toString()
   }
 
   private buildCreateElement(type: string, props: string, children: string[]) {
@@ -226,7 +253,7 @@ class SourceJsxReactBuilder {
   }
 }
 
-const collectRootJsxNodes = (program: Program) => {
+const collectRootJsxNodes = (root: Program | Expression | JSXElement | JSXFragment) => {
   const nodes: Array<JSXElement | JSXFragment> = []
 
   const isJsxElementOrFragment = (node: unknown): node is JSXElement | JSXFragment =>
@@ -260,7 +287,7 @@ const collectRootJsxNodes = (program: Program) => {
     }
   }
 
-  walk(program, false)
+  walk(root, false)
   return nodes
 }
 
