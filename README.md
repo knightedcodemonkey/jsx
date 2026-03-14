@@ -68,6 +68,32 @@ const button = jsx`
 document.body.append(button)
 ```
 
+### Source transpilation (`transpileJsxSource`)
+
+Need to transform raw JSX source text (e.g. code typed in an editor) without Babel? Use `transpileJsxSource`:
+
+```ts
+import { transpileJsxSource } from '@knighted/jsx'
+
+const input = `
+const App = () => {
+  return <button>click me</button>
+}
+`
+
+const { code } = transpileJsxSource(input)
+// -> const App = () => { return React.createElement("button", null, "click me") }
+```
+
+By default this emits `React.createElement(...)` and `React.Fragment`. Override them when needed:
+
+```ts
+transpileJsxSource(input, {
+  createElement: '__jsx',
+  fragment: '__fragment',
+})
+```
+
 ### React runtime (`reactJsx`)
 
 Need to compose React elements instead of DOM nodes? Import the dedicated helper from the `@knighted/jsx/react` subpath (React 18+ and `react-dom` are still required to mount the tree):
