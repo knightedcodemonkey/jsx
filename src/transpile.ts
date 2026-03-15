@@ -49,6 +49,10 @@ const formatParserError = (error: OxcError) => {
     message += `\n${error.codeframe}`
   }
 
+  if (error.helpMessage) {
+    message += `\n${error.helpMessage}`
+  }
+
   return message
 }
 const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
@@ -191,6 +195,19 @@ class SourceJsxReactBuilder {
     }
   }
 
+  private compileMemberExpressionTagName(name: JSXMemberExpression): string {
+    const parts: string[] = []
+    let current: JSXMemberExpression | JSXIdentifier = name
+
+    while (current.type === 'JSXMemberExpression') {
+      parts.unshift(current.property.name)
+      current = current.object
+    }
+
+    parts.unshift(current.name)
+    return parts.join('.')
+  }
+
   private compileTagName(
     name: JSXIdentifier | JSXMemberExpression | JSXNamespacedName | null | undefined,
   ): string {
@@ -206,7 +223,7 @@ class SourceJsxReactBuilder {
     }
 
     if (name.type === 'JSXMemberExpression') {
-      return `${this.compileTagName(name.object)}.${name.property.name}`
+      return this.compileMemberExpressionTagName(name)
     }
 
     if (name.type === 'JSXNamespacedName') {

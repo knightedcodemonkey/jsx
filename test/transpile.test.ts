@@ -85,6 +85,16 @@ const node = <UI.Button disabled data-id={id} label="save" />
     )
   })
 
+  it('keeps lowercase-root member tags as expressions', () => {
+    const input = 'const node = <ui.Button />'
+
+    const result = transpileJsxSource(input)
+
+    expect(result.changed).toBe(true)
+    expect(result.code).toContain('React.createElement(ui.Button, null)')
+    expect(result.code).not.toContain('"ui".Button')
+  })
+
   it('skips empty JSX child expressions', () => {
     const input = `
 const node = <div>{/* intentionally empty */}</div>
