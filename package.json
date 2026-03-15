@@ -101,6 +101,11 @@
       "import": "./dist/lite/node/react/index.js",
       "default": "./dist/lite/node/react/index.js"
     },
+    "./transpile": {
+      "types": "./dist/transpile.d.ts",
+      "import": "./dist/transpile.js",
+      "default": "./dist/transpile.js"
+    },
     "./loader": {
       "import": "./dist/loader/jsx.js",
       "default": "./dist/loader/jsx.js"

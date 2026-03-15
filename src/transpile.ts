@@ -14,11 +14,8 @@ import type {
 } from '@oxc-project/types'
 import { normalizeJsxText } from './shared/normalize-text.js'
 
-type AnyNode = {
-  type: string
-  [key: string]: unknown
-}
-
+type AnyNode = Record<string, unknown>
+type SourceRange = [number, number]
 type TranspileSourceType = 'module' | 'script'
 
 export type TranspileJsxSourceOptions = {
@@ -38,7 +35,6 @@ const createModuleParserOptions = (sourceType: TranspileSourceType): ParserOptio
   range: true,
   preserveParens: true,
 })
-
 const formatParserError = (error: OxcError) => {
   let message = `[jsx] ${error.message}`
 
@@ -55,6 +51,19 @@ const formatParserError = (error: OxcError) => {
 
   return message
 }
+const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null
+const isSourceRange = (value: unknown): value is SourceRange =>
+  Array.isArray(value) &&
+  value.length === 2 &&
+  typeof value[0] === 'number' &&
+  typeof value[1] === 'number'
+const hasSourceRange = (value: unknown): value is { range: SourceRange } =>
+  isObjectRecord(value) && isSourceRange(value.range)
+const compareByRangeStartDesc = (
+  first: { range: SourceRange },
+  second: { range: SourceRange },
+) => second.range[0] - first.range[0]
 
 class SourceJsxReactBuilder {
   constructor(
@@ -77,6 +86,7 @@ class SourceJsxReactBuilder {
     const tagExpr = this.compileTagName(opening.name)
     const propsExpr = this.compileProps(opening.attributes)
     const children = this.compileChildren(node.children)
+
     return this.buildCreateElement(tagExpr, propsExpr, children)
   }
 
@@ -160,7 +170,7 @@ class SourceJsxReactBuilder {
     }
 
     if (segments.length === 1) {
-      return segments[0]!
+      return segments[0] ?? 'null'
     }
 
     return `Object.assign({}, ${segments.join(', ')})`
@@ -181,7 +191,9 @@ class SourceJsxReactBuilder {
     }
   }
 
-  private compileTagName(name: JSXElement['openingElement']['name']): string {
+  private compileTagName(
+    name: JSXIdentifier | JSXMemberExpression | JSXNamespacedName | null | undefined,
+  ): string {
     if (!name) {
       throw new Error('[jsx] Encountered JSX element without a tag name.')
     }
@@ -194,7 +206,7 @@ class SourceJsxReactBuilder {
     }
 
     if (name.type === 'JSXMemberExpression') {
-      return `${this.compileTagName(name.object as never)}.${name.property.name}`
+      return `${this.compileTagName(name.object)}.${name.property.name}`
     }
 
     if (name.type === 'JSXNamespacedName') {
@@ -209,11 +221,11 @@ class SourceJsxReactBuilder {
       return this.compileNode(node)
     }
 
-    const range = (node as unknown as AnyNode).range as [number, number] | undefined
-    if (!range) {
+    if (!hasSourceRange(node)) {
       throw new Error('[jsx] Unable to read source range for expression node.')
     }
 
+    const range = node.range
     const nestedJsxRoots = collectRootJsxNodes(node)
     if (!nestedJsxRoots.length) {
       return this.source.slice(range[0], range[1])
@@ -222,24 +234,13 @@ class SourceJsxReactBuilder {
     const expressionSource = this.source.slice(range[0], range[1])
     const magic = new MagicString(expressionSource)
 
-    nestedJsxRoots
-      .sort(
-        (a, b) =>
-          ((b.range as [number, number])[0] ?? 0) -
-          ((a.range as [number, number])[0] ?? 0),
+    nestedJsxRoots.sort(compareByRangeStartDesc).forEach(jsxNode => {
+      magic.overwrite(
+        jsxNode.range[0] - range[0],
+        jsxNode.range[1] - range[0],
+        this.compileNode(jsxNode),
       )
-      .forEach(jsxNode => {
-        const jsxRange = jsxNode.range as [number, number] | undefined
-        if (!jsxRange) {
-          throw new Error('[jsx] Unable to read source range for nested JSX node.')
-        }
-
-        magic.overwrite(
-          jsxRange[0] - range[0],
-          jsxRange[1] - range[0],
-          this.compileNode(jsxNode),
-        )
-      })
+    })
 
     return magic.toString()
   }
@@ -254,19 +255,17 @@ class SourceJsxReactBuilder {
 }
 
 const collectRootJsxNodes = (root: Program | Expression | JSXElement | JSXFragment) => {
-  const nodes: Array<JSXElement | JSXFragment> = []
+  const nodes: Array<(JSXElement | JSXFragment) & { range: SourceRange }> = []
+  const isJsxElementOrFragment = (node: unknown): node is JSXElement | JSXFragment => {
+    if (!isObjectRecord(node)) {
+      return false
+    }
 
-  const isJsxElementOrFragment = (node: unknown): node is JSXElement | JSXFragment =>
-    Boolean(
-      node &&
-      typeof node === 'object' &&
-      'type' in node &&
-      ((node as { type?: unknown }).type === 'JSXElement' ||
-        (node as { type?: unknown }).type === 'JSXFragment'),
-    )
+    return node.type === 'JSXElement' || node.type === 'JSXFragment'
+  }
 
   const walk = (value: unknown, insideJsx: boolean) => {
-    if (!value || typeof value !== 'object') {
+    if (!isObjectRecord(value)) {
       return
     }
 
@@ -275,10 +274,10 @@ const collectRootJsxNodes = (root: Program | Expression | JSXElement | JSXFragme
       return
     }
 
-    const node = value as AnyNode
+    const node: AnyNode = value
     const isJsxNode = isJsxElementOrFragment(node)
 
-    if (isJsxNode && !insideJsx) {
+    if (isJsxNode && hasSourceRange(node) && !insideJsx) {
       nodes.push(node)
     }
 
@@ -305,8 +304,9 @@ export function transpileJsxSource(
     createModuleParserOptions(sourceType),
   )
 
-  if (parsed.errors.length > 0) {
-    throw new Error(formatParserError(parsed.errors[0]!))
+  const firstError = parsed.errors[0]
+  if (firstError) {
+    throw new Error(formatParserError(firstError))
   }
 
   const jsxRoots = collectRootJsxNodes(parsed.program)
@@ -317,18 +317,9 @@ export function transpileJsxSource(
   const builder = new SourceJsxReactBuilder(source, createElementRef, fragmentRef)
   const magic = new MagicString(source)
 
-  jsxRoots
-    .sort(
-      (a, b) =>
-        ((b.range as [number, number])[0] ?? 0) - ((a.range as [number, number])[0] ?? 0),
-    )
-    .forEach(node => {
-      const range = node.range as [number, number] | undefined
-      if (!range) {
-        throw new Error('[jsx] Unable to read source range for JSX node.')
-      }
-      magic.overwrite(range[0], range[1], builder.compile(node))
-    })
+  jsxRoots.sort(compareByRangeStartDesc).forEach(node => {
+    magic.overwrite(node.range[0], node.range[1], builder.compile(node))
+  })
 
   return {
     code: magic.toString(),

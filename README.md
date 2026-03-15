@@ -73,7 +73,7 @@ document.body.append(button)
 Need to transform raw JSX source text (e.g. code typed in an editor) without Babel? Use `transpileJsxSource`:
 
 ```ts
-import { transpileJsxSource } from '@knighted/jsx'
+import { transpileJsxSource } from '@knighted/jsx/transpile'
 
 const input = `
 const App = () => {

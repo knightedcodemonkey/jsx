@@ -85,16 +85,16 @@ const node = <UI.Button disabled data-id={id} label="save" />
     )
   })
 
-  it('skips empty JSX prop expressions', () => {
+  it('skips empty JSX child expressions', () => {
     const input = `
-const node = <input value={/* intentionally empty */} />
+const node = <div>{/* intentionally empty */}</div>
 `
 
     const result = transpileJsxSource(input)
 
     expect(result.changed).toBe(true)
-    expect(result.code).toContain('React.createElement("input", null)')
-    expect(result.code).not.toContain('"value"')
+    expect(result.code).toContain('React.createElement("div", null)')
+    expect(result.code).not.toContain('intentionally empty')
   })
 
   it('transpiles JSX nested inside expression syntax', () => {
