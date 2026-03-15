@@ -7,8 +7,8 @@ const LOADER_FIXTURE_PORT = Number(process.env.LOADER_FIXTURE_PORT ?? 4174)
 const esmDemoUrl = process.env.ESM_DEMO_URL ?? `http://${HOST}:${ESM_DEMO_PORT}`
 const projects: PlaywrightTestProject[] = [
   {
-    name: 'chrome',
-    use: { channel: 'chrome' },
+    name: 'chromium',
+    use: { browserName: 'chromium' },
   },
 ]
 

@@ -1,6 +1,6 @@
 {
   "name": "@knighted/jsx",
-  "version": "1.7.9",
+  "version": "1.8.0",
   "description": "Runtime JSX tagged template that renders DOM or React trees anywhere with or without a build step.",
   "keywords": [
     "jsx runtime",
@@ -100,6 +100,11 @@
       "types": "./dist/node/react/index.d.ts",
       "import": "./dist/lite/node/react/index.js",
       "default": "./dist/lite/node/react/index.js"
+    },
+    "./transpile": {
+      "types": "./dist/transpile.d.ts",
+      "import": "./dist/transpile.js",
+      "default": "./dist/transpile.js"
     },
     "./loader": {
       "import": "./dist/loader/jsx.js",
