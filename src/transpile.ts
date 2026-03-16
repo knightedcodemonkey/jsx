@@ -494,6 +494,7 @@ const stripTypeScriptSyntax = (
 ): TranspileJsxSourceResult => {
   let currentCode = source
   let changed = false
+  let reachedStripPassLimit = true
 
   for (let pass = 0; pass < MAX_TYPESCRIPT_STRIP_PASSES; pass += 1) {
     const parsed = parseSync(
@@ -508,17 +509,38 @@ const stripTypeScriptSyntax = (
 
     const edits = collectTypeScriptStripEdits(currentCode, parsed.program)
     if (!edits.length) {
+      reachedStripPassLimit = false
       break
     }
 
     const magic = new MagicString(currentCode)
     const passChanged = applyStripEdits(magic, edits)
     if (!passChanged) {
+      reachedStripPassLimit = false
       break
     }
 
     currentCode = magic.toString()
     changed = true
+  }
+
+  if (reachedStripPassLimit) {
+    const parsed = parseSync(
+      'transpile-jsx-source.tsx',
+      currentCode,
+      createModuleParserOptions(sourceType),
+    )
+    const error = parsed.errors[0]
+    if (error) {
+      throw new Error(formatParserError(error))
+    }
+
+    const remainingEdits = collectTypeScriptStripEdits(currentCode, parsed.program)
+    if (remainingEdits.length) {
+      throw new Error(
+        `[jsx] TypeScript strip did not converge after ${MAX_TYPESCRIPT_STRIP_PASSES} passes (${remainingEdits.length} removable TypeScript nodes remain).`,
+      )
+    }
   }
 
   return {

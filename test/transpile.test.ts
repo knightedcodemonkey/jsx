@@ -267,4 +267,17 @@ const node = (<Checkbox checked={true} /> as unknown as HTMLElement)
     expect(result.code).not.toContain(' as HTMLElement')
     expect(() => new Function(result.code)).not.toThrow()
   })
+
+  it('throws a clear error when strip mode does not converge', () => {
+    const input = `
+const node = ((((((value as A) as B) as C) as D) as E) as F)
+`
+
+    expect(() =>
+      transpileJsxSource(input, {
+        sourceType: 'script',
+        typescript: 'strip',
+      }),
+    ).toThrow(/TypeScript strip did not converge after 5 passes/)
+  })
 })
