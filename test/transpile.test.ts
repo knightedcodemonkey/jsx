@@ -152,4 +152,57 @@ const View = ({ maybeNull, maybeUndefined, extra }) => (
   it('reports parser failures with jsx-prefixed diagnostics', () => {
     expect(() => transpileJsxSource('const view = <div>')).toThrow(/\[jsx\]/)
   })
+
+  it('preserves TypeScript syntax by default', () => {
+    const input = `
+type Props = { label: string }
+const Button = ({ label }: Props): unknown => <button>{label}</button>
+`
+
+    const result = transpileJsxSource(input, { sourceType: 'script' })
+
+    expect(result.changed).toBe(true)
+    expect(result.code).toContain('type Props = { label: string }')
+    expect(result.code).toContain('({ label }: Props): unknown =>')
+  })
+
+  it('strips TypeScript annotations and type-only declarations when enabled', () => {
+    const input = `
+type Props = { label: string }
+const Button = ({ label }: Props): unknown => <button>{label as string}</button>
+const App = () => <Button label={('typed' as string)!} />
+`
+
+    const result = transpileJsxSource(input, {
+      sourceType: 'script',
+      typescript: 'strip',
+    })
+
+    expect(result.changed).toBe(true)
+    expect(result.code).not.toContain('type Props =')
+    expect(result.code).not.toContain(': Props')
+    expect(result.code).not.toContain(': unknown')
+    expect(result.code).not.toContain(' as string')
+    expect(result.code).toContain('React.createElement("button", null, label)')
+    expect(result.code).toContain('React.createElement(Button, { "label": (\'typed\') })')
+    expect(() => new Function(result.code)).not.toThrow()
+  })
+
+  it('strips TypeScript-only syntax even when JSX is absent', () => {
+    const input = `
+type Value = string
+const value = (input satisfies string)
+`
+
+    const result = transpileJsxSource(input, {
+      sourceType: 'script',
+      typescript: 'strip',
+    })
+
+    expect(result.changed).toBe(true)
+    expect(result.code).not.toContain('type Value =')
+    expect(result.code).not.toContain('satisfies string')
+    expect(result.code).toContain('const value = (input)')
+    expect(() => new Function(result.code)).not.toThrow()
+  })
 })

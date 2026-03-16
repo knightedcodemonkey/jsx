@@ -17,11 +17,13 @@ import { normalizeJsxText } from './shared/normalize-text.js'
 type AnyNode = Record<string, unknown>
 type SourceRange = [number, number]
 type TranspileSourceType = 'module' | 'script'
+type TranspileTypeScriptMode = 'preserve' | 'strip'
 
 export type TranspileJsxSourceOptions = {
   sourceType?: TranspileSourceType
   createElement?: string
   fragment?: string
+  typescript?: TranspileTypeScriptMode
 }
 
 export type TranspileJsxSourceResult = {
@@ -74,6 +76,7 @@ class SourceJsxReactBuilder {
     private readonly source: string,
     private readonly createElementRef: string,
     private readonly fragmentRef: string,
+    private readonly stripTypes: boolean,
   ) {}
 
   compile(node: JSXElement | JSXFragment): string {
@@ -238,6 +241,44 @@ class SourceJsxReactBuilder {
       return this.compileNode(node)
     }
 
+    if (this.stripTypes && isObjectRecord(node)) {
+      if ('expression' in node && node.type === 'ParenthesizedExpression') {
+        return `(${this.compileExpression(
+          node.expression as Expression | JSXElement | JSXFragment,
+        )})`
+      }
+
+      if ('expression' in node && node.type === 'TSAsExpression') {
+        return this.compileExpression(
+          node.expression as Expression | JSXElement | JSXFragment,
+        )
+      }
+
+      if ('expression' in node && node.type === 'TSSatisfiesExpression') {
+        return this.compileExpression(
+          node.expression as Expression | JSXElement | JSXFragment,
+        )
+      }
+
+      if ('expression' in node && node.type === 'TSInstantiationExpression') {
+        return this.compileExpression(
+          node.expression as Expression | JSXElement | JSXFragment,
+        )
+      }
+
+      if ('expression' in node && node.type === 'TSNonNullExpression') {
+        return this.compileExpression(
+          node.expression as Expression | JSXElement | JSXFragment,
+        )
+      }
+
+      if ('expression' in node && node.type === 'TSTypeAssertion') {
+        return this.compileExpression(
+          node.expression as Expression | JSXElement | JSXFragment,
+        )
+      }
+    }
+
     if (!hasSourceRange(node)) {
       throw new Error('[jsx] Unable to read source range for expression node.')
     }
@@ -307,6 +348,161 @@ const collectRootJsxNodes = (root: Program | Expression | JSXElement | JSXFragme
   return nodes
 }
 
+type StripEdit = {
+  range: SourceRange
+  replacement?: string
+}
+
+const hasStringProperty = <K extends string>(
+  value: unknown,
+  key: K,
+): value is Record<K, string> => isObjectRecord(value) && typeof value[key] === 'string'
+
+const hasSourceAndExpressionRanges = (
+  value: unknown,
+): value is {
+  type: string
+  range: SourceRange
+  expression: { range: SourceRange }
+} => {
+  if (!isObjectRecord(value)) {
+    return false
+  }
+
+  if (typeof value.type !== 'string' || !hasSourceRange(value)) {
+    return false
+  }
+
+  if (!('expression' in value)) {
+    return false
+  }
+
+  return hasSourceRange(value.expression)
+}
+
+const isTypeOnlyImportExport = (value: unknown): boolean =>
+  hasStringProperty(value, 'importKind')
+    ? value.importKind === 'type'
+    : hasStringProperty(value, 'exportKind') && value.exportKind === 'type'
+
+const isTypeOnlyNode = (value: unknown): boolean => {
+  if (!isObjectRecord(value) || typeof value.type !== 'string') {
+    return false
+  }
+
+  return [
+    'TSTypeAnnotation',
+    'TSTypeParameterDeclaration',
+    'TSTypeAliasDeclaration',
+    'TSInterfaceDeclaration',
+    'TSDeclareFunction',
+    'TSImportEqualsDeclaration',
+    'TSNamespaceExportDeclaration',
+    'TSModuleDeclaration',
+  ].includes(value.type)
+}
+
+const createStripEditForTsWrapper = (
+  value: unknown,
+  source: string,
+): StripEdit | null => {
+  if (!hasSourceAndExpressionRanges(value) || !isObjectRecord(value)) {
+    return null
+  }
+
+  if (
+    value.type !== 'TSAsExpression' &&
+    value.type !== 'TSSatisfiesExpression' &&
+    value.type !== 'TSInstantiationExpression' &&
+    value.type !== 'TSNonNullExpression' &&
+    value.type !== 'TSTypeAssertion'
+  ) {
+    return null
+  }
+
+  const [exprStart, exprEnd] = value.expression.range
+  return {
+    range: value.range,
+    replacement: source.slice(exprStart, exprEnd),
+  }
+}
+
+const collectTypeScriptStripEdits = (source: string, root: Program): StripEdit[] => {
+  const edits: StripEdit[] = []
+
+  const walk = (value: unknown) => {
+    if (!isObjectRecord(value)) {
+      return
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach(walk)
+      return
+    }
+
+    if (hasSourceRange(value)) {
+      if (isTypeOnlyNode(value) || isTypeOnlyImportExport(value)) {
+        edits.push({ range: value.range })
+      } else {
+        const wrapperEdit = createStripEditForTsWrapper(value, source)
+        if (wrapperEdit) {
+          edits.push(wrapperEdit)
+        }
+      }
+    }
+
+    for (const entry of Object.values(value)) {
+      walk(entry)
+    }
+  }
+
+  walk(root)
+  return edits
+}
+
+const rangeOverlaps = (first: SourceRange, second: SourceRange) =>
+  first[0] < second[1] && second[0] < first[1]
+
+const compareStripEditPriority = (first: StripEdit, second: StripEdit) => {
+  const firstLength = first.range[1] - first.range[0]
+  const secondLength = second.range[1] - second.range[0]
+
+  if (firstLength !== secondLength) {
+    return secondLength - firstLength
+  }
+
+  return compareByRangeStartDesc(first, second)
+}
+
+const applyStripEdits = (magic: MagicString, edits: StripEdit[]) => {
+  if (!edits.length) {
+    return false
+  }
+
+  const appliedRanges: SourceRange[] = []
+  let changed = false
+
+  edits
+    .slice()
+    .sort(compareStripEditPriority)
+    .forEach(edit => {
+      if (appliedRanges.some(range => rangeOverlaps(range, edit.range))) {
+        return
+      }
+
+      const [start, end] = edit.range
+      if (edit.replacement === undefined) {
+        magic.remove(start, end)
+      } else {
+        magic.overwrite(start, end, edit.replacement)
+      }
+      appliedRanges.push(edit.range)
+      changed = true
+    })
+
+  return changed
+}
+
 export function transpileJsxSource(
   source: string,
   options: TranspileJsxSourceOptions = {},
@@ -314,6 +510,7 @@ export function transpileJsxSource(
   const sourceType = options.sourceType ?? 'module'
   const createElementRef = options.createElement ?? 'React.createElement'
   const fragmentRef = options.fragment ?? 'React.Fragment'
+  const typescriptMode = options.typescript ?? 'preserve'
 
   const parsed = parseSync(
     'transpile-jsx-source.tsx',
@@ -326,14 +523,26 @@ export function transpileJsxSource(
     throw new Error(formatParserError(firstError))
   }
 
+  const magic = new MagicString(source)
+  const stripChanged =
+    typescriptMode === 'strip'
+      ? applyStripEdits(magic, collectTypeScriptStripEdits(source, parsed.program))
+      : false
+
   const jsxRoots = collectRootJsxNodes(parsed.program)
   if (!jsxRoots.length) {
-    return { code: source, changed: false }
+    return {
+      code: stripChanged ? magic.toString() : source,
+      changed: stripChanged,
+    }
   }
 
-  const builder = new SourceJsxReactBuilder(source, createElementRef, fragmentRef)
-  const magic = new MagicString(source)
-
+  const builder = new SourceJsxReactBuilder(
+    source,
+    createElementRef,
+    fragmentRef,
+    typescriptMode === 'strip',
+  )
   jsxRoots.sort(compareByRangeStartDesc).forEach(node => {
     magic.overwrite(node.range[0], node.range[1], builder.compile(node))
   })

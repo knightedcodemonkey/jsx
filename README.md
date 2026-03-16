@@ -94,6 +94,21 @@ transpileJsxSource(input, {
 })
 ```
 
+By default, TypeScript syntax is preserved in the output. If your source needs to run directly
+as JavaScript (for example, code entered in an editor), enable type stripping:
+
+```ts
+transpileJsxSource(input, {
+  typescript: 'strip',
+})
+```
+
+Supported `typescript` modes:
+
+- `'preserve'` (default): keep TypeScript syntax in output.
+- `'strip'`: remove type-only declarations and erase inline type syntax (`: T`, `as T`,
+  `satisfies T`, non-null assertions, and type assertions) while still transpiling JSX.
+
 ### React runtime (`reactJsx`)
 
 Need to compose React elements instead of DOM nodes? Import the dedicated helper from the `@knighted/jsx/react` subpath (React 18+ and `react-dom` are still required to mount the tree):
