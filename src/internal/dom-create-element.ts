@@ -1,12 +1,16 @@
 import type { Namespace } from './attribute-resolution.js'
 import type { JsxComponent, JsxRenderable } from './jsx-types.js'
 
-export const Fragment = Symbol.for('@knighted/jsx::Fragment')
+export declare const FragmentToken: unique symbol
+export type JsxFragmentToken = typeof FragmentToken
+
+export const Fragment = Symbol.for('@knighted/jsx::Fragment') as JsxFragmentToken
 
 type JsxPropsRecord = Record<string, unknown>
+const CREATE_ELEMENT_NAMESPACE_PROP = '__jsxNs'
 
 export type JsxCreateElement = {
-  (type: typeof Fragment, props: null, ...children: JsxRenderable[]): DocumentFragment
+  (type: JsxFragmentToken, props: null, ...children: JsxRenderable[]): DocumentFragment
   <Props extends JsxPropsRecord>(
     type: JsxComponent<Props>,
     props: (Props & { children?: JsxRenderable | JsxRenderable[] }) | null,
@@ -60,6 +64,21 @@ const createPropsForComponent = (props: JsxPropsRecord, children: JsxRenderable[
   return nextProps
 }
 
+const resolveNamespaceOverride = (props: JsxPropsRecord): Namespace | undefined => {
+  if (!Object.prototype.hasOwnProperty.call(props, CREATE_ELEMENT_NAMESPACE_PROP)) {
+    return undefined
+  }
+
+  const override = props[CREATE_ELEMENT_NAMESPACE_PROP]
+  delete props[CREATE_ELEMENT_NAMESPACE_PROP]
+
+  if (override === 'svg' || override === null) {
+    return override
+  }
+
+  throw new Error(`${CREATE_ELEMENT_NAMESPACE_PROP} must be "svg" or null when provided.`)
+}
+
 export const createDomCreateElement = ({
   ensureDomAvailable,
   appendChildValue,
@@ -67,7 +86,7 @@ export const createDomCreateElement = ({
   isPromiseLike,
 }: DomCreateElementHelpers): JsxCreateElement => {
   function createElement(
-    type: typeof Fragment,
+    type: JsxFragmentToken,
     props: null,
     ...children: JsxRenderable[]
   ): DocumentFragment
@@ -82,7 +101,7 @@ export const createDomCreateElement = ({
     ...children: JsxRenderable[]
   ): JsxRenderable
   function createElement(
-    type: string | JsxComponent | typeof Fragment,
+    type: string | JsxComponent | JsxFragmentToken,
     props: JsxPropsRecord | null,
     ...children: JsxRenderable[]
   ): JsxRenderable {
@@ -112,8 +131,9 @@ export const createDomCreateElement = ({
     }
 
     delete nextProps.children
+    const namespaceOverride = resolveNamespaceOverride(nextProps)
 
-    const nextNamespace: Namespace = type === 'svg' ? 'svg' : null
+    const nextNamespace: Namespace = namespaceOverride ?? (type === 'svg' ? 'svg' : null)
     const domElement =
       nextNamespace === 'svg'
         ? document.createElementNS('http://www.w3.org/2000/svg', type)

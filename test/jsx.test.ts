@@ -43,6 +43,71 @@ describe('jsx template tag', () => {
     expect(node.textContent).toBe('ready')
   })
 
+  it('supports explicit namespace override for createElement SVG descendants', () => {
+    const path = jsx.createElement('path', {
+      __jsxNs: 'svg',
+      d: 'M0 0 L10 10',
+    }) as SVGPathElement
+    const svg = jsx.createElement('svg', { viewBox: '0 0 10 10' }, path) as SVGSVGElement
+
+    document.body.append(svg)
+
+    expect(svg.namespaceURI).toBe('http://www.w3.org/2000/svg')
+    expect(path.namespaceURI).toBe('http://www.w3.org/2000/svg')
+    expect(path.getAttribute('__jsxNs')).toBe(null)
+  })
+
+  it('uses props.children when variadic children are not provided', () => {
+    const node = jsx.createElement('div', { children: 'from-props' }) as HTMLDivElement
+
+    expect(node.textContent).toBe('from-props')
+  })
+
+  it('packs single and multiple createElement children for component calls', () => {
+    const capture = vi.fn((props: { children?: JsxRenderable | JsxRenderable[] }) =>
+      jsx.createElement('section', null, String(props.children ?? '')),
+    )
+
+    jsx.createElement(capture, null, 'one')
+    jsx.createElement(capture, null, 'one', 'two')
+
+    expect(capture).toHaveBeenCalledTimes(2)
+    expect(capture.mock.calls[0]?.[0].children).toBe('one')
+    expect(capture.mock.calls[1]?.[0].children).toEqual(['one', 'two'])
+  })
+
+  it('throws for invalid createElement namespace overrides', () => {
+    expect(() =>
+      jsx.createElement('path', {
+        __jsxNs: 'html',
+      } as unknown as Record<string, unknown>),
+    ).toThrow('__jsxNs must be "svg" or null when provided.')
+  })
+
+  it('throws for async component results in createElement', () => {
+    const AsyncComponent = (() => Promise.resolve('nope')) as unknown as JsxComponent
+
+    expect(() => jsx.createElement(AsyncComponent, null)).toThrow(
+      'Async jsx components are not supported.',
+    )
+  })
+
+  it('throws for unsupported createElement types', () => {
+    expect(() => jsx.createElement(Symbol('bad') as unknown as string, null)).toThrow(
+      'Unsupported jsx createElement type: Symbol(bad)',
+    )
+  })
+
+  it('skips the key prop when applying createElement DOM attributes', () => {
+    const node = jsx.createElement('div', {
+      key: 'list-key',
+      id: 'with-id',
+    }) as HTMLDivElement
+
+    expect(node.id).toBe('with-id')
+    expect(node.getAttribute('key')).toBe(null)
+  })
+
   it('renders DOM nodes with props, events, and text', () => {
     const handleClick = vi.fn()
     const count = 3

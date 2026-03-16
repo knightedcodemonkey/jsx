@@ -35,6 +35,7 @@ import {
 import {
   Fragment,
   createDomCreateElement,
+  type JsxFragmentToken,
   type JsxCreateElement,
 } from './internal/dom-create-element.js'
 import type { JsxComponent, JsxRenderable } from './internal/jsx-types.js'
@@ -478,7 +479,7 @@ export const createElement: JsxCreateElement = createDomCreateElement({
 type JsxTaggedTemplate = {
   (templates: TemplateStringsArray, ...values: unknown[]): JsxRenderable
   createElement: typeof createElement
-  Fragment: typeof Fragment
+  Fragment: JsxFragmentToken
 }
 
 const jsxTag = (templates: TemplateStringsArray, ...values: unknown[]): JsxRenderable => {
