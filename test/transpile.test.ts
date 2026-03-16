@@ -248,4 +248,23 @@ const beta = (right as B)
     expect(result.code).not.toContain(' as A')
     expect(result.code).not.toContain(' as B')
   })
+
+  it('strips chained TS casts around JSX expressions', () => {
+    const input = `
+const node = (<Checkbox checked={true} /> as unknown as HTMLElement)
+`
+
+    const result = transpileJsxSource(input, {
+      sourceType: 'script',
+      typescript: 'strip',
+    })
+
+    expect(result.changed).toBe(true)
+    expect(result.code).toContain(
+      'const node = (React.createElement(Checkbox, { "checked": true }))',
+    )
+    expect(result.code).not.toContain(' as unknown')
+    expect(result.code).not.toContain(' as HTMLElement')
+    expect(() => new Function(result.code)).not.toThrow()
+  })
 })
