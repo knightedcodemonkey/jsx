@@ -66,6 +66,14 @@ const isSourceRange = (value: unknown): value is SourceRange =>
   typeof value[1] === 'number'
 const hasSourceRange = (value: unknown): value is { range: SourceRange } =>
   isObjectRecord(value) && isSourceRange(value.range)
+const tsWrapperExpressionNodeTypes = new Set([
+  'TSAsExpression',
+  'TSSatisfiesExpression',
+  'TSInstantiationExpression',
+  'TSNonNullExpression',
+  'TSTypeAssertion',
+])
+
 const compareByRangeStartDesc = (
   first: { range: SourceRange },
   second: { range: SourceRange },
@@ -248,37 +256,18 @@ class SourceJsxReactBuilder {
         )})`
       }
 
-      if ('expression' in node && node.type === 'TSAsExpression') {
-        return this.compileExpression(
-          node.expression as Expression | JSXElement | JSXFragment,
-        )
-      }
-
-      if ('expression' in node && node.type === 'TSSatisfiesExpression') {
-        return this.compileExpression(
-          node.expression as Expression | JSXElement | JSXFragment,
-        )
-      }
-
-      if ('expression' in node && node.type === 'TSInstantiationExpression') {
-        return this.compileExpression(
-          node.expression as Expression | JSXElement | JSXFragment,
-        )
-      }
-
-      if ('expression' in node && node.type === 'TSNonNullExpression') {
-        return this.compileExpression(
-          node.expression as Expression | JSXElement | JSXFragment,
-        )
-      }
-
-      if ('expression' in node && node.type === 'TSTypeAssertion') {
+      if (
+        'expression' in node &&
+        typeof node.type === 'string' &&
+        tsWrapperExpressionNodeTypes.has(node.type)
+      ) {
         return this.compileExpression(
           node.expression as Expression | JSXElement | JSXFragment,
         )
       }
     }
 
+    /* c8 ignore next 3 -- defensive guard for malformed external AST nodes */
     if (!hasSourceRange(node)) {
       throw new Error('[jsx] Unable to read source range for expression node.')
     }
@@ -364,21 +353,12 @@ const hasSourceAndExpressionRanges = (
   type: string
   range: SourceRange
   expression: { range: SourceRange }
-} => {
-  if (!isObjectRecord(value)) {
-    return false
-  }
-
-  if (typeof value.type !== 'string' || !hasSourceRange(value)) {
-    return false
-  }
-
-  if (!('expression' in value)) {
-    return false
-  }
-
-  return hasSourceRange(value.expression)
-}
+} =>
+  isObjectRecord(value) &&
+  typeof value.type === 'string' &&
+  hasSourceRange(value) &&
+  'expression' in value &&
+  hasSourceRange(value.expression)
 
 const isTypeOnlyImportExport = (value: unknown): boolean =>
   hasStringProperty(value, 'importKind')
@@ -406,7 +386,7 @@ const createStripEditForTsWrapper = (
   value: unknown,
   source: string,
 ): StripEdit | null => {
-  if (!hasSourceAndExpressionRanges(value) || !isObjectRecord(value)) {
+  if (!hasSourceAndExpressionRanges(value)) {
     return null
   }
 
@@ -443,10 +423,12 @@ const collectTypeScriptStripEdits = (source: string, root: Program): StripEdit[]
     if (hasSourceRange(value)) {
       if (isTypeOnlyNode(value) || isTypeOnlyImportExport(value)) {
         edits.push({ range: value.range })
+        return
       } else {
         const wrapperEdit = createStripEditForTsWrapper(value, source)
         if (wrapperEdit) {
           edits.push(wrapperEdit)
+          return
         }
       }
     }
@@ -486,6 +468,7 @@ const applyStripEdits = (magic: MagicString, edits: StripEdit[]) => {
     .slice()
     .sort(compareStripEditPriority)
     .forEach(edit => {
+      /* c8 ignore next -- overlap handling is defensive after de-duplicated collection */
       if (appliedRanges.some(range => rangeOverlaps(range, edit.range))) {
         return
       }

@@ -134,6 +134,19 @@ const View = ({ cond, items, visible }) => (
     expect(result.code).not.toContain('<Footer />')
   })
 
+  it('transpiles direct JSX expression containers', () => {
+    const input = `
+const View = () => <section>{<A />}</section>
+`
+
+    const result = transpileJsxSource(input)
+
+    expect(result.changed).toBe(true)
+    expect(result.code).toContain(
+      'React.createElement("section", null, React.createElement(A, null))',
+    )
+  })
+
   it('emits null-safe spread props', () => {
     const input = `
 const View = ({ maybeNull, maybeUndefined, extra }) => (
@@ -204,5 +217,35 @@ const value = (input satisfies string)
     expect(result.code).not.toContain('satisfies string')
     expect(result.code).toContain('const value = (input)')
     expect(() => new Function(result.code)).not.toThrow()
+  })
+
+  it('keeps strip mode as no-op when no TypeScript syntax is present', () => {
+    const input = 'const sum = 1 + 2'
+
+    const result = transpileJsxSource(input, {
+      sourceType: 'script',
+      typescript: 'strip',
+    })
+
+    expect(result.changed).toBe(false)
+    expect(result.code).toBe(input)
+  })
+
+  it('strips multiple equal-length wrapper edits', () => {
+    const input = `
+const alpha = (left as A)
+const beta = (right as B)
+`
+
+    const result = transpileJsxSource(input, {
+      sourceType: 'script',
+      typescript: 'strip',
+    })
+
+    expect(result.changed).toBe(true)
+    expect(result.code).toContain('const alpha = (left)')
+    expect(result.code).toContain('const beta = (right)')
+    expect(result.code).not.toContain(' as A')
+    expect(result.code).not.toContain(' as B')
   })
 })
