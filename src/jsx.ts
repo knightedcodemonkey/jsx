@@ -32,25 +32,16 @@ import {
   parseEventPropName,
   resolveEventHandlerValue,
 } from './internal/event-bindings.js'
+import {
+  Fragment,
+  createDomCreateElement,
+  type JsxCreateElement,
+} from './internal/dom-create-element.js'
+import type { JsxComponent, JsxRenderable } from './internal/jsx-types.js'
 
 type JsxContext = TemplateContext<JsxComponent>
 type ElementWithIndex = Element & Record<string, unknown>
-
-export type JsxRenderable =
-  | Node
-  | DocumentFragment
-  | string
-  | number
-  | bigint
-  | boolean
-  | null
-  | undefined
-  | Iterable<JsxRenderable>
-
-export type JsxComponent<Props = Record<string, unknown>> = {
-  (props: Props & { children?: JsxRenderable | JsxRenderable[] }): JsxRenderable
-  displayName?: string
-}
+export type { JsxRenderable, JsxComponent } from './internal/jsx-types.js'
 
 const ensureDomAvailable = () => {
   if (typeof document === 'undefined' || typeof document.createElement !== 'function') {
@@ -477,10 +468,20 @@ const evaluateJsxNode = (
   return evaluateJsxElement(node, ctx, namespace)
 }
 
-export const jsx = (
-  templates: TemplateStringsArray,
-  ...values: unknown[]
-): JsxRenderable => {
+export const createElement: JsxCreateElement = createDomCreateElement({
+  ensureDomAvailable,
+  appendChildValue,
+  setDomProp,
+  isPromiseLike,
+})
+
+type JsxTaggedTemplate = {
+  (templates: TemplateStringsArray, ...values: unknown[]): JsxRenderable
+  createElement: typeof createElement
+  Fragment: typeof Fragment
+}
+
+const jsxTag = (templates: TemplateStringsArray, ...values: unknown[]): JsxRenderable => {
   ensureDomAvailable()
   const build = buildTemplate<JsxComponent>(templates, values)
   const result = parseSync('inline.jsx', build.source, parserOptions)
@@ -505,3 +506,8 @@ export const jsx = (
 
   return evaluateJsxNode(root, ctx, null)
 }
+
+export const jsx = Object.assign(jsxTag, {
+  createElement,
+  Fragment,
+}) as JsxTaggedTemplate

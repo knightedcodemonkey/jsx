@@ -1,6 +1,6 @@
 {
   "name": "@knighted/jsx",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "Runtime JSX tagged template that renders DOM or React trees anywhere with or without a build step.",
   "keywords": [
     "jsx runtime",
@@ -136,6 +136,7 @@
     "test:watch": "cross-env KNIGHTED_JSX_CLI_TEST=1 vitest",
     "test:e2e": "npm run build && npm run setup:wasm && npm run build:fixture && playwright test",
     "build:fixture": "node scripts/build-rspack-fixture.mjs",
+    "demo:e2e-fixture": "npm run build && npx serve . -l tcp://127.0.0.1:4173",
     "demo:node-ssr": "node test/fixtures/node-ssr/render.mjs",
     "dev": "vite dev --config vite.config.ts",
     "build:demo": "vite build --config vite.config.ts",

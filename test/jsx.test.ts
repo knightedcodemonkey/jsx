@@ -15,6 +15,34 @@ const resetDom = () => {
 describe('jsx template tag', () => {
   beforeEach(resetDom)
 
+  it('exposes createElement and Fragment helpers on jsx', () => {
+    const item = jsx.createElement('li', { className: 'entry' }, 'alpha')
+    const list = jsx.createElement('ul', { id: 'items' }, item)
+    const fragment = jsx.createElement(
+      jsx.Fragment,
+      null,
+      jsx.createElement('span', null, 'left'),
+      jsx.createElement('span', null, 'right'),
+    )
+
+    document.body.append(list as Node)
+    document.body.append(fragment as Node)
+
+    expect((list as HTMLUListElement).id).toBe('items')
+    expect((list as HTMLUListElement).querySelector('li')?.textContent).toBe('alpha')
+    expect(document.body.querySelectorAll('span')).toHaveLength(2)
+  })
+
+  it('supports component functions via jsx.createElement', () => {
+    const Badge: JsxComponent<{ label: string }> = ({ label }) =>
+      jsx.createElement('strong', { className: 'badge' }, label)
+
+    const node = jsx.createElement(Badge, { label: 'ready' }) as HTMLElement
+    expect(node.tagName).toBe('STRONG')
+    expect(node.className).toBe('badge')
+    expect(node.textContent).toBe('ready')
+  })
+
   it('renders DOM nodes with props, events, and text', () => {
     const handleClick = vi.fn()
     const count = 3

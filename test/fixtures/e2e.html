@@ -768,6 +768,67 @@
           </section>
         `
       }
+      const CreateElementCounter = ({ start = 0 }) => {
+        let value = start
+        const valueLabel = jsx.createElement(
+          'strong',
+          { class: 'create-element-value' },
+          String(value),
+        )
+        const nodeTypeLabel = jsx.createElement(
+          'code',
+          { class: 'create-element-node-type' },
+          String(valueLabel.nodeType),
+        )
+        const increment = () => {
+          value += 1
+          valueLabel.textContent = String(value)
+        }
+
+        return jsx.createElement(
+          'section',
+          { class: 'card dom-card create-element-card' },
+          jsx.createElement(
+            'header',
+            null,
+            jsx.createElement('p', { class: 'eyebrow' }, 'createElement facade'),
+            jsx.createElement('h2', null, 'DOM parity with jsx.createElement + Fragment'),
+          ),
+          jsx.createElement(
+            'p',
+            null,
+            'This section is rendered without template literals to validate direct createElement usage.',
+          ),
+          jsx.createElement('p', null, 'Current total: ', valueLabel),
+          jsx.createElement('p', null, 'valueLabel.nodeType = ', nodeTypeLabel),
+          jsx.createElement(
+            'ul',
+            { class: 'list create-element-fragment-list' },
+            jsx.createElement(
+              jsx.Fragment,
+              null,
+              jsx.createElement(
+                'li',
+                { class: 'create-element-fragment-item' },
+                'Fragment child one',
+              ),
+              jsx.createElement(
+                'li',
+                { class: 'create-element-fragment-item' },
+                'Fragment child two',
+              ),
+            ),
+          ),
+          jsx.createElement(
+            'button',
+            {
+              class: 'counter-button create-element-button',
+              onClick: increment,
+            },
+            'Increment via createElement',
+          ),
+        )
+      }
       const reactMetrics = ['Hooks ready', 'Fragments inline', 'Suspense friendly']
       const ReactBadge = ({ label }) =>
         reactJsx`
@@ -1143,6 +1204,7 @@
             </p>
           </section>
           <${Counter} start={${0}} />
+          <${CreateElementCounter} start={${0}} />
           <section class="card react-card">
             <header>
               <h2>Try the React runtime</h2>

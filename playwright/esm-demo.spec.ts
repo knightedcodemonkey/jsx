@@ -6,6 +6,11 @@ const hybridSelectors = {
   litHost: 'lit-hosts-react',
   litReactBadge: 'lit-hosts-react .hybrid-react-badge',
   liteMetrics: '#lite-entrypaths .lite-metric',
+  createElementCard: '.create-element-card',
+  createElementCounter: '.create-element-value',
+  createElementNodeType: '.create-element-node-type',
+  createElementButton: '.create-element-button',
+  createElementFragmentItems: '.create-element-fragment-item',
 }
 
 const overviewSelectors = {
@@ -20,7 +25,7 @@ test.describe('esm demo via local dist fixture', () => {
   test('renders nested DOM trees and increments counter', async ({ page }) => {
     await page.goto('/test/fixtures/e2e.html')
 
-    const counterButton = page.locator('.counter-button')
+    const counterButton = page.getByRole('button', { name: 'Increment', exact: true })
     const counterLabel = page.locator('.counter-value')
 
     await expect(counterLabel).toHaveText('0')
@@ -55,5 +60,21 @@ test.describe('esm demo via local dist fixture', () => {
       page.locator(`${hybridSelectors.litReactBadge} header strong`),
     ).toHaveText(/Connected|Paused/)
     await expect(page.locator(hybridSelectors.liteMetrics)).toHaveCount(4)
+  })
+
+  test('renders createElement + Fragment output as real DOM nodes', async ({ page }) => {
+    await page.goto('/test/fixtures/e2e.html')
+
+    const createElementCard = page.locator(hybridSelectors.createElementCard)
+    const createElementCounter = page.locator(hybridSelectors.createElementCounter)
+    const createElementButton = page.locator(hybridSelectors.createElementButton)
+
+    await expect(createElementCard).toBeVisible()
+    await expect(page.locator(hybridSelectors.createElementNodeType)).toHaveText('1')
+    await expect(page.locator(hybridSelectors.createElementFragmentItems)).toHaveCount(2)
+
+    await expect(createElementCounter).toHaveText('0')
+    await createElementButton.click()
+    await expect(createElementCounter).toHaveText('1')
   })
 })
