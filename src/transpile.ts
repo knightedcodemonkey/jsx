@@ -342,6 +342,8 @@ type StripEdit = {
   replacement?: string
 }
 
+const MAX_TYPESCRIPT_STRIP_PASSES = 5
+
 const hasStringProperty = <K extends string>(
   value: unknown,
   key: K,
@@ -486,6 +488,67 @@ const applyStripEdits = (magic: MagicString, edits: StripEdit[]) => {
   return changed
 }
 
+const stripTypeScriptSyntax = (
+  source: string,
+  sourceType: TranspileSourceType,
+): TranspileJsxSourceResult => {
+  let currentCode = source
+  let changed = false
+  let reachedStripPassLimit = true
+
+  for (let pass = 0; pass < MAX_TYPESCRIPT_STRIP_PASSES; pass += 1) {
+    const parsed = parseSync(
+      'transpile-jsx-source.tsx',
+      currentCode,
+      createModuleParserOptions(sourceType),
+    )
+    const error = parsed.errors[0]
+    if (error) {
+      throw new Error(formatParserError(error))
+    }
+
+    const edits = collectTypeScriptStripEdits(currentCode, parsed.program)
+    if (!edits.length) {
+      reachedStripPassLimit = false
+      break
+    }
+
+    const magic = new MagicString(currentCode)
+    const passChanged = applyStripEdits(magic, edits)
+    if (!passChanged) {
+      reachedStripPassLimit = false
+      break
+    }
+
+    currentCode = magic.toString()
+    changed = true
+  }
+
+  if (reachedStripPassLimit) {
+    const parsed = parseSync(
+      'transpile-jsx-source.tsx',
+      currentCode,
+      createModuleParserOptions(sourceType),
+    )
+    const error = parsed.errors[0]
+    if (error) {
+      throw new Error(formatParserError(error))
+    }
+
+    const remainingEdits = collectTypeScriptStripEdits(currentCode, parsed.program)
+    if (remainingEdits.length) {
+      throw new Error(
+        `[jsx] TypeScript strip did not converge after ${MAX_TYPESCRIPT_STRIP_PASSES} passes (${remainingEdits.length} removable TypeScript nodes remain).`,
+      )
+    }
+  }
+
+  return {
+    code: currentCode,
+    changed,
+  }
+}
+
 export function transpileJsxSource(
   source: string,
   options: TranspileJsxSourceOptions = {},
@@ -506,32 +569,36 @@ export function transpileJsxSource(
     throw new Error(formatParserError(firstError))
   }
 
-  const magic = new MagicString(source)
-  const stripChanged =
-    typescriptMode === 'strip'
-      ? applyStripEdits(magic, collectTypeScriptStripEdits(source, parsed.program))
-      : false
-
   const jsxRoots = collectRootJsxNodes(parsed.program)
-  if (!jsxRoots.length) {
+  const jsxMagic = new MagicString(source)
+
+  if (jsxRoots.length) {
+    const builder = new SourceJsxReactBuilder(
+      source,
+      createElementRef,
+      fragmentRef,
+      typescriptMode === 'strip',
+    )
+
+    jsxRoots.sort(compareByRangeStartDesc).forEach(node => {
+      jsxMagic.overwrite(node.range[0], node.range[1], builder.compile(node))
+    })
+  }
+
+  const jsxCode = jsxRoots.length ? jsxMagic.toString() : source
+  const jsxChanged = jsxRoots.length > 0
+
+  if (typescriptMode !== 'strip') {
     return {
-      code: stripChanged ? magic.toString() : source,
-      changed: stripChanged,
+      code: jsxCode,
+      changed: jsxChanged,
     }
   }
 
-  const builder = new SourceJsxReactBuilder(
-    source,
-    createElementRef,
-    fragmentRef,
-    typescriptMode === 'strip',
-  )
-  jsxRoots.sort(compareByRangeStartDesc).forEach(node => {
-    magic.overwrite(node.range[0], node.range[1], builder.compile(node))
-  })
+  const stripResult = stripTypeScriptSyntax(jsxCode, sourceType)
 
   return {
-    code: magic.toString(),
-    changed: true,
+    code: stripResult.code,
+    changed: jsxChanged || stripResult.changed,
   }
 }
