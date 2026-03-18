@@ -195,18 +195,17 @@ const collectImportMetadata = (body: unknown): TransformImport[] => {
       return
     }
 
+    const importKind = asImportKind(statement.importKind)
     const bindings = Array.isArray(statement.specifiers)
       ? statement.specifiers
-          .map(specifier =>
-            toImportBinding(specifier, asImportKind(statement.importKind)),
-          )
+          .map(specifier => toImportBinding(specifier, importKind))
           .filter((binding): binding is TransformImportBinding => binding !== null)
       : []
 
     imports.push({
       source: statement.source.value,
-      importKind: asImportKind(statement.importKind),
-      sideEffectOnly: bindings.length === 0,
+      importKind,
+      sideEffectOnly: bindings.length === 0 && importKind === 'value',
       bindings,
       range: toSourceRange(statement),
     })

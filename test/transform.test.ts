@@ -283,4 +283,50 @@ const value = (input satisfies string)
     vi.doUnmock('oxc-parser')
     vi.resetModules()
   })
+
+  it('marks sideEffectOnly only for value imports with no bindings', async () => {
+    vi.resetModules()
+    vi.doMock('oxc-parser', () => ({
+      parseSync: () => ({
+        errors: [],
+        program: {
+          body: [
+            {
+              type: 'ImportDeclaration',
+              source: { value: './value-side-effect' },
+              importKind: 'value',
+              specifiers: [],
+            },
+            {
+              type: 'ImportDeclaration',
+              source: { value: './type-side-effect' },
+              importKind: 'type',
+              specifiers: [],
+            },
+          ],
+        },
+      }),
+    }))
+
+    const { transformJsxSource: mockedTransformJsxSource } =
+      await import('../src/transform.js')
+
+    const result = mockedTransformJsxSource('const value = 1')
+
+    expect(result.imports).toMatchObject([
+      {
+        source: './value-side-effect',
+        importKind: 'value',
+        sideEffectOnly: true,
+      },
+      {
+        source: './type-side-effect',
+        importKind: 'type',
+        sideEffectOnly: false,
+      },
+    ])
+
+    vi.doUnmock('oxc-parser')
+    vi.resetModules()
+  })
 })
