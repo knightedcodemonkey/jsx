@@ -215,4 +215,72 @@ const value = (input satisfies string)
     vi.doUnmock('oxc-transform')
     vi.resetModules()
   })
+
+  it('throws for unsupported sourceType values', () => {
+    expect(() =>
+      transformJsxSource('const value = 1', {
+        sourceType: 'invalid' as unknown as 'module',
+      }),
+    ).toThrow(/Unsupported sourceType/)
+  })
+
+  it('throws for unsupported typescript mode values', () => {
+    expect(() =>
+      transformJsxSource('const value = 1', {
+        typescript: 'erase-all' as unknown as 'preserve',
+      }),
+    ).toThrow(/Unsupported typescript mode/)
+  })
+
+  it('throws for unsupported internal strip backend values', () => {
+    const invalidBackendOptions = {
+      sourceType: 'script' as const,
+      typescript: 'strip' as const,
+      typescriptStripBackend: 'unknown-backend',
+    } as unknown as Parameters<typeof transformJsxSource>[1]
+
+    expect(() => transformJsxSource('const value = 1', invalidBackendOptions)).toThrow(
+      /Unsupported typescriptStripBackend/,
+    )
+  })
+
+  it('normalizes import metadata even when range fields are missing', async () => {
+    vi.resetModules()
+    vi.doMock('oxc-parser', () => ({
+      parseSync: () => ({
+        errors: [],
+        program: {
+          body: [
+            {
+              type: 'ImportDeclaration',
+              source: { value: 'pkg' },
+              importKind: 'type',
+              specifiers: [
+                {
+                  type: 'ImportSpecifier',
+                  imported: { name: 'Thing' },
+                  local: { name: 'Thing' },
+                  importKind: 'value',
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    }))
+
+    const { transformJsxSource: mockedTransformJsxSource } =
+      await import('../src/transform.js')
+
+    const result = mockedTransformJsxSource('const value = 1')
+
+    expect(result.imports).toHaveLength(1)
+    expect(result.imports[0]?.range).toBeNull()
+    expect(result.imports[0]?.bindings[0]?.range).toBeNull()
+    expect(result.imports[0]?.importKind).toBe('type')
+    expect(result.imports[0]?.bindings[0]?.isTypeOnly).toBe(true)
+
+    vi.doUnmock('oxc-parser')
+    vi.resetModules()
+  })
 })
