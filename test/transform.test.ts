@@ -1,7 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { transformJsxSource } from '../src/transform.js'
 import { transpileJsxSource } from '../src/transpile.js'
+
+type ManualStripBackendOptions = Parameters<typeof transformJsxSource>[1] & {
+  typescriptStripBackend: 'transpile-manual'
+}
 
 describe('transformJsxSource()', () => {
   it('produces deterministic import metadata snapshots', () => {
@@ -163,16 +167,52 @@ const Button = ({ label }: Props): unknown => <button>{label as string}</button>
 type Value = string
 const value = (input satisfies string)
 `
-
-    const result = transformJsxSource(input, {
+    const internalOptions: ManualStripBackendOptions = {
       sourceType: 'script',
       typescript: 'strip',
       typescriptStripBackend: 'transpile-manual',
-    })
+    }
+
+    const result = transformJsxSource(input, internalOptions)
 
     expect(result.diagnostics).toEqual([])
     expect(result.code).not.toContain('type Value =')
     expect(result.code).not.toContain('satisfies string')
     expect(() => new Function(result.code)).not.toThrow()
+  })
+
+  it('keeps changed aligned with returned code when transform emits diagnostics', async () => {
+    const source = "const value: string = 'ok'"
+    vi.resetModules()
+    vi.doMock('oxc-transform', () => ({
+      transformSync: () => ({
+        code: '',
+        helpersUsed: {},
+        errors: [
+          {
+            severity: 'Error',
+            message: 'mock transform failure',
+            labels: [{ start: 0, end: 0 }],
+            codeframe: null,
+            helpMessage: null,
+          },
+        ],
+      }),
+    }))
+
+    const { transformJsxSource: mockedTransformJsxSource } =
+      await import('../src/transform.js')
+
+    const result = mockedTransformJsxSource(source, {
+      sourceType: 'script',
+      typescript: 'strip',
+    })
+
+    expect(result.code).toBe(source)
+    expect(result.changed).toBe(false)
+    expect(result.diagnostics[0]?.source).toBe('transform')
+
+    vi.doUnmock('oxc-transform')
+    vi.resetModules()
   })
 })

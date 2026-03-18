@@ -42,7 +42,9 @@ export type TransformImport = {
   range: SourceRange | null
 }
 
-export type TransformJsxSourceOptions = TranspileJsxSourceOptions & {
+export type TransformJsxSourceOptions = TranspileJsxSourceOptions
+
+type InternalTransformJsxSourceOptions = TransformJsxSourceOptions & {
   /* Internal compare switch for parity spikes. */
   typescriptStripBackend?: TypeScriptStripBackend
 }
@@ -213,7 +215,7 @@ const collectImportMetadata = (body: unknown): TransformImport[] => {
   return imports
 }
 
-const ensureSupportedOptions = (options: TransformJsxSourceOptions) => {
+const ensureSupportedOptions = (options: InternalTransformJsxSourceOptions) => {
   if (
     options.sourceType !== undefined &&
     options.sourceType !== 'module' &&
@@ -249,11 +251,13 @@ export function transformJsxSource(
   source: string,
   options: TransformJsxSourceOptions = {},
 ): TransformJsxSourceResult {
-  ensureSupportedOptions(options)
+  const internalOptions = options as InternalTransformJsxSourceOptions
 
-  const sourceType = options.sourceType ?? 'module'
-  const typescriptMode = options.typescript ?? 'preserve'
-  const typescriptStripBackend = options.typescriptStripBackend ?? 'oxc-transform'
+  ensureSupportedOptions(internalOptions)
+
+  const sourceType = internalOptions.sourceType ?? 'module'
+  const typescriptMode = internalOptions.typescript ?? 'preserve'
+  const typescriptStripBackend = internalOptions.typescriptStripBackend ?? 'oxc-transform'
 
   const parsed = parseSync(
     'transform-jsx-source.tsx',
@@ -275,8 +279,8 @@ export function transformJsxSource(
 
   const transpileBaseOptions: TranspileJsxSourceOptions = {
     sourceType,
-    createElement: options.createElement,
-    fragment: options.fragment,
+    createElement: internalOptions.createElement,
+    fragment: internalOptions.fragment,
     typescript: 'preserve',
   }
 
@@ -316,9 +320,11 @@ export function transformJsxSource(
   const diagnostics = [...parserDiagnostics, ...transformDiagnostics]
 
   if (transformDiagnostics.length) {
+    const fallbackCode = transformed.code || source
+
     return {
-      code: transformed.code || source,
-      changed: transformed.code !== source,
+      code: fallbackCode,
+      changed: fallbackCode !== source,
       imports,
       diagnostics,
     }

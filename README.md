@@ -68,39 +68,52 @@ const button = jsx`
 document.body.append(button)
 ```
 
-### Source transpilation (`transpileJsxSource`)
+### Source transpilation (`transpileJsxSource` + `transformJsxSource`)
 
-Need to transform raw JSX source text (e.g. code typed in an editor) without Babel? Use `transpileJsxSource`:
+Need to transform raw JSX source text (for example, code typed in an editor) without Babel?
+Use one of these subpath exports:
+
+- `@knighted/jsx/transpile` for code-only output (`{ code, changed }`).
+- `@knighted/jsx/transform` for code plus parser-backed import metadata and diagnostics
+  (`{ code, changed, imports, diagnostics }`).
 
 ```ts
 import { transpileJsxSource } from '@knighted/jsx/transpile'
+import { transformJsxSource } from '@knighted/jsx/transform'
 
 const input = `
-const App = () => {
-  return <button>click me</button>
-}
+import React from 'react'
+const App = () => <button>click me</button>
 `
 
-const { code } = transpileJsxSource(input)
-// -> const App = () => { return React.createElement("button", null, "click me") }
+const transpiled = transpileJsxSource(input)
+// -> { code, changed }
+
+const transformed = transformJsxSource(input, { typescript: 'strip' })
+// -> { code, changed, imports, diagnostics }
 ```
 
-By default this emits `React.createElement(...)` and `React.Fragment`. Override them when needed:
+Both entrypoints emit `React.createElement(...)` and `React.Fragment` by default. Override
+them when needed:
 
 ```ts
 transpileJsxSource(input, {
   createElement: '__jsx',
   fragment: '__fragment',
 })
+
+transformJsxSource(input, {
+  createElement: '__jsx',
+  fragment: '__fragment',
+})
 ```
 
-By default, TypeScript syntax is preserved in the output. If your source needs to run directly
-as JavaScript (for example, code entered in an editor), enable type stripping:
+By default, TypeScript syntax is preserved in output. If your source needs to run directly as
+JavaScript, enable type stripping:
 
 ```ts
-transpileJsxSource(input, {
-  typescript: 'strip',
-})
+transpileJsxSource(input, { typescript: 'strip' })
+transformJsxSource(input, { typescript: 'strip' })
 ```
 
 Supported `typescript` modes:
@@ -108,6 +121,13 @@ Supported `typescript` modes:
 - `'preserve'` (default): keep TypeScript syntax in output.
 - `'strip'`: remove type-only declarations and erase inline type syntax (`: T`, `as T`,
   `satisfies T`, non-null assertions, and type assertions) while still transpiling JSX.
+
+Environment note:
+
+- Both APIs are ESM-first and work in Node.
+- For direct browser usage of `@knighted/jsx/transform`, use a CDN/runtime that can resolve
+  `oxc-transform` for the browser build (for example, modern ESM CDNs that bundle or map
+  WASM/native bindings automatically).
 
 ### React runtime (`reactJsx`)
 
