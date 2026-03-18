@@ -1,6 +1,6 @@
 {
   "name": "@knighted/jsx",
-  "version": "1.9.2",
+  "version": "1.10.0",
   "description": "Runtime JSX tagged template that renders DOM or React trees anywhere with or without a build step.",
   "keywords": [
     "jsx runtime",
@@ -106,6 +106,11 @@
       "import": "./dist/transpile.js",
       "default": "./dist/transpile.js"
     },
+    "./transform": {
+      "types": "./dist/transform.d.ts",
+      "import": "./dist/transform.js",
+      "default": "./dist/transform.js"
+    },
     "./loader": {
       "import": "./dist/loader/jsx.js",
       "default": "./dist/loader/jsx.js"
@@ -185,6 +190,7 @@
     "@napi-rs/wasm-runtime": "^1.1.1",
     "magic-string": "^0.30.21",
     "oxc-parser": "^0.116.0",
+    "oxc-transform": "^0.116.0",
     "property-information": "^7.1.0",
     "tar": "^7.5.11"
   },

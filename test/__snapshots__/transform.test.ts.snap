@@ -1,0 +1,115 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`transformJsxSource() > produces a stable parser diagnostics snapshot shape 1`] = `
+[
+  {
+    "codeframe": "<codeframe>",
+    "helpMessage": null,
+    "message": "Expected \`}\` but found \`EOF\`",
+    "range": [
+      8,
+      8,
+    ],
+    "severity": "Error",
+    "source": "parser",
+  },
+]
+`;
+
+exports[`transformJsxSource() > produces deterministic import metadata snapshots 1`] = `
+[
+  {
+    "bindings": [
+      {
+        "imported": "default",
+        "isTypeOnly": false,
+        "kind": "default",
+        "local": "React",
+        "range": [
+          8,
+          13,
+        ],
+      },
+      {
+        "imported": "useMemo",
+        "isTypeOnly": false,
+        "kind": "named",
+        "local": "memo",
+        "range": [
+          17,
+          32,
+        ],
+      },
+      {
+        "imported": "FC",
+        "isTypeOnly": true,
+        "kind": "named",
+        "local": "FC",
+        "range": [
+          34,
+          41,
+        ],
+      },
+    ],
+    "importKind": "value",
+    "range": [
+      1,
+      56,
+    ],
+    "sideEffectOnly": false,
+    "source": "react",
+  },
+  {
+    "bindings": [
+      {
+        "imported": "*",
+        "isTypeOnly": false,
+        "kind": "namespace",
+        "local": "Theme",
+        "range": [
+          64,
+          74,
+        ],
+      },
+    ],
+    "importKind": "value",
+    "range": [
+      57,
+      92,
+    ],
+    "sideEffectOnly": false,
+    "source": "@app/theme",
+  },
+  {
+    "bindings": [
+      {
+        "imported": "Palette",
+        "isTypeOnly": true,
+        "kind": "named",
+        "local": "Palette",
+        "range": [
+          107,
+          114,
+        ],
+      },
+    ],
+    "importKind": "type",
+    "range": [
+      93,
+      133,
+    ],
+    "sideEffectOnly": false,
+    "source": "./palette",
+  },
+  {
+    "bindings": [],
+    "importKind": "value",
+    "range": [
+      134,
+      152,
+    ],
+    "sideEffectOnly": true,
+    "source": "./app.css",
+  },
+]
+`;
