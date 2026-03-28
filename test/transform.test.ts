@@ -733,6 +733,43 @@ const value = (input satisfies string)
     vi.resetModules()
   })
 
+  it('returns false for non-JSX expression statement shapes', async () => {
+    vi.resetModules()
+    vi.doMock('oxc-parser', () => ({
+      parseSync: () => ({
+        errors: [],
+        program: {
+          body: [
+            {
+              type: 'ExpressionStatement',
+              expression: null,
+            },
+            {
+              type: 'ExpressionStatement',
+              expression: {
+                type: 'Identifier',
+                name: 'value',
+              },
+            },
+          ],
+        },
+      }),
+    }))
+
+    const { transformJsxSource: mockedTransformJsxSource } =
+      await import('../src/transform.js')
+
+    const result = mockedTransformJsxSource('const value = 1', {
+      collectTopLevelJsxExpression: true,
+    })
+
+    expect(result.hasTopLevelJsxExpression).toBe(false)
+    expect(result.topLevelJsxExpressionRange).toBeNull()
+
+    vi.doUnmock('oxc-parser')
+    vi.resetModules()
+  })
+
   it('marks sideEffectOnly only for value imports with no bindings', async () => {
     vi.resetModules()
     vi.doMock('oxc-parser', () => ({

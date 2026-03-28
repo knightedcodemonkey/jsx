@@ -436,18 +436,6 @@ const toJsxExpressionNode = (value: unknown): Record<string, unknown> | null => 
   return null
 }
 
-const isJsxExpressionNode = (value: unknown): boolean =>
-  toJsxExpressionNode(value) !== null
-
-const toTopLevelJsxExpressionRange = (value: unknown): SourceRange | null => {
-  const jsxNode = toJsxExpressionNode(value)
-  if (!jsxNode) {
-    return null
-  }
-
-  return toSourceRange(jsxNode)
-}
-
 type TopLevelJsxExpressionMetadata = {
   hasTopLevelJsxExpression: boolean
   topLevelJsxExpressionRange: SourceRange | null
@@ -470,10 +458,11 @@ const collectTopLevelJsxExpressionMetadata = (
       continue
     }
 
-    if (isJsxExpressionNode(statement.expression)) {
+    const jsxNode = toJsxExpressionNode(statement.expression)
+    if (jsxNode) {
       return {
         hasTopLevelJsxExpression: true,
-        topLevelJsxExpressionRange: toTopLevelJsxExpressionRange(statement.expression),
+        topLevelJsxExpressionRange: toSourceRange(jsxNode),
       }
     }
   }
