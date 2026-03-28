@@ -6,6 +6,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import type * as React from 'react'
 import type {
+  ReactJsxChildren,
   ReactJsxComponent,
   ReactJsxDomAttributes,
   ReactJsxEventHandler,
@@ -52,3 +53,6 @@ type DemoPropsArePropsWithChildren = Expect<
 >
 
 type RenderableAllowsNull = Expect<null extends ReactJsxRenderable ? true : false>
+type ReactChildrenAliasMatchesRenderableUnion = Expect<
+  Equal<ReactJsxChildren, ReactJsxRenderable | ReactJsxRenderable[]>
+>

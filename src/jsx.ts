@@ -42,7 +42,7 @@ import type { JsxComponent, JsxRenderable } from './internal/jsx-types.js'
 
 type JsxContext = TemplateContext<JsxComponent>
 type ElementWithIndex = Element & Record<string, unknown>
-export type { JsxRenderable, JsxComponent } from './internal/jsx-types.js'
+export type { JsxRenderable, JsxChildren, JsxComponent } from './internal/jsx-types.js'
 
 const ensureDomAvailable = () => {
   if (typeof document === 'undefined' || typeof document.createElement !== 'function') {

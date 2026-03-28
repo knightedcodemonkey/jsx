@@ -4,4 +4,4 @@ import { jsx as baseJsx } from '../jsx.js'
 ensureNodeDom()
 
 export const jsx = baseJsx
-export type { JsxRenderable, JsxComponent } from '../jsx.js'
+export type { JsxRenderable, JsxChildren, JsxComponent } from '../jsx.js'

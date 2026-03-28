@@ -1,5 +1,6 @@
 export { reactJsx } from './react-jsx.js'
 export type {
+  ReactJsxChildren,
   ReactJsxComponent,
   ReactJsxDomAttributes,
   ReactJsxEventHandler,
