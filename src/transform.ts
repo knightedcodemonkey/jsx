@@ -546,6 +546,9 @@ export function transformJsxSource(
   const topLevelJsxExpressionMetadata = internalOptions.collectTopLevelJsxExpression
     ? collectTopLevelJsxExpressionMetadata(parsed.program.body)
     : undefined
+  const hasTopLevelJsxExpression = topLevelJsxExpressionMetadata?.hasTopLevelJsxExpression
+  const topLevelJsxExpressionRange =
+    topLevelJsxExpressionMetadata?.topLevelJsxExpressionRange
 
   if (parserDiagnostics.length) {
     return {
@@ -554,9 +557,8 @@ export function transformJsxSource(
       imports,
       diagnostics: parserDiagnostics,
       declarations,
-      hasTopLevelJsxExpression: topLevelJsxExpressionMetadata?.hasTopLevelJsxExpression,
-      topLevelJsxExpressionRange:
-        topLevelJsxExpressionMetadata?.topLevelJsxExpressionRange,
+      hasTopLevelJsxExpression,
+      topLevelJsxExpressionRange,
     }
   }
 
@@ -575,9 +577,8 @@ export function transformJsxSource(
       imports,
       diagnostics: parserDiagnostics,
       declarations,
-      hasTopLevelJsxExpression: topLevelJsxExpressionMetadata?.hasTopLevelJsxExpression,
-      topLevelJsxExpressionRange:
-        topLevelJsxExpressionMetadata?.topLevelJsxExpressionRange,
+      hasTopLevelJsxExpression,
+      topLevelJsxExpressionRange,
     }
   }
 
@@ -593,9 +594,8 @@ export function transformJsxSource(
       imports,
       diagnostics: parserDiagnostics,
       declarations,
-      hasTopLevelJsxExpression: topLevelJsxExpressionMetadata?.hasTopLevelJsxExpression,
-      topLevelJsxExpressionRange:
-        topLevelJsxExpressionMetadata?.topLevelJsxExpressionRange,
+      hasTopLevelJsxExpression,
+      topLevelJsxExpressionRange,
     }
   }
 
@@ -619,9 +619,8 @@ export function transformJsxSource(
       imports,
       diagnostics,
       declarations,
-      hasTopLevelJsxExpression: topLevelJsxExpressionMetadata?.hasTopLevelJsxExpression,
-      topLevelJsxExpressionRange:
-        topLevelJsxExpressionMetadata?.topLevelJsxExpressionRange,
+      hasTopLevelJsxExpression,
+      topLevelJsxExpressionRange,
     }
   }
 
@@ -633,7 +632,7 @@ export function transformJsxSource(
     imports,
     diagnostics,
     declarations,
-    hasTopLevelJsxExpression: topLevelJsxExpressionMetadata?.hasTopLevelJsxExpression,
-    topLevelJsxExpressionRange: topLevelJsxExpressionMetadata?.topLevelJsxExpressionRange,
+    hasTopLevelJsxExpression,
+    topLevelJsxExpressionRange,
   }
 }
