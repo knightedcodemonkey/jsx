@@ -51,6 +51,180 @@ const App = () => (
     expect(transformed.changed).toBe(transpiled.changed)
     expect(transformed.imports).toEqual([])
     expect(transformed.diagnostics).toEqual([])
+    expect(transformed.declarations).toBeUndefined()
+  })
+
+  it('collects top-level declarations when requested', () => {
+    const input = `
+const LocalArrow = () => <button>arrow</button>
+const LocalFunctionExpr = function named() { return null }
+const LocalClassExpr = class Named {}
+const LocalValue = 42
+function LocalFn() { return <LocalArrow /> }
+class LocalClass {}
+export const ExportedArrow = () => <button>exported</button>
+export function ExportedFn() { return <ExportedArrow /> }
+export default function App() { return <ExportedArrow /> }
+`
+
+    const result = transformJsxSource(input, {
+      collectTopLevelDeclarations: true,
+      typescript: 'strip',
+    })
+
+    expect(result.diagnostics).toEqual([])
+    expect(result.declarations).toHaveLength(9)
+    expect(result.declarations).toEqual([
+      {
+        name: 'LocalArrow',
+        kind: 'variable',
+        exportKind: 'none',
+        range: expect.any(Array),
+        statementRange: expect.any(Array),
+        initializerKind: 'arrow-function',
+      },
+      {
+        name: 'LocalFunctionExpr',
+        kind: 'variable',
+        exportKind: 'none',
+        range: expect.any(Array),
+        statementRange: expect.any(Array),
+        initializerKind: 'function-expression',
+      },
+      {
+        name: 'LocalClassExpr',
+        kind: 'variable',
+        exportKind: 'none',
+        range: expect.any(Array),
+        statementRange: expect.any(Array),
+        initializerKind: 'class-expression',
+      },
+      {
+        name: 'LocalValue',
+        kind: 'variable',
+        exportKind: 'none',
+        range: expect.any(Array),
+        statementRange: expect.any(Array),
+        initializerKind: 'other',
+      },
+      {
+        name: 'LocalFn',
+        kind: 'function',
+        exportKind: 'none',
+        range: expect.any(Array),
+        statementRange: expect.any(Array),
+        initializerKind: null,
+      },
+      {
+        name: 'LocalClass',
+        kind: 'class',
+        exportKind: 'none',
+        range: expect.any(Array),
+        statementRange: expect.any(Array),
+        initializerKind: null,
+      },
+      {
+        name: 'ExportedArrow',
+        kind: 'variable',
+        exportKind: 'named',
+        range: expect.any(Array),
+        statementRange: expect.any(Array),
+        initializerKind: 'arrow-function',
+      },
+      {
+        name: 'ExportedFn',
+        kind: 'function',
+        exportKind: 'named',
+        range: expect.any(Array),
+        statementRange: expect.any(Array),
+        initializerKind: null,
+      },
+      {
+        name: 'App',
+        kind: 'function',
+        exportKind: 'default',
+        range: expect.any(Array),
+        statementRange: expect.any(Array),
+        initializerKind: null,
+      },
+    ])
+
+    expect(result.declarations?.every(declaration => declaration.range !== null)).toBe(
+      true,
+    )
+    expect(
+      result.declarations?.every(declaration => declaration.statementRange !== null),
+    ).toBe(true)
+  })
+
+  it('collects top-level declarations for all valid identifier naming styles', () => {
+    const input = `
+const camelCase = () => null
+const snake_case = () => null
+const $dollar = () => null
+const _underscore = () => null
+function lowerFn() { return null }
+`
+
+    const result = transformJsxSource(input, {
+      collectTopLevelDeclarations: true,
+    })
+
+    expect(result.diagnostics).toEqual([])
+    expect(result.declarations).toHaveLength(5)
+    expect(result.declarations).toEqual([
+      {
+        name: 'camelCase',
+        kind: 'variable',
+        exportKind: 'none',
+        range: expect.any(Array),
+        statementRange: expect.any(Array),
+        initializerKind: 'arrow-function',
+      },
+      {
+        name: 'snake_case',
+        kind: 'variable',
+        exportKind: 'none',
+        range: expect.any(Array),
+        statementRange: expect.any(Array),
+        initializerKind: 'arrow-function',
+      },
+      {
+        name: '$dollar',
+        kind: 'variable',
+        exportKind: 'none',
+        range: expect.any(Array),
+        statementRange: expect.any(Array),
+        initializerKind: 'arrow-function',
+      },
+      {
+        name: '_underscore',
+        kind: 'variable',
+        exportKind: 'none',
+        range: expect.any(Array),
+        statementRange: expect.any(Array),
+        initializerKind: 'arrow-function',
+      },
+      {
+        name: 'lowerFn',
+        kind: 'function',
+        exportKind: 'none',
+        range: expect.any(Array),
+        statementRange: expect.any(Array),
+        initializerKind: null,
+      },
+    ])
+  })
+
+  it('returns a declarations array on parser-error paths when requested', () => {
+    const input = 'const App = () => <button>ok</button>\nimport {'
+
+    const result = transformJsxSource(input, {
+      collectTopLevelDeclarations: true,
+    })
+
+    expect(result.diagnostics[0]?.source).toBe('parser')
+    expect(Array.isArray(result.declarations)).toBe(true)
   })
 
   it('returns parser diagnostics with source ranges', () => {
@@ -244,6 +418,14 @@ const value = (input satisfies string)
     )
   })
 
+  it('throws for unsupported collectTopLevelDeclarations values', () => {
+    expect(() =>
+      transformJsxSource('const value = 1', {
+        collectTopLevelDeclarations: 'yes' as unknown as boolean,
+      }),
+    ).toThrow(/Unsupported collectTopLevelDeclarations value/)
+  })
+
   it('normalizes import metadata even when range fields are missing', async () => {
     vi.resetModules()
     vi.doMock('oxc-parser', () => ({
@@ -279,6 +461,162 @@ const value = (input satisfies string)
     expect(result.imports[0]?.bindings[0]?.range).toBeNull()
     expect(result.imports[0]?.importKind).toBe('type')
     expect(result.imports[0]?.bindings[0]?.isTypeOnly).toBe(true)
+
+    vi.doUnmock('oxc-parser')
+    vi.resetModules()
+  })
+
+  it('normalizes declaration metadata with mixed export wrappers and missing ranges', async () => {
+    vi.resetModules()
+    vi.doMock('oxc-parser', () => ({
+      parseSync: () => ({
+        errors: [],
+        program: {
+          body: [
+            {
+              type: 'ExportNamedDeclaration',
+              declaration: {
+                type: 'VariableDeclaration',
+                declarations: [
+                  {
+                    type: 'VariableDeclarator',
+                    id: { type: 'Identifier', name: 'namedNoInit' },
+                  },
+                ],
+              },
+            },
+            {
+              type: 'ExportDefaultDeclaration',
+              declaration: {
+                type: 'FunctionDeclaration',
+                id: { type: 'Identifier', name: 'DefaultFn' },
+              },
+            },
+            {
+              type: 'ExportDefaultDeclaration',
+              declaration: {
+                type: 'ClassDeclaration',
+                id: { type: 'Identifier', name: 'DefaultClass' },
+              },
+            },
+            {
+              type: 'ExportDefaultDeclaration',
+              declaration: {
+                type: 'FunctionDeclaration',
+                id: null,
+              },
+            },
+            {
+              type: 'VariableDeclaration',
+              declarations: [
+                null,
+                {
+                  type: 'VariableDeclarator',
+                  id: { type: 'ObjectPattern' },
+                  init: { type: 'ArrowFunctionExpression' },
+                },
+                {
+                  type: 'VariableDeclarator',
+                  id: { type: 'Identifier', name: 'classExprValue' },
+                  init: { type: 'ClassExpression' },
+                },
+                {
+                  type: 'VariableDeclarator',
+                  id: { type: 'Identifier', name: 'otherInitValue' },
+                  init: { type: 'CallExpression' },
+                },
+              ],
+            },
+            {
+              type: 'ExpressionStatement',
+            },
+            {
+              type: 'ExportNamedDeclaration',
+              declaration: null,
+            },
+            {
+              type: 'ExportDefaultDeclaration',
+              declaration: null,
+            },
+          ],
+        },
+      }),
+    }))
+
+    const { transformJsxSource: mockedTransformJsxSource } =
+      await import('../src/transform.js')
+
+    const result = mockedTransformJsxSource('const value = 1', {
+      collectTopLevelDeclarations: true,
+    })
+
+    expect(result.declarations).toHaveLength(5)
+    expect(result.declarations).toEqual([
+      {
+        name: 'namedNoInit',
+        kind: 'variable',
+        exportKind: 'named',
+        initializerKind: null,
+        range: null,
+        statementRange: null,
+      },
+      {
+        name: 'DefaultFn',
+        kind: 'function',
+        exportKind: 'default',
+        initializerKind: null,
+        range: null,
+        statementRange: null,
+      },
+      {
+        name: 'DefaultClass',
+        kind: 'class',
+        exportKind: 'default',
+        initializerKind: null,
+        range: null,
+        statementRange: null,
+      },
+      {
+        name: 'classExprValue',
+        kind: 'variable',
+        exportKind: 'none',
+        initializerKind: 'class-expression',
+        range: null,
+        statementRange: null,
+      },
+      {
+        name: 'otherInitValue',
+        kind: 'variable',
+        exportKind: 'none',
+        initializerKind: 'other',
+        range: null,
+        statementRange: null,
+      },
+    ])
+
+    vi.doUnmock('oxc-parser')
+    vi.resetModules()
+  })
+
+  it('returns an empty declarations array when parser body is not an array', async () => {
+    vi.resetModules()
+    vi.doMock('oxc-parser', () => ({
+      parseSync: () => ({
+        errors: [],
+        program: {
+          body: null,
+        },
+      }),
+    }))
+
+    const { transformJsxSource: mockedTransformJsxSource } =
+      await import('../src/transform.js')
+
+    const result = mockedTransformJsxSource('const value = 1', {
+      collectTopLevelDeclarations: true,
+    })
+
+    expect(result.declarations).toEqual([])
 
     vi.doUnmock('oxc-parser')
     vi.resetModules()
