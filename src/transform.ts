@@ -64,6 +64,7 @@ export type TransformTopLevelDeclaration = {
 
 export type TransformJsxSourceOptions = TranspileJsxSourceOptions & {
   collectTopLevelDeclarations?: boolean
+  collectTopLevelJsxExpression?: boolean
 }
 
 type InternalTransformJsxSourceOptions = TransformJsxSourceOptions & {
@@ -77,6 +78,7 @@ export type TransformJsxSourceResult = {
   imports: TransformImport[]
   diagnostics: TransformDiagnostic[]
   declarations?: TransformTopLevelDeclaration[]
+  hasTopLevelJsxExpression?: boolean
 }
 
 const createParserOptions = (sourceType: TransformSourceType) => ({
@@ -394,6 +396,59 @@ const collectTopLevelDeclarationMetadata = (
   return declarations
 }
 
+const unwrapExpressionNode = (value: unknown): unknown => {
+  let current = value
+
+  while (isObjectRecord(current) && typeof current.type === 'string') {
+    if (current.type === 'ParenthesizedExpression') {
+      current = current.expression
+      continue
+    }
+
+    if (
+      current.type === 'TSAsExpression' ||
+      current.type === 'TSSatisfiesExpression' ||
+      current.type === 'TSInstantiationExpression' ||
+      current.type === 'TSNonNullExpression' ||
+      current.type === 'TSTypeAssertion'
+    ) {
+      current = current.expression
+      continue
+    }
+
+    break
+  }
+
+  return current
+}
+
+const isJsxExpressionNode = (value: unknown): boolean => {
+  const unwrapped = unwrapExpressionNode(value)
+  if (!isObjectRecord(unwrapped) || typeof unwrapped.type !== 'string') {
+    return false
+  }
+
+  return unwrapped.type === 'JSXElement' || unwrapped.type === 'JSXFragment'
+}
+
+const collectTopLevelJsxExpressionMetadata = (body: unknown): boolean => {
+  if (!Array.isArray(body)) {
+    return false
+  }
+
+  for (const statement of body) {
+    if (!isObjectRecord(statement) || statement.type !== 'ExpressionStatement') {
+      continue
+    }
+
+    if (isJsxExpressionNode(statement.expression)) {
+      return true
+    }
+  }
+
+  return false
+}
+
 const ensureSupportedOptions = (options: InternalTransformJsxSourceOptions) => {
   if (
     options.sourceType !== undefined &&
@@ -433,6 +488,15 @@ const ensureSupportedOptions = (options: InternalTransformJsxSourceOptions) => {
       `[jsx] Unsupported collectTopLevelDeclarations value "${String(options.collectTopLevelDeclarations)}". Use true or false.`,
     )
   }
+
+  if (
+    options.collectTopLevelJsxExpression !== undefined &&
+    typeof options.collectTopLevelJsxExpression !== 'boolean'
+  ) {
+    throw new Error(
+      `[jsx] Unsupported collectTopLevelJsxExpression value "${String(options.collectTopLevelJsxExpression)}". Use true or false.`,
+    )
+  }
 }
 
 export function transformJsxSource(
@@ -458,6 +522,9 @@ export function transformJsxSource(
   const declarations = internalOptions.collectTopLevelDeclarations
     ? collectTopLevelDeclarationMetadata(parsed.program.body)
     : undefined
+  const hasTopLevelJsxExpression = internalOptions.collectTopLevelJsxExpression
+    ? collectTopLevelJsxExpressionMetadata(parsed.program.body)
+    : undefined
 
   if (parserDiagnostics.length) {
     return {
@@ -466,6 +533,7 @@ export function transformJsxSource(
       imports,
       diagnostics: parserDiagnostics,
       declarations,
+      hasTopLevelJsxExpression,
     }
   }
 
@@ -484,6 +552,7 @@ export function transformJsxSource(
       imports,
       diagnostics: parserDiagnostics,
       declarations,
+      hasTopLevelJsxExpression,
     }
   }
 
@@ -499,6 +568,7 @@ export function transformJsxSource(
       imports,
       diagnostics: parserDiagnostics,
       declarations,
+      hasTopLevelJsxExpression,
     }
   }
 
@@ -522,6 +592,7 @@ export function transformJsxSource(
       imports,
       diagnostics,
       declarations,
+      hasTopLevelJsxExpression,
     }
   }
 
@@ -533,5 +604,6 @@ export function transformJsxSource(
     imports,
     diagnostics,
     declarations,
+    hasTopLevelJsxExpression,
   }
 }
