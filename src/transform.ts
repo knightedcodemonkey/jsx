@@ -79,6 +79,7 @@ export type TransformJsxSourceResult = {
   diagnostics: TransformDiagnostic[]
   declarations?: TransformTopLevelDeclaration[]
   hasTopLevelJsxExpression?: boolean
+  topLevelJsxExpressionRange?: SourceRange | null
 }
 
 const createParserOptions = (sourceType: TransformSourceType) => ({
@@ -431,9 +432,21 @@ const isJsxExpressionNode = (value: unknown): boolean => {
   return unwrapped.type === 'JSXElement' || unwrapped.type === 'JSXFragment'
 }
 
-const collectTopLevelJsxExpressionMetadata = (body: unknown): boolean => {
+type TopLevelJsxExpressionMetadata = {
+  hasTopLevelJsxExpression: boolean
+  topLevelJsxExpressionRange: SourceRange | null
+}
+
+const createEmptyTopLevelJsxExpressionMetadata = (): TopLevelJsxExpressionMetadata => ({
+  hasTopLevelJsxExpression: false,
+  topLevelJsxExpressionRange: null,
+})
+
+const collectTopLevelJsxExpressionMetadata = (
+  body: unknown,
+): TopLevelJsxExpressionMetadata => {
   if (!Array.isArray(body)) {
-    return false
+    return createEmptyTopLevelJsxExpressionMetadata()
   }
 
   for (const statement of body) {
@@ -442,11 +455,14 @@ const collectTopLevelJsxExpressionMetadata = (body: unknown): boolean => {
     }
 
     if (isJsxExpressionNode(statement.expression)) {
-      return true
+      return {
+        hasTopLevelJsxExpression: true,
+        topLevelJsxExpressionRange: toSourceRange(statement.expression),
+      }
     }
   }
 
-  return false
+  return createEmptyTopLevelJsxExpressionMetadata()
 }
 
 const ensureSupportedOptions = (options: InternalTransformJsxSourceOptions) => {
@@ -522,7 +538,7 @@ export function transformJsxSource(
   const declarations = internalOptions.collectTopLevelDeclarations
     ? collectTopLevelDeclarationMetadata(parsed.program.body)
     : undefined
-  const hasTopLevelJsxExpression = internalOptions.collectTopLevelJsxExpression
+  const topLevelJsxExpressionMetadata = internalOptions.collectTopLevelJsxExpression
     ? collectTopLevelJsxExpressionMetadata(parsed.program.body)
     : undefined
 
@@ -533,7 +549,9 @@ export function transformJsxSource(
       imports,
       diagnostics: parserDiagnostics,
       declarations,
-      hasTopLevelJsxExpression,
+      hasTopLevelJsxExpression: topLevelJsxExpressionMetadata?.hasTopLevelJsxExpression,
+      topLevelJsxExpressionRange:
+        topLevelJsxExpressionMetadata?.topLevelJsxExpressionRange,
     }
   }
 
@@ -552,7 +570,9 @@ export function transformJsxSource(
       imports,
       diagnostics: parserDiagnostics,
       declarations,
-      hasTopLevelJsxExpression,
+      hasTopLevelJsxExpression: topLevelJsxExpressionMetadata?.hasTopLevelJsxExpression,
+      topLevelJsxExpressionRange:
+        topLevelJsxExpressionMetadata?.topLevelJsxExpressionRange,
     }
   }
 
@@ -568,7 +588,9 @@ export function transformJsxSource(
       imports,
       diagnostics: parserDiagnostics,
       declarations,
-      hasTopLevelJsxExpression,
+      hasTopLevelJsxExpression: topLevelJsxExpressionMetadata?.hasTopLevelJsxExpression,
+      topLevelJsxExpressionRange:
+        topLevelJsxExpressionMetadata?.topLevelJsxExpressionRange,
     }
   }
 
@@ -592,7 +614,9 @@ export function transformJsxSource(
       imports,
       diagnostics,
       declarations,
-      hasTopLevelJsxExpression,
+      hasTopLevelJsxExpression: topLevelJsxExpressionMetadata?.hasTopLevelJsxExpression,
+      topLevelJsxExpressionRange:
+        topLevelJsxExpressionMetadata?.topLevelJsxExpressionRange,
     }
   }
 
@@ -604,6 +628,7 @@ export function transformJsxSource(
     imports,
     diagnostics,
     declarations,
-    hasTopLevelJsxExpression,
+    hasTopLevelJsxExpression: topLevelJsxExpressionMetadata?.hasTopLevelJsxExpression,
+    topLevelJsxExpressionRange: topLevelJsxExpressionMetadata?.topLevelJsxExpressionRange,
   }
 }

@@ -64,6 +64,9 @@ const App = () => (
 
     expect(result.diagnostics).toEqual([])
     expect(result.hasTopLevelJsxExpression).toBe(true)
+    expect(result.topLevelJsxExpressionRange).toHaveLength(2)
+    const [start, end] = result.topLevelJsxExpressionRange as [number, number]
+    expect(input.slice(start, end)).toBe('<button type="button">hello</button>')
   })
 
   it('reports false top-level JSX expression metadata when absent', () => {
@@ -75,6 +78,7 @@ const App = () => (
 
     expect(result.diagnostics).toEqual([])
     expect(result.hasTopLevelJsxExpression).toBe(false)
+    expect(result.topLevelJsxExpressionRange).toBeNull()
   })
 
   it('collects top-level declarations when requested', () => {
@@ -260,6 +264,7 @@ function lowerFn() { return null }
     expect(result.diagnostics[0]?.source).toBe('parser')
     expect(typeof result.hasTopLevelJsxExpression).toBe('boolean')
     expect(result.hasTopLevelJsxExpression).toBe(false)
+    expect(result.topLevelJsxExpressionRange).toBeNull()
   })
 
   it('returns parser diagnostics with source ranges', () => {
@@ -684,6 +689,7 @@ const value = (input satisfies string)
     })
 
     expect(result.hasTopLevelJsxExpression).toBe(false)
+    expect(result.topLevelJsxExpressionRange).toBeNull()
 
     vi.doUnmock('oxc-parser')
     vi.resetModules()
@@ -721,6 +727,7 @@ const value = (input satisfies string)
     })
 
     expect(result.hasTopLevelJsxExpression).toBe(true)
+    expect(result.topLevelJsxExpressionRange).toBeNull()
 
     vi.doUnmock('oxc-parser')
     vi.resetModules()
