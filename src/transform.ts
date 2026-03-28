@@ -42,7 +42,29 @@ export type TransformImport = {
   range: SourceRange | null
 }
 
-export type TransformJsxSourceOptions = TranspileJsxSourceOptions
+export type TransformTopLevelDeclarationKind = 'function' | 'class' | 'variable'
+
+export type TransformTopLevelDeclarationExportKind = 'none' | 'named' | 'default'
+
+export type TransformVariableInitializerKind =
+  | 'arrow-function'
+  | 'function-expression'
+  | 'class-expression'
+  | 'other'
+  | null
+
+export type TransformTopLevelDeclaration = {
+  name: string
+  kind: TransformTopLevelDeclarationKind
+  exportKind: TransformTopLevelDeclarationExportKind
+  range: SourceRange | null
+  statementRange: SourceRange | null
+  initializerKind: TransformVariableInitializerKind
+}
+
+export type TransformJsxSourceOptions = TranspileJsxSourceOptions & {
+  collectTopLevelDeclarations?: boolean
+}
 
 type InternalTransformJsxSourceOptions = TransformJsxSourceOptions & {
   /* Internal compare switch for parity spikes. */
@@ -54,6 +76,7 @@ export type TransformJsxSourceResult = {
   changed: boolean
   imports: TransformImport[]
   diagnostics: TransformDiagnostic[]
+  declarations?: TransformTopLevelDeclaration[]
 }
 
 const createParserOptions = (sourceType: TransformSourceType) => ({
@@ -214,6 +237,163 @@ const collectImportMetadata = (body: unknown): TransformImport[] => {
   return imports
 }
 
+const toIdentifierName = (value: unknown): string | null => {
+  if (!isObjectRecord(value)) {
+    return null
+  }
+
+  if (value.type !== 'Identifier') {
+    return null
+  }
+
+  return typeof value.name === 'string' ? value.name : null
+}
+
+const toVariableInitializerKind = (value: unknown): TransformVariableInitializerKind => {
+  if (!isObjectRecord(value) || typeof value.type !== 'string') {
+    return null
+  }
+
+  if (value.type === 'ArrowFunctionExpression') {
+    return 'arrow-function'
+  }
+
+  if (value.type === 'FunctionExpression') {
+    return 'function-expression'
+  }
+
+  if (value.type === 'ClassExpression') {
+    return 'class-expression'
+  }
+
+  return 'other'
+}
+
+const pushTopLevelDeclarationMetadata = ({
+  declaration,
+  exportKind,
+  statementRange,
+  declarations,
+}: {
+  declaration: Record<string, unknown>
+  exportKind: TransformTopLevelDeclarationExportKind
+  statementRange: SourceRange | null
+  declarations: TransformTopLevelDeclaration[]
+}) => {
+  if (declaration.type === 'FunctionDeclaration') {
+    const name = toIdentifierName(declaration.id)
+    if (!name) {
+      return
+    }
+
+    declarations.push({
+      name,
+      kind: 'function',
+      exportKind,
+      range: toSourceRange(declaration),
+      statementRange,
+      initializerKind: null,
+    })
+    return
+  }
+
+  if (declaration.type === 'ClassDeclaration') {
+    const name = toIdentifierName(declaration.id)
+    if (!name) {
+      return
+    }
+
+    declarations.push({
+      name,
+      kind: 'class',
+      exportKind,
+      range: toSourceRange(declaration),
+      statementRange,
+      initializerKind: null,
+    })
+    return
+  }
+
+  if (!Array.isArray(declaration.declarations)) {
+    return
+  }
+
+  for (const declarator of declaration.declarations) {
+    if (!isObjectRecord(declarator)) {
+      continue
+    }
+
+    const name = toIdentifierName(declarator.id)
+    if (!name) {
+      continue
+    }
+
+    declarations.push({
+      name,
+      kind: 'variable',
+      exportKind,
+      range: toSourceRange(declarator),
+      statementRange,
+      initializerKind: toVariableInitializerKind(declarator.init),
+    })
+  }
+}
+
+const collectTopLevelDeclarationMetadata = (
+  body: unknown,
+): TransformTopLevelDeclaration[] => {
+  if (!Array.isArray(body)) {
+    return []
+  }
+
+  const declarations: TransformTopLevelDeclaration[] = []
+
+  for (const statement of body) {
+    if (!isObjectRecord(statement) || typeof statement.type !== 'string') {
+      continue
+    }
+
+    const statementRange = toSourceRange(statement)
+
+    if (statement.type === 'ExportNamedDeclaration') {
+      if (!isObjectRecord(statement.declaration)) {
+        continue
+      }
+
+      pushTopLevelDeclarationMetadata({
+        declaration: statement.declaration,
+        exportKind: 'named',
+        statementRange,
+        declarations,
+      })
+      continue
+    }
+
+    if (statement.type === 'ExportDefaultDeclaration') {
+      if (!isObjectRecord(statement.declaration)) {
+        continue
+      }
+
+      pushTopLevelDeclarationMetadata({
+        declaration: statement.declaration,
+        exportKind: 'default',
+        statementRange,
+        declarations,
+      })
+      continue
+    }
+
+    pushTopLevelDeclarationMetadata({
+      declaration: statement,
+      exportKind: 'none',
+      statementRange,
+      declarations,
+    })
+  }
+
+  return declarations
+}
+
 const ensureSupportedOptions = (options: InternalTransformJsxSourceOptions) => {
   if (
     options.sourceType !== undefined &&
@@ -244,6 +424,15 @@ const ensureSupportedOptions = (options: InternalTransformJsxSourceOptions) => {
       `[jsx] Unsupported typescriptStripBackend "${String(options.typescriptStripBackend)}". Use "oxc-transform" or "transpile-manual".`,
     )
   }
+
+  if (
+    options.collectTopLevelDeclarations !== undefined &&
+    typeof options.collectTopLevelDeclarations !== 'boolean'
+  ) {
+    throw new Error(
+      `[jsx] Unsupported collectTopLevelDeclarations value "${String(options.collectTopLevelDeclarations)}". Use true or false.`,
+    )
+  }
 }
 
 export function transformJsxSource(
@@ -266,6 +455,9 @@ export function transformJsxSource(
 
   const parserDiagnostics = parsed.errors.map(error => toDiagnostic('parser', error))
   const imports = collectImportMetadata(parsed.program.body)
+  const declarations = internalOptions.collectTopLevelDeclarations
+    ? collectTopLevelDeclarationMetadata(parsed.program.body)
+    : undefined
 
   if (parserDiagnostics.length) {
     return {
@@ -273,6 +465,7 @@ export function transformJsxSource(
       changed: false,
       imports,
       diagnostics: parserDiagnostics,
+      declarations,
     }
   }
 
@@ -290,6 +483,7 @@ export function transformJsxSource(
       changed: result.changed,
       imports,
       diagnostics: parserDiagnostics,
+      declarations,
     }
   }
 
@@ -304,6 +498,7 @@ export function transformJsxSource(
       changed: result.changed,
       imports,
       diagnostics: parserDiagnostics,
+      declarations,
     }
   }
 
@@ -326,6 +521,7 @@ export function transformJsxSource(
       changed: fallbackCode !== source,
       imports,
       diagnostics,
+      declarations,
     }
   }
 
@@ -336,5 +532,6 @@ export function transformJsxSource(
     changed: jsxResult.code !== source,
     imports,
     diagnostics,
+    declarations,
   }
 }

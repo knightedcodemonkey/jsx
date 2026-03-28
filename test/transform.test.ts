@@ -51,6 +51,102 @@ const App = () => (
     expect(transformed.changed).toBe(transpiled.changed)
     expect(transformed.imports).toEqual([])
     expect(transformed.diagnostics).toEqual([])
+    expect(transformed.declarations).toBeUndefined()
+  })
+
+  it('collects top-level declarations when requested', () => {
+    const input = `
+const LocalArrow = () => <button>arrow</button>
+const LocalFunctionExpr = function named() { return null }
+const LocalClassExpr = class Named {}
+const LocalValue = 42
+function LocalFn() { return <LocalArrow /> }
+class LocalClass {}
+export const ExportedArrow = () => <button>exported</button>
+export function ExportedFn() { return <ExportedArrow /> }
+export default function App() { return <ExportedArrow /> }
+`
+
+    const result = transformJsxSource(input, {
+      collectTopLevelDeclarations: true,
+      typescript: 'strip',
+    })
+
+    expect(result.diagnostics).toEqual([])
+    expect(result.declarations).toMatchObject([
+      {
+        name: 'LocalArrow',
+        kind: 'variable',
+        exportKind: 'none',
+        initializerKind: 'arrow-function',
+      },
+      {
+        name: 'LocalFunctionExpr',
+        kind: 'variable',
+        exportKind: 'none',
+        initializerKind: 'function-expression',
+      },
+      {
+        name: 'LocalClassExpr',
+        kind: 'variable',
+        exportKind: 'none',
+        initializerKind: 'class-expression',
+      },
+      {
+        name: 'LocalValue',
+        kind: 'variable',
+        exportKind: 'none',
+        initializerKind: 'other',
+      },
+      {
+        name: 'LocalFn',
+        kind: 'function',
+        exportKind: 'none',
+        initializerKind: null,
+      },
+      {
+        name: 'LocalClass',
+        kind: 'class',
+        exportKind: 'none',
+        initializerKind: null,
+      },
+      {
+        name: 'ExportedArrow',
+        kind: 'variable',
+        exportKind: 'named',
+        initializerKind: 'arrow-function',
+      },
+      {
+        name: 'ExportedFn',
+        kind: 'function',
+        exportKind: 'named',
+        initializerKind: null,
+      },
+      {
+        name: 'App',
+        kind: 'function',
+        exportKind: 'default',
+        initializerKind: null,
+      },
+    ])
+
+    expect(result.declarations?.every(declaration => declaration.range !== null)).toBe(
+      true,
+    )
+    expect(
+      result.declarations?.every(declaration => declaration.statementRange !== null),
+    ).toBe(true)
+  })
+
+  it('returns a declarations array on parser-error paths when requested', () => {
+    const input = 'const App = () => <button>ok</button>\nimport {'
+
+    const result = transformJsxSource(input, {
+      collectTopLevelDeclarations: true,
+    })
+
+    expect(result.diagnostics[0]?.source).toBe('parser')
+    expect(Array.isArray(result.declarations)).toBe(true)
   })
 
   it('returns parser diagnostics with source ranges', () => {
@@ -242,6 +338,14 @@ const value = (input satisfies string)
     expect(() => transformJsxSource('const value = 1', invalidBackendOptions)).toThrow(
       /Unsupported typescriptStripBackend/,
     )
+  })
+
+  it('throws for unsupported collectTopLevelDeclarations values', () => {
+    expect(() =>
+      transformJsxSource('const value = 1', {
+        collectTopLevelDeclarations: 'yes' as unknown as boolean,
+      }),
+    ).toThrow(/Unsupported collectTopLevelDeclarations value/)
   })
 
   it('normalizes import metadata even when range fields are missing', async () => {
