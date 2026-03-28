@@ -56,7 +56,7 @@ const App = () => (
   })
 
   it('collects top-level JSX expression metadata when requested', () => {
-    const input = '<button type="button">hello</button>; // trailing'
+    const input = '(<button type="button">hello</button>) as any; // trailing'
 
     const result = transformJsxSource(input, {
       collectTopLevelJsxExpression: true,
@@ -64,6 +64,9 @@ const App = () => (
 
     expect(result.diagnostics).toEqual([])
     expect(result.hasTopLevelJsxExpression).toBe(true)
+    expect(result.topLevelJsxExpressionRange).toHaveLength(2)
+    const [start, end] = result.topLevelJsxExpressionRange as [number, number]
+    expect(input.slice(start, end)).toBe('<button type="button">hello</button>')
   })
 
   it('reports false top-level JSX expression metadata when absent', () => {
@@ -75,6 +78,7 @@ const App = () => (
 
     expect(result.diagnostics).toEqual([])
     expect(result.hasTopLevelJsxExpression).toBe(false)
+    expect(result.topLevelJsxExpressionRange).toBeNull()
   })
 
   it('collects top-level declarations when requested', () => {
@@ -260,6 +264,7 @@ function lowerFn() { return null }
     expect(result.diagnostics[0]?.source).toBe('parser')
     expect(typeof result.hasTopLevelJsxExpression).toBe('boolean')
     expect(result.hasTopLevelJsxExpression).toBe(false)
+    expect(result.topLevelJsxExpressionRange).toBeNull()
   })
 
   it('returns parser diagnostics with source ranges', () => {
@@ -684,6 +689,7 @@ const value = (input satisfies string)
     })
 
     expect(result.hasTopLevelJsxExpression).toBe(false)
+    expect(result.topLevelJsxExpressionRange).toBeNull()
 
     vi.doUnmock('oxc-parser')
     vi.resetModules()
@@ -721,6 +727,44 @@ const value = (input satisfies string)
     })
 
     expect(result.hasTopLevelJsxExpression).toBe(true)
+    expect(result.topLevelJsxExpressionRange).toBeNull()
+
+    vi.doUnmock('oxc-parser')
+    vi.resetModules()
+  })
+
+  it('returns false for non-JSX expression statement shapes', async () => {
+    vi.resetModules()
+    vi.doMock('oxc-parser', () => ({
+      parseSync: () => ({
+        errors: [],
+        program: {
+          body: [
+            {
+              type: 'ExpressionStatement',
+              expression: null,
+            },
+            {
+              type: 'ExpressionStatement',
+              expression: {
+                type: 'Identifier',
+                name: 'value',
+              },
+            },
+          ],
+        },
+      }),
+    }))
+
+    const { transformJsxSource: mockedTransformJsxSource } =
+      await import('../src/transform.js')
+
+    const result = mockedTransformJsxSource('const value = 1', {
+      collectTopLevelJsxExpression: true,
+    })
+
+    expect(result.hasTopLevelJsxExpression).toBe(false)
+    expect(result.topLevelJsxExpressionRange).toBeNull()
 
     vi.doUnmock('oxc-parser')
     vi.resetModules()
