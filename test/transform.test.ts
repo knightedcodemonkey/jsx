@@ -56,7 +56,7 @@ const App = () => (
   })
 
   it('collects top-level JSX expression metadata when requested', () => {
-    const input = '<button type="button">hello</button>; // trailing'
+    const input = '(<button type="button">hello</button>) as any; // trailing'
 
     const result = transformJsxSource(input, {
       collectTopLevelJsxExpression: true,

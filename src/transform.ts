@@ -423,13 +423,29 @@ const unwrapExpressionNode = (value: unknown): unknown => {
   return current
 }
 
-const isJsxExpressionNode = (value: unknown): boolean => {
+const toJsxExpressionNode = (value: unknown): Record<string, unknown> | null => {
   const unwrapped = unwrapExpressionNode(value)
   if (!isObjectRecord(unwrapped) || typeof unwrapped.type !== 'string') {
-    return false
+    return null
   }
 
-  return unwrapped.type === 'JSXElement' || unwrapped.type === 'JSXFragment'
+  if (unwrapped.type === 'JSXElement' || unwrapped.type === 'JSXFragment') {
+    return unwrapped
+  }
+
+  return null
+}
+
+const isJsxExpressionNode = (value: unknown): boolean =>
+  toJsxExpressionNode(value) !== null
+
+const toTopLevelJsxExpressionRange = (value: unknown): SourceRange | null => {
+  const jsxNode = toJsxExpressionNode(value)
+  if (!jsxNode) {
+    return null
+  }
+
+  return toSourceRange(jsxNode)
 }
 
 type TopLevelJsxExpressionMetadata = {
@@ -457,7 +473,7 @@ const collectTopLevelJsxExpressionMetadata = (
     if (isJsxExpressionNode(statement.expression)) {
       return {
         hasTopLevelJsxExpression: true,
-        topLevelJsxExpressionRange: toSourceRange(statement.expression),
+        topLevelJsxExpressionRange: toTopLevelJsxExpressionRange(statement.expression),
       }
     }
   }
