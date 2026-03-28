@@ -6,4 +6,4 @@ enableJsxDebugDiagnostics({ mode: 'always' })
 ensureNodeDom()
 
 export const jsx = baseJsx
-export type { JsxRenderable, JsxComponent } from '../../jsx.js'
+export type { JsxRenderable, JsxChildren, JsxComponent } from '../../jsx.js'

@@ -36,6 +36,7 @@ export type ReactJsxComponent<Props = Record<string, unknown>> = ComponentType<
 >
 
 export type ReactJsxRenderable = ReactNode
+export type ReactJsxChildren = ReactJsxRenderable | ReactJsxRenderable[]
 export type ReactJsxRef<T> = Ref<T>
 export type ReactJsxEventHandler<E extends SyntheticEvent> = EventHandler<E>
 export type ReactJsxDomAttributes<T = unknown> = DOMAttributes<T>

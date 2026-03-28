@@ -9,7 +9,9 @@ export type JsxRenderable =
   | undefined
   | Iterable<JsxRenderable>
 
+export type JsxChildren = JsxRenderable | JsxRenderable[]
+
 export type JsxComponent<Props = Record<string, unknown>> = {
-  (props: Props & { children?: JsxRenderable | JsxRenderable[] }): JsxRenderable
+  (props: Props & { children?: JsxChildren }): JsxRenderable
   displayName?: string
 }
