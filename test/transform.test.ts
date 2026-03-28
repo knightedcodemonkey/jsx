@@ -52,6 +52,29 @@ const App = () => (
     expect(transformed.imports).toEqual([])
     expect(transformed.diagnostics).toEqual([])
     expect(transformed.declarations).toBeUndefined()
+    expect(transformed.hasTopLevelJsxExpression).toBeUndefined()
+  })
+
+  it('collects top-level JSX expression metadata when requested', () => {
+    const input = '<button type="button">hello</button>; // trailing'
+
+    const result = transformJsxSource(input, {
+      collectTopLevelJsxExpression: true,
+    })
+
+    expect(result.diagnostics).toEqual([])
+    expect(result.hasTopLevelJsxExpression).toBe(true)
+  })
+
+  it('reports false top-level JSX expression metadata when absent', () => {
+    const input = 'const App = () => <button>ok</button>'
+
+    const result = transformJsxSource(input, {
+      collectTopLevelJsxExpression: true,
+    })
+
+    expect(result.diagnostics).toEqual([])
+    expect(result.hasTopLevelJsxExpression).toBe(false)
   })
 
   it('collects top-level declarations when requested', () => {
@@ -225,6 +248,18 @@ function lowerFn() { return null }
 
     expect(result.diagnostics[0]?.source).toBe('parser')
     expect(Array.isArray(result.declarations)).toBe(true)
+  })
+
+  it('returns JSX expression metadata on parser-error paths when requested', () => {
+    const input = 'import {'
+
+    const result = transformJsxSource(input, {
+      collectTopLevelJsxExpression: true,
+    })
+
+    expect(result.diagnostics[0]?.source).toBe('parser')
+    expect(typeof result.hasTopLevelJsxExpression).toBe('boolean')
+    expect(result.hasTopLevelJsxExpression).toBe(false)
   })
 
   it('returns parser diagnostics with source ranges', () => {
@@ -426,6 +461,14 @@ const value = (input satisfies string)
     ).toThrow(/Unsupported collectTopLevelDeclarations value/)
   })
 
+  it('throws for unsupported collectTopLevelJsxExpression values', () => {
+    expect(() =>
+      transformJsxSource('const value = 1', {
+        collectTopLevelJsxExpression: 'yes' as unknown as boolean,
+      }),
+    ).toThrow(/Unsupported collectTopLevelJsxExpression value/)
+  })
+
   it('normalizes import metadata even when range fields are missing', async () => {
     vi.resetModules()
     vi.doMock('oxc-parser', () => ({
@@ -617,6 +660,67 @@ const value = (input satisfies string)
     })
 
     expect(result.declarations).toEqual([])
+
+    vi.doUnmock('oxc-parser')
+    vi.resetModules()
+  })
+
+  it('returns false for JSX expression metadata when parser body is not an array', async () => {
+    vi.resetModules()
+    vi.doMock('oxc-parser', () => ({
+      parseSync: () => ({
+        errors: [],
+        program: {
+          body: null,
+        },
+      }),
+    }))
+
+    const { transformJsxSource: mockedTransformJsxSource } =
+      await import('../src/transform.js')
+
+    const result = mockedTransformJsxSource('const value = 1', {
+      collectTopLevelJsxExpression: true,
+    })
+
+    expect(result.hasTopLevelJsxExpression).toBe(false)
+
+    vi.doUnmock('oxc-parser')
+    vi.resetModules()
+  })
+
+  it('detects top-level JSX expressions through TS/parens wrappers', async () => {
+    vi.resetModules()
+    vi.doMock('oxc-parser', () => ({
+      parseSync: () => ({
+        errors: [],
+        program: {
+          body: [
+            {
+              type: 'ExpressionStatement',
+              expression: {
+                type: 'ParenthesizedExpression',
+                expression: {
+                  type: 'TSAsExpression',
+                  expression: {
+                    type: 'JSXFragment',
+                  },
+                },
+              },
+            },
+          ],
+        },
+      }),
+    }))
+
+    const { transformJsxSource: mockedTransformJsxSource } =
+      await import('../src/transform.js')
+
+    const result = mockedTransformJsxSource('const value = 1', {
+      collectTopLevelJsxExpression: true,
+    })
+
+    expect(result.hasTopLevelJsxExpression).toBe(true)
 
     vi.doUnmock('oxc-parser')
     vi.resetModules()
