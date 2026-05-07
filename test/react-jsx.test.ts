@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createRoot } from 'react-dom/client'
-import { Children, act } from 'react'
+import { Children, act, forwardRef, memo } from 'react'
 import type { ReactNode } from 'react'
 
 import { reactJsx, type ReactJsxComponent } from '../src/react/index.js'
@@ -100,6 +100,77 @@ describe('reactJsx template tag', () => {
     act(() => {
       root.unmount()
     })
+  })
+
+  it('supports memo-wrapped components in tag interpolation', () => {
+    const Button = memo(function Button({ label }: { label: string }) {
+      return reactJsx`<button type="button">{${label}}</button>`
+    })
+
+    const tree = reactJsx`
+      <section>
+        <${Button} label={${'Click Me'}} />
+      </section>
+    `
+
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+
+    act(() => {
+      root.render(tree)
+    })
+
+    expect(container.querySelector('button')?.textContent).toBe('Click Me')
+    expect(container.innerHTML).not.toContain('__KX_EXPR__')
+
+    act(() => {
+      root.unmount()
+    })
+  })
+
+  it('supports forwardRef components in tag interpolation', () => {
+    const Field = forwardRef<HTMLInputElement, { value: string }>(function Field(
+      { value },
+      ref,
+    ) {
+      return reactJsx`<input ref={${ref}} value={${value}} readOnly />`
+    })
+
+    const tree = reactJsx`
+      <section>
+        <${Field} value={${'rc-check'}} />
+      </section>
+    `
+
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+
+    act(() => {
+      root.render(tree)
+    })
+
+    const input = container.querySelector('input') as HTMLInputElement | null
+    expect(input?.value).toBe('rc-check')
+    expect(container.innerHTML).not.toContain('__KX_EXPR__')
+
+    act(() => {
+      root.unmount()
+    })
+  })
+
+  it('does not treat React elements as tag interpolation components', () => {
+    const readyElement = reactJsx`<button type="button">ready</button>`
+
+    expect(
+      () =>
+        reactJsx`
+          <section>
+            <${readyElement} />
+          </section>
+        `,
+    ).toThrow('Invalid tag interpolation value')
   })
 
   it('throws when encountering unknown component names', () => {

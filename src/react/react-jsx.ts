@@ -24,6 +24,9 @@ import {
   type DOMAttributes,
   type EventHandler,
   type JSX as ReactJSX,
+  type LazyExoticComponent,
+  type MemoExoticComponent,
+  type ForwardRefExoticComponent,
   type PropsWithChildren,
   type ReactElement,
   type ReactNode,
@@ -35,6 +38,13 @@ export type ReactJsxComponent<Props = Record<string, unknown>> = ComponentType<
   PropsWithChildren<Props>
 >
 
+type ReactJsxExoticComponent =
+  | MemoExoticComponent<ReactJsxComponent>
+  | ForwardRefExoticComponent<Record<string, unknown>>
+  | LazyExoticComponent<ReactJsxComponent>
+
+type ReactJsxTagComponent = ReactJsxComponent | ReactJsxExoticComponent
+
 export type ReactJsxRenderable = ReactNode
 export type ReactJsxChildren = ReactJsxRenderable | ReactJsxRenderable[]
 export type ReactJsxRef<T> = Ref<T>
@@ -44,7 +54,7 @@ export type ReactJsxIntrinsicElements = ReactJSX.IntrinsicElements
 export type ReactJsxIntrinsicElement<Tag extends keyof ReactJsxIntrinsicElements> =
   ReactJsxIntrinsicElements[Tag]
 
-type ReactJsxContext = TemplateContext<ReactJsxComponent>
+type ReactJsxContext = TemplateContext<ReactJsxTagComponent>
 
 const isIterable = (value: unknown): value is Iterable<unknown> => {
   if (!value || typeof value === 'string') {
@@ -172,11 +182,32 @@ const evaluateReactJsxChildren = (children: JSXChild[], ctx: ReactJsxContext) =>
 }
 
 const createReactElement = (
-  type: string | ReactJsxComponent,
+  type: string | ReactJsxTagComponent,
   props: Record<string, unknown>,
   children: ReactNode[],
 ) => {
   return createElement(type as never, props, ...children)
+}
+
+const reactMemoSymbol = Symbol.for('react.memo')
+const reactForwardRefSymbol = Symbol.for('react.forward_ref')
+const reactLazySymbol = Symbol.for('react.lazy')
+
+const isReactTagBindingValue = (value: unknown): value is ReactJsxTagComponent => {
+  if (typeof value === 'function') {
+    return true
+  }
+
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  const candidate = value as { $$typeof?: unknown }
+  return (
+    candidate.$$typeof === reactMemoSymbol ||
+    candidate.$$typeof === reactForwardRefSymbol ||
+    candidate.$$typeof === reactLazySymbol
+  )
 }
 
 const evaluateReactJsxElement = (
@@ -218,7 +249,9 @@ export const reactJsx = (
   templates: TemplateStringsArray,
   ...values: unknown[]
 ): ReactElement => {
-  const build = buildTemplate<ReactJsxComponent>(templates, values)
+  const build = buildTemplate<ReactJsxTagComponent>(templates, values, {
+    isTagNameBindingValue: isReactTagBindingValue,
+  })
   const result = parseSync('inline.jsx', build.source, parserOptions)
 
   if (result.errors.length > 0) {
