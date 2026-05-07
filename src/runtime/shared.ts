@@ -68,6 +68,10 @@ export type TemplateBuildResult<TComponent extends TemplateComponent> = {
   diagnostics: TemplateDiagnostics
 }
 
+export type TemplateBuildOptions<TComponent extends TemplateComponent> = {
+  isTagNameBindingValue?: (value: unknown) => value is TComponent
+}
+
 export type TemplateContext<TComponent extends TemplateComponent> = {
   source: string
   placeholders: Map<string, unknown>
@@ -272,6 +276,7 @@ export const ensureBinding = <TComponent extends TemplateComponent>(
 export const buildTemplate = <TComponent extends TemplateComponent>(
   strings: TemplateStringsArray,
   values: unknown[],
+  options?: TemplateBuildOptions<TComponent>,
 ): TemplateBuildResult<TComponent> => {
   const raw = strings.raw ?? strings
   const placeholders = new Map<string, unknown>()
@@ -281,6 +286,9 @@ export const buildTemplate = <TComponent extends TemplateComponent>(
   const templateId = invocationCounter++
   let placeholderIndex = 0
   const expressionRanges: TemplateExpressionRange[] = []
+  const isTagNameBindingValue =
+    options?.isTagNameBindingValue ??
+    ((value: unknown): value is TComponent => typeof value === 'function')
 
   for (let idx = 0; idx < values.length; idx++) {
     const chunk = raw[idx] ?? ''
@@ -290,7 +298,7 @@ export const buildTemplate = <TComponent extends TemplateComponent>(
     const isTagNamePosition = OPEN_TAG_RE.test(chunk) || CLOSE_TAG_RE.test(chunk)
     let insertion: string
 
-    if (isTagNamePosition && typeof value === 'function') {
+    if (isTagNamePosition && isTagNameBindingValue(value)) {
       const binding = ensureBinding(value as TComponent, bindings, bindingLookup)
       insertion = binding.name
     } else if (isTagNamePosition && typeof value === 'string') {

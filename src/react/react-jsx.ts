@@ -179,6 +179,19 @@ const createReactElement = (
   return createElement(type as never, props, ...children)
 }
 
+const isReactTagBindingValue = (value: unknown): value is ReactJsxComponent => {
+  if (typeof value === 'function') {
+    return true
+  }
+
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  const candidate = value as { $$typeof?: unknown }
+  return typeof candidate.$$typeof === 'symbol'
+}
+
 const evaluateReactJsxElement = (
   element: JSXElement,
   ctx: ReactJsxContext,
@@ -218,7 +231,9 @@ export const reactJsx = (
   templates: TemplateStringsArray,
   ...values: unknown[]
 ): ReactElement => {
-  const build = buildTemplate<ReactJsxComponent>(templates, values)
+  const build = buildTemplate<ReactJsxComponent>(templates, values, {
+    isTagNameBindingValue: isReactTagBindingValue,
+  })
   const result = parseSync('inline.jsx', build.source, parserOptions)
 
   if (result.errors.length > 0) {
