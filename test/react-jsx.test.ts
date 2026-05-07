@@ -160,6 +160,19 @@ describe('reactJsx template tag', () => {
     })
   })
 
+  it('does not treat React elements as tag interpolation components', () => {
+    const readyElement = reactJsx`<button type="button">ready</button>`
+
+    expect(
+      () =>
+        reactJsx`
+          <section>
+            <${readyElement} />
+          </section>
+        `,
+    ).toThrow('Invalid tag interpolation value')
+  })
+
   it('throws when encountering unknown component names', () => {
     expect(() => reactJsx`<MissingComponent />`).toThrow(
       'Unknown component "MissingComponent"',

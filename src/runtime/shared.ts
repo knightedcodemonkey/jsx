@@ -303,6 +303,10 @@ export const buildTemplate = <TComponent extends TemplateComponent>(
       insertion = binding.name
     } else if (isTagNamePosition && typeof value === 'string') {
       insertion = value
+    } else if (isTagNamePosition) {
+      throw new Error(
+        'Invalid tag interpolation value. Expected a component, class, or string tag name.',
+      )
     } else {
       const placeholder = `${PLACEHOLDER_PREFIX}${templateId}_${placeholderIndex++}__`
       placeholders.set(placeholder, value)
