@@ -118,7 +118,7 @@
     "./package.json": "./package.json"
   },
   "engines": {
-    "node": ">=22.21.1"
+    "node": ">=22.21.1 <23 || >=24"
   },
   "engineStrict": true,
   "scripts": {
