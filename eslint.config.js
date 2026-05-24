@@ -63,6 +63,12 @@ export default [
     files: ['test/cli-init.test.ts'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
+      'n/no-unsupported-features/node-builtins': [
+        'error',
+        {
+          ignores: ['readline/promises'],
+        },
+      ],
     },
   },
   {
