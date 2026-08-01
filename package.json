@@ -1,6 +1,6 @@
 {
   "name": "@knighted/jsx",
-  "version": "1.14.1",
+  "version": "1.15.0",
   "description": "Runtime JSX tagged template that renders DOM or React trees anywhere with or without a build step.",
   "keywords": [
     "jsx runtime",
@@ -111,10 +111,16 @@
       "import": "./dist/transform.js",
       "default": "./dist/transform.js"
     },
+    "./cdn-stable": {
+      "types": "./dist/cdn-stable.d.ts",
+      "import": "./dist/cdn-stable.js",
+      "default": "./dist/cdn-stable.js"
+    },
     "./loader": {
       "import": "./dist/loader/jsx.js",
       "default": "./dist/loader/jsx.js"
     },
+    "./cdn-contract.json": "./cdn-contract.json",
     "./package.json": "./package.json"
   },
   "engines": {
@@ -149,8 +155,10 @@
     "build:lite": "tsup --config tsup.config.ts",
     "build:cli": "tsup --config tsup.cli.config.ts",
     "setup:wasm": "node scripts/setup-wasm.mjs",
+    "generate:cdn-contract": "node scripts/generate-cdn-contract.mjs",
+    "check:cdn-contract": "node scripts/generate-cdn-contract.mjs --check",
     "sizecheck": "node scripts/sizecheck.mjs",
-    "prepack": "npm run build"
+    "prepack": "npm run build && npm run generate:cdn-contract && npm run check:cdn-contract"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -220,7 +228,8 @@
     "@oxc-parser/binding-wasm32-wasi": "^0.142.0"
   },
   "files": [
-    "dist"
+    "dist",
+    "cdn-contract.json"
   ],
   "author": "KCM <knightedcodemonkey@gmail.com>",
   "license": "MIT",
