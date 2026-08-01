@@ -48,6 +48,23 @@ See [docs/cli.md](docs/cli.md) for flags, dry runs, and package-manager override
 > [!TIP]
 > Public CDNs such as `esm.sh` or `jsdelivr` already publish bundles that include the WASM binding, so you can import this package directly from those endpoints in `<script type="module">` blocks without any extra setup.
 
+### CDN stability contract (browser imports)
+
+If you load `@knighted/jsx` from a CDN, pinning only the top-level package version is
+not always enough for long-term stability. CDNs resolve transitive dependencies remotely,
+and semver ranges inside dependency graphs can drift over time.
+
+For deterministic browser behavior, prefer a fully pinned CDN URL contract that also fixes
+the parser, binding, and WASM runtime versions.
+
+Example (`esm.sh`):
+
+```ts
+import { jsx } from 'https://esm.sh/@knighted/jsx@1.14.1?bundle&target=es2022&deps=oxc-parser@0.142.0,@oxc-parser/binding-wasm32-wasi@0.142.0,@napi-rs/wasm-runtime@1.2.2'
+import { reactJsx } from 'https://esm.sh/@knighted/jsx@1.14.1/react?bundle&target=es2022&deps=oxc-parser@0.142.0,@oxc-parser/binding-wasm32-wasi@0.142.0,@napi-rs/wasm-runtime@1.2.2'
+import { transformJsxSource } from 'https://esm.sh/@knighted/jsx@1.14.1/transform?bundle&target=es2022&deps=oxc-parser@0.142.0,oxc-transform@0.142.0,@oxc-parser/binding-wasm32-wasi@0.142.0,@oxc-transform/binding-wasm32-wasi@0.142.0,@napi-rs/wasm-runtime@1.2.2'
+```
+
 ## Usage
 
 ```ts
