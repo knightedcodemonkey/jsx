@@ -65,6 +65,9 @@ import { reactJsx } from 'https://esm.sh/@knighted/jsx@1.14.1/react?bundle&targe
 import { transformJsxSource } from 'https://esm.sh/@knighted/jsx@1.14.1/transform?bundle&target=es2022&deps=oxc-parser@0.142.0,oxc-transform@0.142.0,@oxc-parser/binding-wasm32-wasi@0.142.0,@oxc-transform/binding-wasm32-wasi@0.142.0,@napi-rs/wasm-runtime@1.2.2'
 ```
 
+For automation and future stable-entry tooling, this package also publishes
+`@knighted/jsx/cdn-contract.json` with the canonical pinned dependency set.
+
 ## Usage
 
 ```ts
