@@ -19,7 +19,7 @@ const toContract = pkg => {
     contractVersion: 1,
     packageName: pkg.name,
     packageVersion: pkg.version,
-    defaultProvider: 'esm.sh',
+    defaultProvider: 'esm',
     entries: {
       core: {
         subpath: '.',

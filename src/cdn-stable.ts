@@ -51,6 +51,7 @@ const normalizeProvider = (
 
 const toDependencyList = (entry: CdnStableEntry) =>
   Object.entries(entry.deps)
+    .sort(([a], [b]) => a.localeCompare(b))
     .map(([name, version]) => `${name}@${version}`)
     .join(',')
 
@@ -122,9 +123,8 @@ export const buildStableCdnUrls = ({
   provider,
   target = 'es2022',
 }: BuildStableCdnUrlsOptions): StableCdnUrls => {
-  const normalizedProvider = normalizeProvider(provider)
   assertContract(contract)
-
+  const normalizedProvider = normalizeProvider(provider ?? contract.defaultProvider)
   const urls: Record<CdnStableEntryKey, string> =
     normalizedProvider === 'jsdelivr'
       ? {

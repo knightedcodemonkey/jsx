@@ -72,16 +72,58 @@ describe('buildStableCdnUrls', () => {
     )
 
     expect(decodeURIComponent(result.urls.core)).toContain(
-      `deps=oxc-parser@${fixtureParserVersion},@oxc-parser/binding-wasm32-wasi@${fixtureBindingVersion},@napi-rs/wasm-runtime@${fixtureRuntimeVersion}`,
+      `deps=@napi-rs/wasm-runtime@${fixtureRuntimeVersion},@oxc-parser/binding-wasm32-wasi@${fixtureBindingVersion},oxc-parser@${fixtureParserVersion}`,
     )
   })
 
-  it('defaults to esm when provider is omitted', () => {
+  it('serializes dependency query strings in deterministic sorted order', () => {
+    const unorderedContract: CdnContract = {
+      ...contract,
+      entries: {
+        ...contract.entries,
+        core: {
+          ...contract.entries.core,
+          deps: {
+            'oxc-parser': fixtureParserVersion,
+            '@napi-rs/wasm-runtime': fixtureRuntimeVersion,
+            '@oxc-parser/binding-wasm32-wasi': fixtureBindingVersion,
+          },
+        },
+      },
+    }
+
+    const result = buildStableCdnUrls({
+      contract: unorderedContract,
+      provider: 'esm',
+    })
+
+    expect(decodeURIComponent(result.urls.core)).toContain(
+      `deps=@napi-rs/wasm-runtime@${fixtureRuntimeVersion},@oxc-parser/binding-wasm32-wasi@${fixtureBindingVersion},oxc-parser@${fixtureParserVersion}`,
+    )
+  })
+
+  it('defaults to the contract default provider when provider is omitted', () => {
     const result = buildStableCdnUrls({
       contract,
     })
 
     expect(result.provider).toBe('esm')
+  })
+
+  it('uses jsdelivr when contract defaultProvider is jsdelivr', () => {
+    const jsdelivrDefaultContract: CdnContract = {
+      ...contract,
+      defaultProvider: 'jsdelivr',
+    }
+
+    const result = buildStableCdnUrls({
+      contract: jsdelivrDefaultContract,
+    })
+
+    expect(result.provider).toBe('jsdelivr')
+    expect(result.urls.core).toBe(
+      `https://cdn.jsdelivr.net/npm/@knighted/jsx@${fixturePackageVersion}/+esm`,
+    )
   })
 
   it('builds jsDelivr +esm URLs for all stable entries', () => {
