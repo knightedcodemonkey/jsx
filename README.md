@@ -60,13 +60,41 @@ the parser, binding, and WASM runtime versions.
 Example (`esm.sh`):
 
 ```ts
-import { jsx } from 'https://esm.sh/@knighted/jsx@1.14.1?bundle&target=es2022&deps=oxc-parser@0.142.0,@oxc-parser/binding-wasm32-wasi@0.142.0,@napi-rs/wasm-runtime@1.2.2'
-import { reactJsx } from 'https://esm.sh/@knighted/jsx@1.14.1/react?bundle&target=es2022&deps=oxc-parser@0.142.0,@oxc-parser/binding-wasm32-wasi@0.142.0,@napi-rs/wasm-runtime@1.2.2'
-import { transformJsxSource } from 'https://esm.sh/@knighted/jsx@1.14.1/transform?bundle&target=es2022&deps=oxc-parser@0.142.0,oxc-transform@0.142.0,@oxc-parser/binding-wasm32-wasi@0.142.0,@oxc-transform/binding-wasm32-wasi@0.142.0,@napi-rs/wasm-runtime@1.2.2'
+import { jsx } from 'https://esm.sh/@knighted/jsx@1.15.0?bundle&target=es2022&deps=oxc-parser@0.142.0,@oxc-parser/binding-wasm32-wasi@0.142.0,@napi-rs/wasm-runtime@1.2.2'
+import { reactJsx } from 'https://esm.sh/@knighted/jsx@1.15.0/react?bundle&target=es2022&deps=oxc-parser@0.142.0,@oxc-parser/binding-wasm32-wasi@0.142.0,@napi-rs/wasm-runtime@1.2.2'
+import { transformJsxSource } from 'https://esm.sh/@knighted/jsx@1.15.0/transform?bundle&target=es2022&deps=oxc-parser@0.142.0,oxc-transform@0.142.0,@oxc-parser/binding-wasm32-wasi@0.142.0,@oxc-transform/binding-wasm32-wasi@0.142.0,@napi-rs/wasm-runtime@1.2.2'
 ```
 
 For automation and future stable-entry tooling, this package also publishes
 `@knighted/jsx/cdn-contract.json` with the canonical pinned dependency set.
+
+You can also use the provider-agnostic helper subpath to build stable URLs:
+
+```ts
+import { getStableCdnUrls } from '@knighted/jsx/cdn-stable'
+
+const stable = await getStableCdnUrls({ provider: 'esm', target: 'es2022' })
+const [coreModule, reactModule, transformModule] = await Promise.all([
+  import(stable.urls.core),
+  import(stable.urls.react),
+  import(stable.urls.transform),
+])
+
+const { jsx } = coreModule
+const { reactJsx } = reactModule
+const { transformJsxSource } = transformModule
+```
+
+Use `buildStableCdnUrls` if you want a pure, sync API with an explicit contract object
+(`getStableCdnUrls` auto-loads the published contract).
+
+Provider notes:
+
+- `esm` returns fully pinned URLs using the contract dependency set (generated `esm.sh` URLs).
+- `jsdelivr` returns `+esm` entry URLs for the same stable entry set (`core`, `react`,
+  `transform`).
+- Because jsDelivr uses a different URL model than `esm`, transitive dependency override
+  controls differ between providers.
 
 ## Usage
 

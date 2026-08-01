@@ -8,11 +8,11 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <link
       rel="modulepreload"
-      href="https://cdn.jsdelivr.net/npm/@knighted/jsx@1.14.1/lite/+esm"
+      href="https://cdn.jsdelivr.net/npm/@knighted/jsx@1.15.0/lite/+esm"
     />
     <link
       rel="modulepreload"
-      href="https://cdn.jsdelivr.net/npm/@knighted/jsx@1.14.1/react/+esm"
+      href="https://cdn.jsdelivr.net/npm/@knighted/jsx@1.15.0/react/+esm"
     />
     <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/react@19.2.4/+esm" />
     <link
@@ -469,16 +469,31 @@
     </main>
 
     <script type="module">
-      import { jsx } from 'https://cdn.jsdelivr.net/npm/@knighted/jsx@1.14.1/lite/+esm'
-      import { reactJsx } from 'https://cdn.jsdelivr.net/npm/@knighted/jsx@1.14.1/react/+esm'
-      import {
-        useEffect,
-        useRef,
-        useState,
-      } from 'https://cdn.jsdelivr.net/npm/react@19.2.4/+esm'
-      import { createRoot } from 'https://cdn.jsdelivr.net/npm/react-dom@19.2.4/client/+esm'
-      import { LitElement, css, html } from 'https://cdn.jsdelivr.net/npm/lit@3/+esm'
-      import { codeToHtml } from 'https://cdn.jsdelivr.net/npm/shiki@1.1.7/+esm'
+      import { getStableCdnUrls } from 'https://cdn.jsdelivr.net/npm/@knighted/jsx@1.15.0/cdn-stable/+esm'
+
+      const stable = await getStableCdnUrls({ provider: 'jsdelivr' })
+      const [
+        jsxModule,
+        reactJsxModule,
+        reactModule,
+        reactDomClientModule,
+        litModule,
+        shikiModule,
+      ] = await Promise.all([
+        import(stable.urls.core),
+        import(stable.urls.react),
+        import('https://cdn.jsdelivr.net/npm/react@19.2.4/+esm'),
+        import('https://cdn.jsdelivr.net/npm/react-dom@19.2.4/client/+esm'),
+        import('https://cdn.jsdelivr.net/npm/lit@3/+esm'),
+        import('https://cdn.jsdelivr.net/npm/shiki@1.1.7/+esm'),
+      ])
+
+      const { jsx } = jsxModule
+      const { reactJsx } = reactJsxModule
+      const { useEffect, useRef, useState } = reactModule
+      const { createRoot } = reactDomClientModule
+      const { LitElement, css, html } = litModule
+      const { codeToHtml } = shikiModule
 
       const app = document.getElementById('app')
       const loadingCard = document.getElementById('demo-loading')
