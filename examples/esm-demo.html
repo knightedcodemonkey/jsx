@@ -21,6 +21,14 @@
     />
     <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/lit@3/+esm" />
     <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/shiki@1.1.7/+esm" />
+    <script type="importmap">
+      {
+        "imports": {
+          "https://cdn.jsdelivr.net/npm/@oxc-parser/binding-wasm32-wasi/+esm": "https://cdn.jsdelivr.net/npm/@oxc-parser/binding-wasm32-wasi@0.142.0/+esm",
+          "https://cdn.jsdelivr.net/npm/@napi-rs/wasm-runtime@1.1.6/+esm": "https://cdn.jsdelivr.net/npm/@napi-rs/wasm-runtime@1.2.2/+esm"
+        }
+      }
+    </script>
     <style>
       :root {
         font-family:
