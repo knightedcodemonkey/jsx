@@ -18,6 +18,39 @@ const overviewSelectors = {
   capabilityItems: '.overview-card .capability-item',
 }
 
+test('standalone CDN demo initializes the parser and renders interactive counters', async ({
+  page,
+}) => {
+  test.setTimeout(90_000)
+  const pageErrors: string[] = []
+  page.on('pageerror', error => pageErrors.push(error.message))
+
+  await page.goto('/examples/esm-demo.html')
+
+  const counterButton = page.getByRole('button', { name: 'Increment', exact: true })
+  const counterLabel = page.locator('.counter-value')
+
+  await expect
+    .poll(async () => (pageErrors.length ? pageErrors : counterLabel.count()), {
+      timeout: 60_000,
+    })
+    .not.toBe(0)
+  expect(pageErrors).toEqual([])
+  await expect(counterLabel).toHaveText('0')
+  await counterButton.click()
+  await expect(counterLabel).toHaveText('1')
+
+  const reactCounter = page
+    .locator(hybridSelectors.reactRuntimeCounter)
+    .filter({ hasText: 'Button clicks' })
+
+  await expect(reactCounter).toContainText('Button clicks: 0')
+  await page.locator(hybridSelectors.reactRuntimeButton).click()
+  await expect(reactCounter).toContainText('Button clicks: 1')
+  await expect(page.locator('#demo-loading')).toHaveCount(0)
+  expect(pageErrors).toEqual([])
+})
+
 /**
  * Tests the local E2E fixture to ensure that the current build works as expected.
  */
