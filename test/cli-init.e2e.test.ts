@@ -74,6 +74,11 @@ describe('cli init e2e (dist binary)', () => {
     try {
       const installed = runNpm(['install', '--ignore-scripts', '--prefer-offline'])
       expect([installed.status, installed.stderr]).toEqual([0, expect.any(String)])
+      const cliEnv = Object.fromEntries(
+        Object.entries(process.env).filter(
+          ([key]) => key.toLowerCase() !== 'npm_execpath',
+        ),
+      )
       const result = spawnSync(
         process.execPath,
         [
@@ -86,7 +91,11 @@ describe('cli init e2e (dist binary)', () => {
         {
           cwd: projectDir,
           encoding: 'utf8',
-          env: { ...process.env, KNIGHTED_JSX_CLI_TEST: '0' },
+          env: {
+            ...cliEnv,
+            NODE_ENV: process.env.NODE_ENV ?? 'test',
+            KNIGHTED_JSX_CLI_TEST: '0',
+          },
         },
       )
       expect([result.status, result.stderr]).toEqual([0, expect.any(String)])

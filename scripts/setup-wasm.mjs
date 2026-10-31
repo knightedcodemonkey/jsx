@@ -1,8 +1,9 @@
-import { execFileSync } from 'node:child_process'
+import fs from 'node:fs'
+import path from 'node:path'
+import crossSpawn from 'cross-spawn'
 import { applyWasmRuntimePolicy } from '../src/cli/wasm-runtime-policy.ts'
 
 const npmExecPath = process.env.npm_execpath
-const npmBin = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 const packageSpecs = process.env.WASM_BINDING_PACKAGE
   ? [process.env.WASM_BINDING_PACKAGE]
   : [
@@ -26,11 +27,17 @@ function main() {
       '--include=optional',
     ]
     const options = { cwd: process.cwd(), stdio: 'inherit' }
-    if (npmExecPath) {
-      execFileSync(process.execPath, [npmExecPath, ...args], options)
-    } else {
-      execFileSync(npmBin, args, { ...options, shell: process.platform === 'win32' })
-    }
+    const verifiedNpmScript =
+      npmExecPath &&
+      path.basename(npmExecPath).toLowerCase() === 'npm-cli.js' &&
+      fs.existsSync(npmExecPath)
+        ? npmExecPath
+        : undefined
+    const result = verifiedNpmScript
+      ? crossSpawn.sync(process.execPath, [verifiedNpmScript, ...args], options)
+      : crossSpawn.sync('npm', args, options)
+    if (result.error) throw result.error
+    if (result.status !== 0) throw new Error('npm failed to install WASM bindings')
 
     console.log(
       `Installed ${packageSpecs.join(', ')} with their compatible dependency graphs`,

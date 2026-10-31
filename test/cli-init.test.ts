@@ -8,17 +8,6 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 let cli: typeof import('../src/cli/init.js')
 
-function expectedInstallCommand(pm: string, args: string[]) {
-  const npmScript =
-    pm === 'npm' && process.platform === 'win32' ? process.env.npm_execpath : undefined
-  return npmScript
-    ? ([
-        process.execPath,
-        [path.join(path.dirname(npmScript), 'npm-cli.js'), ...args],
-      ] as const)
-    : ([pm, args] as const)
-}
-
 beforeAll(async () => {
   process.env.KNIGHTED_JSX_CLI_TEST = '1'
   cli = await import('../src/cli/init.js')
@@ -201,20 +190,81 @@ describe('resolveBindingSpec + fetchLatestBindingVersion', () => {
   })
 
   it('parses npm view output when fetching latest version', () => {
-    const execSpy = vi.fn().mockReturnValue('"3.4.5"')
-    const latest = cli.fetchLatestBindingVersion('@scope/pkg', execSpy as any)
+    const spawner = vi.fn().mockReturnValue({ status: 0, stdout: '"3.4.5"' })
+    const latest = cli.fetchLatestBindingVersion('@scope/pkg', spawner)
 
     expect(latest).toBe('3.4.5')
-    expect(execSpy).toHaveBeenCalled()
+    expect(spawner).toHaveBeenCalledWith(
+      'npm',
+      ['view', '@scope/pkg', 'version', '--json'],
+      {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'inherit'],
+      },
+    )
   })
 })
 
 describe('setup:wasm', () => {
+  it.each(['', 'pnpm.cjs', 'yarn.js', 'missing/npm-cli.js'])(
+    'resolves npm from PATH when npm_execpath is %s',
+    npmExecpath => {
+      const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jsx-npm-path-'))
+      const binDir = path.join(tmp, 'npm tools with spaces')
+      const npmScript = path.join(binDir, 'record.cjs')
+      const commandPath = path.join(tmp, 'command.json')
+      fs.mkdirSync(binDir, { recursive: true })
+      fs.writeFileSync(path.join(tmp, 'package.json'), JSON.stringify({ name: 'tmp' }))
+      fs.writeFileSync(
+        npmScript,
+        `require('node:fs').writeFileSync(${JSON.stringify(commandPath)}, JSON.stringify(process.argv.slice(2)))`,
+      )
+      const shimName = process.platform === 'win32' ? 'npm.cmd' : 'npm'
+      const shimContent =
+        process.platform === 'win32'
+          ? `@echo off\r\n"${process.execPath}" "${npmScript}" %*\r\n`
+          : `#!/bin/sh\nexec "${process.execPath}" "${npmScript}" "$@"\n`
+      fs.writeFileSync(path.join(binDir, shimName), shimContent, { mode: 0o755 })
+      const originalPath =
+        Object.entries(process.env).find(([key]) => key.toLowerCase() === 'path')?.[1] ??
+        ''
+      const env = Object.fromEntries(
+        Object.entries(process.env).filter(
+          ([key]) =>
+            !['path', 'npm_execpath', 'wasm_binding_package'].includes(key.toLowerCase()),
+        ),
+      )
+      try {
+        execFileSync(process.execPath, [path.resolve('scripts/setup-wasm.mjs')], {
+          cwd: tmp,
+          env: {
+            ...env,
+            NODE_ENV: process.env.NODE_ENV ?? 'test',
+            PATH: `${binDir}${path.delimiter}${originalPath}`,
+            npm_execpath: npmExecpath ? path.join(tmp, npmExecpath) : '',
+            WASM_BINDING_PACKAGE: '',
+          },
+          stdio: 'pipe',
+        })
+        expect(JSON.parse(fs.readFileSync(commandPath, 'utf8'))).toEqual([
+          'install',
+          '@oxc-parser/binding-wasm32-wasip1@0.156.0',
+          '@oxc-transform/binding-wasm32-wasip1@0.156.0',
+          '--no-save',
+          '--ignore-scripts',
+          '--include=optional',
+        ])
+      } finally {
+        fs.rmSync(tmp, { recursive: true, force: true })
+      }
+    },
+  )
+
   it.each([false, true])(
     'delegates dependency installation to npm with an existing binding: %s',
     existingBinding => {
       const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jsx-setup-wasm-'))
-      const npmScript = path.join(tmp, 'npm.cjs')
+      const npmScript = path.join(tmp, 'npm-cli.js')
       const commandPath = path.join(tmp, 'command.json')
       const packagePath = path.join(tmp, 'package.json')
       const lockPath = path.join(tmp, 'package-lock.json')
@@ -240,10 +290,17 @@ describe('setup:wasm', () => {
       }
 
       try {
+        const env = Object.fromEntries(
+          Object.entries(process.env).filter(
+            ([key]) =>
+              !['npm_execpath', 'wasm_binding_package'].includes(key.toLowerCase()),
+          ),
+        )
         execFileSync(process.execPath, [path.resolve('scripts/setup-wasm.mjs')], {
           cwd: tmp,
           env: {
-            ...process.env,
+            ...env,
+            NODE_ENV: process.env.NODE_ENV ?? 'test',
             npm_execpath: npmScript,
             WASM_BINDING_PACKAGE: '',
           },
@@ -278,6 +335,33 @@ describe('setup:wasm', () => {
 })
 
 describe('installBinding', () => {
+  it.each(['', 'pnpm.cjs', 'yarn.js'])(
+    'does not derive npm from the invoking manager %s',
+    async npmExecpath => {
+      const previous = process.env.npm_execpath
+      process.env.npm_execpath = npmExecpath
+      const spawner = vi.fn().mockReturnValue({ status: 0 })
+      try {
+        await cli.installBinding(
+          'pkg@1.0.0',
+          '/tmp/project',
+          false,
+          false,
+          'npm',
+          spawner,
+        )
+        expect(spawner).toHaveBeenCalledWith(
+          'npm',
+          ['install', 'pkg@1.0.0', '--save-exact'],
+          { cwd: '/tmp/project', stdio: 'inherit' },
+        )
+      } finally {
+        if (previous === undefined) delete process.env.npm_execpath
+        else process.env.npm_execpath = previous
+      }
+    },
+  )
+
   it('does not install or modify dependencies in dry-run mode', async () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jsx-cli-binding-'))
     const spawner = vi.fn()
@@ -321,13 +405,10 @@ describe('installBinding', () => {
 
       try {
         await cli.installBinding('pkg@1.0.0', tmp, false, false, pm, spawner)
-        expect(spawner).toHaveBeenCalledWith(
-          ...expectedInstallCommand(pm, [command, 'pkg@1.0.0', exactFlag]),
-          {
-            cwd: tmp,
-            stdio: 'inherit',
-          },
-        )
+        expect(spawner).toHaveBeenCalledWith(pm, [command, 'pkg@1.0.0', exactFlag], {
+          cwd: tmp,
+          stdio: 'inherit',
+        })
         expect(fs.readFileSync(hostPath, 'utf8')).toBe(hostContent)
         expect(fs.readFileSync(nestedPath, 'utf8')).toBe(nestedContent)
       } finally {
@@ -375,11 +456,8 @@ describe('installBinding', () => {
         },
       })
       expect(spawner).toHaveBeenCalledWith(
-        ...expectedInstallCommand('npm', [
-          'install',
-          '@oxc-parser/binding-wasm32-wasip1@0.156.0',
-          '--save-exact',
-        ]),
+        'npm',
+        ['install', '@oxc-parser/binding-wasm32-wasip1@0.156.0', '--save-exact'],
         { cwd: tmp, stdio: 'inherit' },
       )
       await cli.installBinding(

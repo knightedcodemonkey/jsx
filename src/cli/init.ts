@@ -1,4 +1,5 @@
-import { execFileSync, spawnSync } from 'node:child_process'
+import type { spawnSync } from 'node:child_process'
+import crossSpawn from 'cross-spawn'
 import fs from 'node:fs'
 import path from 'node:path'
 import readline from 'node:readline/promises'
@@ -204,12 +205,17 @@ function isRegistryResolvablePackage(name: string) {
 
 function fetchLatestBindingVersion(
   pkgName: string,
-  execFn: typeof execFileSync = execFileSync,
+  spawner: typeof spawnSync = crossSpawn.sync,
 ) {
-  const output = execFn('npm', ['view', pkgName, 'version', '--json'], {
+  const result = spawner('npm', ['view', pkgName, 'version', '--json'], {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'inherit'],
-  }).trim()
+  })
+  if (result.error) throw result.error
+  if (result.status !== 0) {
+    throw new Error(`Unable to determine latest version for ${pkgName}`)
+  }
+  const output = result.stdout?.trim()
 
   if (!output) {
     throw new Error(`Unable to determine latest version for ${pkgName}`)
@@ -258,7 +264,7 @@ async function installBinding(
   dryRun: boolean,
   verbose: boolean,
   pm: PackageManager = 'npm',
-  spawner: typeof spawnSync = spawnSync,
+  spawner: typeof spawnSync = crossSpawn.sync,
 ): Promise<{ targetDir: string; name: string; version?: string }> {
   const { name, version } = parsePackageName(spec)
   applyWasmRuntimePolicy(cwd, name, version, pm, dryRun)
@@ -274,13 +280,8 @@ async function installBinding(
   log(`> Installing ${spec} with its declared dependencies`)
   logVerbose(`> ${command} ${args.join(' ')}`, verbose)
   if (!dryRun) {
-    const npmScript =
-      pm === 'npm' && process.platform === 'win32' ? process.env.npm_execpath : undefined
-    const executable = npmScript ? process.execPath : command
-    const commandArgs = npmScript
-      ? [path.join(path.dirname(npmScript), 'npm-cli.js'), ...args]
-      : args
-    const result = spawner(executable, commandArgs, { cwd, stdio: 'inherit' })
+    const result = spawner(command, args, { cwd, stdio: 'inherit' })
+    if (result.error) throw result.error
     if (result.status !== 0) {
       throw new Error(`Failed to install WASM binding with ${pm}`)
     }
