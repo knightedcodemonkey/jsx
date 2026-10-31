@@ -47,7 +47,7 @@ describe('cli init e2e (dist binary)', () => {
 
     expect(result.status).toBe(0)
     expect(result.stdout).toContain('Done!')
-    expect(result.stdout).toContain('Runtime deps installed')
+    expect(result.stdout).toContain('Runtime dependencies managed by the binding package')
     expect(result.stderr).toBe('')
   })
 })
