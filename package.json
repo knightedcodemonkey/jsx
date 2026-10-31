@@ -1,6 +1,6 @@
 {
   "name": "@knighted/jsx",
-  "version": "1.15.0",
+  "version": "2.0.0-alpha.0",
   "description": "Runtime JSX tagged template that renders DOM or React trees anywhere with or without a build step.",
   "keywords": [
     "jsx runtime",
@@ -252,5 +252,11 @@
     "src/**/*.{ts,tsx,js,jsx}": "npm run cycles",
     "*.{js,jsx,ts,tsx,mjs,cjs,cts,mts}": "eslint --max-warnings=0",
     "*.{js,jsx,ts,tsx,mjs,cjs,cts,mts,json,md,css,scss,html}": "prettier --check"
+  },
+  "allowScripts": {
+    "esbuild@0.27.2": true,
+    "sharp@0.34.5": true,
+    "fsevents@2.3.2": true,
+    "fsevents@2.3.3": true
   }
 }
