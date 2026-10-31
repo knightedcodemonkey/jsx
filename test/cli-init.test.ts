@@ -8,6 +8,17 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 let cli: typeof import('../src/cli/init.js')
 
+function expectedInstallCommand(pm: string, args: string[]) {
+  const npmScript =
+    pm === 'npm' && process.platform === 'win32' ? process.env.npm_execpath : undefined
+  return npmScript
+    ? ([
+        process.execPath,
+        [path.join(path.dirname(npmScript), 'npm-cli.js'), ...args],
+      ] as const)
+    : ([pm, args] as const)
+}
+
 beforeAll(async () => {
   process.env.KNIGHTED_JSX_CLI_TEST = '1'
   cli = await import('../src/cli/init.js')
@@ -234,7 +245,7 @@ describe('setup:wasm', () => {
           env: {
             ...process.env,
             npm_execpath: npmScript,
-            WASM_BINDING_PACKAGE: '@oxc-parser/binding-wasm32-wasip1@0.156.0',
+            WASM_BINDING_PACKAGE: '',
           },
           stdio: 'pipe',
         })
@@ -242,11 +253,18 @@ describe('setup:wasm', () => {
         expect(JSON.parse(fs.readFileSync(commandPath, 'utf8'))).toEqual([
           'install',
           '@oxc-parser/binding-wasm32-wasip1@0.156.0',
+          '@oxc-transform/binding-wasm32-wasip1@0.156.0',
           '--no-save',
           '--ignore-scripts',
           '--include=optional',
         ])
-        expect(fs.readFileSync(packagePath, 'utf8')).toBe(packageContent)
+        const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'))
+        expect(pkg.name).toBe('tmp')
+        expect(pkg.version).toBe('0.0.0')
+        expect(Object.keys(pkg.overrides).sort()).toEqual([
+          '@oxc-parser/binding-wasm32-wasip1@0.156.0',
+          '@oxc-transform/binding-wasm32-wasip1@0.156.0',
+        ])
         expect(fs.readFileSync(lockPath, 'utf8')).toBe(lockContent)
         const nestedMetadata = fs.existsSync(nestedPackagePath)
           ? fs.readFileSync(nestedPackagePath, 'utf8')
@@ -303,10 +321,13 @@ describe('installBinding', () => {
 
       try {
         await cli.installBinding('pkg@1.0.0', tmp, false, false, pm, spawner)
-        expect(spawner).toHaveBeenCalledWith(pm, [command, 'pkg@1.0.0', exactFlag], {
-          cwd: tmp,
-          stdio: 'inherit',
-        })
+        expect(spawner).toHaveBeenCalledWith(
+          ...expectedInstallCommand(pm, [command, 'pkg@1.0.0', exactFlag]),
+          {
+            cwd: tmp,
+            stdio: 'inherit',
+          },
+        )
         expect(fs.readFileSync(hostPath, 'utf8')).toBe(hostContent)
         expect(fs.readFileSync(nestedPath, 'utf8')).toBe(nestedContent)
       } finally {
@@ -354,8 +375,11 @@ describe('installBinding', () => {
         },
       })
       expect(spawner).toHaveBeenCalledWith(
-        'npm',
-        ['install', '@oxc-parser/binding-wasm32-wasip1@0.156.0', '--save-exact'],
+        ...expectedInstallCommand('npm', [
+          'install',
+          '@oxc-parser/binding-wasm32-wasip1@0.156.0',
+          '--save-exact',
+        ]),
         { cwd: tmp, stdio: 'inherit' },
       )
       await cli.installBinding(
@@ -415,6 +439,8 @@ describe('installBinding', () => {
   it.each([
     '@oxc-parser/binding-wasm32-wasip1@0.156.0',
     '@oxc-parser/binding-wasm32-wasip1',
+    '@oxc-parser/binding-wasm32-wasip1@^0.156.0',
+    '@oxc-parser/binding-wasm32-wasip1@>=0.156.0',
   ])('rejects conflicting host override %s without modifying it', async key => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jsx-cli-conflicting-policy-'))
     const pkgPath = path.join(tmp, 'package.json')
@@ -433,6 +459,53 @@ describe('installBinding', () => {
         ),
       ).rejects.toThrow('Conflicting')
       expect(fs.readFileSync(pkgPath, 'utf8')).toBe(content)
+      expect(spawner).not.toHaveBeenCalled()
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true })
+    }
+  })
+  it.each(['=0.156.0', '^0.156.0', 'latest', 'v0.156.0'])(
+    'rejects non-canonical binding version %s before installation',
+    async version => {
+      const spawner = vi.fn()
+      await expect(
+        cli.installBinding(
+          `@oxc-parser/binding-wasm32-wasip1@${version}`,
+          '/tmp/project',
+          false,
+          false,
+          'npm',
+          spawner,
+        ),
+      ).rejects.toThrow('canonical exact version')
+      expect(spawner).not.toHaveBeenCalled()
+    },
+  )
+
+  it('rejects workspace-child installs without modifying either manifest', async () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jsx-cli-workspace-'))
+    const childDir = path.join(tmp, 'packages', 'app')
+    const rootPath = path.join(tmp, 'package.json')
+    const childPath = path.join(childDir, 'package.json')
+    const rootContent = JSON.stringify({ name: 'root', workspaces: ['packages/*'] })
+    const childContent = JSON.stringify({ name: 'app' })
+    fs.mkdirSync(childDir, { recursive: true })
+    fs.writeFileSync(rootPath, rootContent)
+    fs.writeFileSync(childPath, childContent)
+    const spawner = vi.fn()
+    try {
+      await expect(
+        cli.installBinding(
+          '@oxc-parser/binding-wasm32-wasip1@0.156.0',
+          childDir,
+          false,
+          false,
+          'npm',
+          spawner,
+        ),
+      ).rejects.toThrow('npm workspace root')
+      expect(fs.readFileSync(rootPath, 'utf8')).toBe(rootContent)
+      expect(fs.readFileSync(childPath, 'utf8')).toBe(childContent)
       expect(spawner).not.toHaveBeenCalled()
     } finally {
       fs.rmSync(tmp, { recursive: true, force: true })

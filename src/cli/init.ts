@@ -4,7 +4,7 @@ import path from 'node:path'
 import readline from 'node:readline/promises'
 import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
-import { isDeepStrictEqual } from 'node:util'
+import { applyWasmRuntimePolicy } from './wasm-runtime-policy.js'
 
 const CLI_REQUIRE = createRequire(
   typeof __filename !== 'undefined' ? __filename : path.join(process.cwd(), 'noop.js'),
@@ -261,14 +261,7 @@ async function installBinding(
   spawner: typeof spawnSync = spawnSync,
 ): Promise<{ targetDir: string; name: string; version?: string }> {
   const { name, version } = parsePackageName(spec)
-  if (name === DEFAULT_BINDING_PACKAGE_NAME && version === '0.156.0') {
-    if (pm !== 'npm') {
-      throw new Error(
-        `OXC binding 0.156.0 requires a tested npm-scoped runtime override. ${pm} is not supported for this binding yet; use --pm npm or wait for a compatible upstream release.`,
-      )
-    }
-    persistBindingRuntimeOverride(cwd, dryRun)
-  }
+  applyWasmRuntimePolicy(cwd, name, version, pm, dryRun)
   const targetDir = path.resolve(cwd, 'node_modules', ...name.split('/'))
   const commands: Record<PackageManager, [string, string[]]> = {
     npm: ['npm', ['install', spec, '--save-exact']],
@@ -281,51 +274,19 @@ async function installBinding(
   log(`> Installing ${spec} with its declared dependencies`)
   logVerbose(`> ${command} ${args.join(' ')}`, verbose)
   if (!dryRun) {
-    const result = spawner(command, args, { cwd, stdio: 'inherit' })
+    const npmScript =
+      pm === 'npm' && process.platform === 'win32' ? process.env.npm_execpath : undefined
+    const executable = npmScript ? process.execPath : command
+    const commandArgs = npmScript
+      ? [path.join(path.dirname(npmScript), 'npm-cli.js'), ...args]
+      : args
+    const result = spawner(executable, commandArgs, { cwd, stdio: 'inherit' })
     if (result.status !== 0) {
       throw new Error(`Failed to install WASM binding with ${pm}`)
     }
   }
 
   return { targetDir, name, version }
-}
-
-function persistBindingRuntimeOverride(cwd: string, dryRun: boolean) {
-  const pkgPath = path.join(cwd, 'package.json')
-  const pkg: unknown = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
-  if (typeof pkg !== 'object' || pkg === null || Array.isArray(pkg)) {
-    throw new Error('Invalid project package.json')
-  }
-  const overrides = ('overrides' in pkg ? pkg.overrides : undefined) ?? {}
-  if (typeof overrides !== 'object' || Array.isArray(overrides)) {
-    throw new Error('Invalid npm overrides in project package.json')
-  }
-  const key = `${DEFAULT_BINDING_PACKAGE_NAME}@0.156.0`
-  const workaround = {
-    '@napi-rs/wasm-runtime': {
-      '.': '1.2.5',
-      '@emnapi/core': '2.0.0-alpha.6',
-      '@emnapi/runtime': '2.0.0-alpha.6',
-    },
-  }
-  if (DEFAULT_BINDING_PACKAGE_NAME in overrides) {
-    throw new Error(
-      `Conflicting unversioned npm override for ${DEFAULT_BINDING_PACKAGE_NAME}; no overrides were changed`,
-    )
-  }
-  const existing = key in overrides ? overrides[key] : undefined
-  if (existing !== undefined && !isDeepStrictEqual(existing, workaround)) {
-    throw new Error(`Conflicting npm override for ${key}; no overrides were changed`)
-  }
-
-  log(`> Applying ${key} scoped runtime compatibility override`)
-  if (!dryRun && existing === undefined) {
-    fs.writeFileSync(
-      pkgPath,
-      `${JSON.stringify({ ...pkg, overrides: { ...overrides, [key]: workaround } }, null, 2)}\n`,
-      'utf8',
-    )
-  }
 }
 
 type BindingImporter = (specifier: string) => Promise<unknown>

@@ -4,6 +4,29 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>@knighted/jsx &mdash; E2E fixture</title>
+    <script type="importmap">
+      {
+        "imports": {
+          "@knighted/jsx/lite": "/dist/lite/index.js",
+          "@knighted/jsx/react": "/dist/react/index.js",
+          "react": "https://cdn.jsdelivr.net/npm/react@19.2.4/+esm",
+          "react-dom/client": "https://cdn.jsdelivr.net/npm/react-dom@19.2.4/client/+esm",
+          "lit": "https://cdn.jsdelivr.net/npm/lit@3/+esm",
+          "shiki": "https://cdn.jsdelivr.net/npm/shiki@1.1.7/+esm",
+          "property-information": "https://cdn.jsdelivr.net/npm/property-information@7.1.0/+esm",
+          "oxc-parser": "https://cdn.jsdelivr.net/npm/oxc-parser@0.156.0/+esm",
+          "oxc-transform": "https://cdn.jsdelivr.net/npm/oxc-transform@0.156.0/+esm",
+          "@oxc-parser/binding-wasm32-wasip1": "https://cdn.jsdelivr.net/npm/@oxc-parser/binding-wasm32-wasip1@0.156.0/+esm",
+          "@oxc-transform/binding-wasm32-wasip1": "https://cdn.jsdelivr.net/npm/@oxc-transform/binding-wasm32-wasip1@0.156.0/+esm",
+          "@napi-rs/wasm-runtime": "https://cdn.jsdelivr.net/npm/@napi-rs/wasm-runtime@1.2.5/+esm",
+          "https://cdn.jsdelivr.net/npm/@oxc-parser/binding-wasm32-wasip1/+esm": "https://cdn.jsdelivr.net/npm/@oxc-parser/binding-wasm32-wasip1@0.156.0/+esm",
+          "https://cdn.jsdelivr.net/npm/@oxc-transform/binding-wasm32-wasip1/+esm": "https://cdn.jsdelivr.net/npm/@oxc-transform/binding-wasm32-wasip1@0.156.0/+esm",
+          "https://cdn.jsdelivr.net/npm/@napi-rs/wasm-runtime@1.2.6/+esm": "https://cdn.jsdelivr.net/npm/@napi-rs/wasm-runtime@1.2.5/+esm",
+          "https://cdn.jsdelivr.net/npm/@emnapi/core@1.11.3/+esm": "https://cdn.jsdelivr.net/npm/@emnapi/core@2.0.0-alpha.6/+esm",
+          "https://cdn.jsdelivr.net/npm/@emnapi/runtime@1.11.3/+esm": "https://cdn.jsdelivr.net/npm/@emnapi/runtime@2.0.0-alpha.6/+esm"
+        }
+      }
+    </script>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <link rel="modulepreload" href="/dist/lite/index.js" />
@@ -27,30 +50,10 @@
     />
     <link
       rel="modulepreload"
-      href="https://cdn.jsdelivr.net/npm/@napi-rs/wasm-runtime@1.2.6/+esm"
+      href="https://cdn.jsdelivr.net/npm/@napi-rs/wasm-runtime@1.2.5/+esm"
     />
     <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/lit@3/+esm" />
     <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/shiki@1.1.7/+esm" />
-    <script type="importmap">
-      {
-        "imports": {
-          "@knighted/jsx/lite": "/dist/lite/index.js",
-          "@knighted/jsx/react": "/dist/react/index.js",
-          "react": "https://cdn.jsdelivr.net/npm/react@19.2.4/+esm",
-          "react-dom/client": "https://cdn.jsdelivr.net/npm/react-dom@19.2.4/client/+esm",
-          "lit": "https://cdn.jsdelivr.net/npm/lit@3/+esm",
-          "shiki": "https://cdn.jsdelivr.net/npm/shiki@1.1.7/+esm",
-          "property-information": "https://cdn.jsdelivr.net/npm/property-information@7.1.0/+esm",
-          "oxc-parser": "https://cdn.jsdelivr.net/npm/oxc-parser@0.156.0/+esm",
-          "@oxc-parser/binding-wasm32-wasip1": "https://cdn.jsdelivr.net/npm/@oxc-parser/binding-wasm32-wasip1@0.156.0/+esm",
-          "@napi-rs/wasm-runtime": "https://cdn.jsdelivr.net/npm/@napi-rs/wasm-runtime@1.2.6/+esm",
-          "https://cdn.jsdelivr.net/npm/@oxc-parser/binding-wasm32-wasip1/+esm": "https://cdn.jsdelivr.net/npm/@oxc-parser/binding-wasm32-wasip1@0.156.0/+esm",
-          "https://cdn.jsdelivr.net/npm/@emnapi/core@1.11.3/+esm": "https://cdn.jsdelivr.net/npm/@emnapi/core@2.0.0-beta.2/+esm",
-          "https://cdn.jsdelivr.net/npm/@emnapi/runtime@1.11.3/+esm": "https://cdn.jsdelivr.net/npm/@emnapi/runtime@2.0.0-beta.2/+esm",
-          "https://cdn.jsdelivr.net/npm/@emnapi/runtime@2.0.0-alpha.6/+esm": "https://cdn.jsdelivr.net/npm/@emnapi/runtime@2.0.0-beta.2/+esm"
-        }
-      }
-    </script>
     <style>
       :root {
         font-family:

@@ -45,6 +45,10 @@ npx @knighted/jsx init
 
 See [docs/cli.md](docs/cli.md) for flags, dry runs, and manual installation. OXC 0.156.0 requires a tested npm-scoped runtime workaround because its published binding/runtime peer requirements conflict. The CLI applies that policy without replacing the host's direct emnapi dependencies; pnpm, Yarn, and Bun support for this binding version is pending.
 
+For browser use of `@knighted/jsx/transform`, also prepare the transformer binding
+with the [transformer setup command](docs/cli.md#options). Its compatibility policy
+must be recorded in the consuming project, not just this package's development setup.
+
 > [!TIP]
 > Public CDNs such as `esm.sh` or `jsdelivr` already publish bundles that include the WASM binding, so you can import this package directly from those endpoints in `<script type="module">` blocks without any extra setup.
 

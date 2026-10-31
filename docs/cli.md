@@ -45,15 +45,17 @@ npx @knighted/jsx init --config
 # Install a specific binding version
 npx @knighted/jsx init --wasm-version 0.156.0
 
-# Use a custom binding spec entirely
-WASM_BINDING_PACKAGE=@oxc-parser/binding-wasm32-wasip1@beta npx @knighted/jsx init
+# Also prepare the transformer binding for browser TypeScript stripping
+npx @knighted/jsx init --pm npm --wasm-package @oxc-transform/binding-wasm32-wasip1@0.156.0
 ```
 
 ## Notes
 
 - The default binding install always matches the `oxc-parser` version bundled with `@knighted/jsx`; use `--wasm-version`, `--wasm-package`, or `WASM_BINDING_PACKAGE` when you intentionally need a different build.
 - The current WASM binding has no CPU restriction and is installed normally; the CLI no longer deletes its directory or extracts a tarball without installing dependencies.
-- The repository's `npm run setup:wasm` helper uses ordinary npm installation for the current binding, preserving its declared dependency graph without modifying project manifests or running install scripts.
+- The repository's `npm run setup:wasm` helper applies the same compatibility policies to both WASM bindings and uses npm installation without saving dependency changes or running install scripts. Missing root policies are saved first; existing matching policies and the lockfile are preserved.
+- For the supported OXC bindings, use a canonical exact version. Ranges, tags, prefixed versions such as `=0.156.0`, and version strings with leading zeroes are rejected before installation.
+- Run affected npm installs from the workspace root. Workspace-child installs are rejected before any files change because npm ignores child-package overrides. This conservative check also rejects nested projects beneath a workspace manifest.
 - Loader configuration is opt-in and requires a prompt. No config files are modified unless you request help.
 - If verification fails, rerun with `--verbose` to see the resolved binding path and error details.
 - `@tybys/wasm-util` is not required for the standard flow. Consider it only as an advanced workaround if your environment blocks the normal WASM install/loading path.
@@ -63,7 +65,8 @@ WASM_BINDING_PACKAGE=@oxc-parser/binding-wasm32-wasip1@beta npx @knighted/jsx in
 
 The published dependency requirements are inconsistent:
 
-- `@oxc-parser/binding-wasm32-wasip1@0.156.0` declares emnapi core/runtime
+- Both `@oxc-parser/binding-wasm32-wasip1@0.156.0` and
+  `@oxc-transform/binding-wasm32-wasip1@0.156.0` declare emnapi core/runtime
   `2.0.0-alpha.6` and `@napi-rs/wasm-runtime ~1.2.6`.
 - WASM runtime 1.2.6 accepts emnapi 1.x or `2.0.0-beta.2` as peers, but not alpha.6.
 - A normal install can share that runtime with a host's emnapi 1.x packages. The
@@ -72,7 +75,9 @@ The published dependency requirements are inconsistent:
 - A nested npm install instead produces an invalid alpha peer graph; nesting alone
   is not a supported solution.
 
-For this exact binding version, the CLI applies the following npm-only workaround:
+For each selected binding at this exact version, the CLI applies the following
+npm-only workaround (the parser policy is shown; the transformer policy uses its
+own package name as the outer key):
 
 ```json
 {
@@ -95,9 +100,16 @@ workaround, not an upstream-supported dependency declaration. Real WASM parsing 
 dependency validation were verified both after installation and after `npm ci`.
 
 Existing unrelated npm overrides are preserved, matching scoped overrides are reused,
-and conflicting versioned or unversioned binding overrides are rejected. A dry run
+and any competing selector for the same binding is conservatively rejected, including
+ranges and unversioned keys. This intentionally avoids guessing whether selectors overlap
+or merging host policies. A dry run
 does not save any policy or install packages. For manual setup, add the scoped policy
 above before running `npm install @oxc-parser/binding-wasm32-wasip1@0.156.0 --save-exact`.
+
+Browser consumers of `@knighted/jsx/transform` should also run the transformer CLI
+command above so its subtree policy is recorded in the consuming project. Package-level
+overrides are not inherited by consumers. The package includes both exact WASM bindings;
+the DOM-only runtime does not import or initialize the transformer until used.
 
 ### Package-manager follow-up
 

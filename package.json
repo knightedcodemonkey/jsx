@@ -227,7 +227,24 @@
   "optionalDependencies": {
     "@oxc-parser/binding-darwin-arm64": "^0.156.0",
     "@oxc-parser/binding-linux-x64-gnu": "^0.156.0",
-    "@oxc-parser/binding-wasm32-wasip1": "^0.156.0"
+    "@oxc-parser/binding-wasm32-wasip1": "0.156.0",
+    "@oxc-transform/binding-wasm32-wasip1": "0.156.0"
+  },
+  "overrides": {
+    "@oxc-parser/binding-wasm32-wasip1@0.156.0": {
+      "@napi-rs/wasm-runtime": {
+        ".": "1.2.5",
+        "@emnapi/core": "2.0.0-alpha.6",
+        "@emnapi/runtime": "2.0.0-alpha.6"
+      }
+    },
+    "@oxc-transform/binding-wasm32-wasip1@0.156.0": {
+      "@napi-rs/wasm-runtime": {
+        ".": "1.2.5",
+        "@emnapi/core": "2.0.0-alpha.6",
+        "@emnapi/runtime": "2.0.0-alpha.6"
+      }
+    }
   },
   "files": [
     "dist",
