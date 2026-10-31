@@ -4,7 +4,7 @@ const external = [
   'oxc-parser',
   '@oxc-parser/binding-darwin-arm64',
   '@oxc-parser/binding-linux-x64-gnu',
-  '@oxc-parser/binding-wasm32-wasi',
+  '@oxc-parser/binding-wasm32-wasip1',
 ]
 
 export default defineConfig({

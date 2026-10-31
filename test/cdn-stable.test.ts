@@ -16,6 +16,7 @@ const fixtureParserVersion = '9.1.0'
 const fixtureTransformVersion = '9.2.0'
 const fixtureBindingVersion = '9.3.0'
 const fixtureRuntimeVersion = '9.4.0'
+const fixtureEmnapiVersion = '2.0.0-beta.2'
 
 const contract: CdnContract = {
   contractVersion: 1,
@@ -26,8 +27,10 @@ const contract: CdnContract = {
     core: {
       subpath: '.',
       deps: {
+        '@emnapi/core': fixtureEmnapiVersion,
+        '@emnapi/runtime': fixtureEmnapiVersion,
         'oxc-parser': fixtureParserVersion,
-        '@oxc-parser/binding-wasm32-wasi': fixtureBindingVersion,
+        '@oxc-parser/binding-wasm32-wasip1': fixtureBindingVersion,
         '@napi-rs/wasm-runtime': fixtureRuntimeVersion,
       },
     },
@@ -35,7 +38,7 @@ const contract: CdnContract = {
       subpath: './react',
       deps: {
         'oxc-parser': fixtureParserVersion,
-        '@oxc-parser/binding-wasm32-wasi': fixtureBindingVersion,
+        '@oxc-parser/binding-wasm32-wasip1': fixtureBindingVersion,
         '@napi-rs/wasm-runtime': fixtureRuntimeVersion,
       },
     },
@@ -44,8 +47,8 @@ const contract: CdnContract = {
       deps: {
         'oxc-parser': fixtureParserVersion,
         'oxc-transform': fixtureTransformVersion,
-        '@oxc-parser/binding-wasm32-wasi': fixtureBindingVersion,
-        '@oxc-transform/binding-wasm32-wasi': fixtureTransformVersion,
+        '@oxc-parser/binding-wasm32-wasip1': fixtureBindingVersion,
+        '@oxc-transform/binding-wasm32-wasip1': fixtureTransformVersion,
         '@napi-rs/wasm-runtime': fixtureRuntimeVersion,
       },
     },
@@ -72,7 +75,7 @@ describe('buildStableCdnUrls', () => {
     )
 
     expect(decodeURIComponent(result.urls.core)).toContain(
-      `deps=@napi-rs/wasm-runtime@${fixtureRuntimeVersion},@oxc-parser/binding-wasm32-wasi@${fixtureBindingVersion},oxc-parser@${fixtureParserVersion}`,
+      `deps=@emnapi/core@${fixtureEmnapiVersion},@emnapi/runtime@${fixtureEmnapiVersion},@napi-rs/wasm-runtime@${fixtureRuntimeVersion},@oxc-parser/binding-wasm32-wasip1@${fixtureBindingVersion},oxc-parser@${fixtureParserVersion}`,
     )
   })
 
@@ -86,7 +89,7 @@ describe('buildStableCdnUrls', () => {
           deps: {
             'oxc-parser': fixtureParserVersion,
             '@napi-rs/wasm-runtime': fixtureRuntimeVersion,
-            '@oxc-parser/binding-wasm32-wasi': fixtureBindingVersion,
+            '@oxc-parser/binding-wasm32-wasip1': fixtureBindingVersion,
           },
         },
       },
@@ -98,7 +101,7 @@ describe('buildStableCdnUrls', () => {
     })
 
     expect(decodeURIComponent(result.urls.core)).toContain(
-      `deps=@napi-rs/wasm-runtime@${fixtureRuntimeVersion},@oxc-parser/binding-wasm32-wasi@${fixtureBindingVersion},oxc-parser@${fixtureParserVersion}`,
+      `deps=@napi-rs/wasm-runtime@${fixtureRuntimeVersion},@oxc-parser/binding-wasm32-wasip1@${fixtureBindingVersion},oxc-parser@${fixtureParserVersion}`,
     )
   })
 

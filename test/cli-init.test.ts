@@ -239,6 +239,77 @@ describe('installRuntimeDeps', () => {
       cli.installRuntimeDeps('npm', ['missing-dep'], tmp, false, false, failingSpawner),
     ).toThrow(/Failed to install runtime dependencies/)
   })
+
+  it('skips matching versions even when package metadata is not exported', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jsx-cli-runtime-version-'))
+    const packageDir = path.join(tmp, 'node_modules', '@napi-rs', 'wasm-runtime')
+    fs.mkdirSync(path.join(packageDir, 'dist'), { recursive: true })
+    fs.writeFileSync(path.join(tmp, 'package.json'), JSON.stringify({ name: 'tmp' }))
+    fs.writeFileSync(path.join(packageDir, 'dist', 'index.js'), 'module.exports = {}')
+    fs.writeFileSync(
+      path.join(packageDir, 'package.json'),
+      JSON.stringify({
+        name: '@napi-rs/wasm-runtime',
+        version: '1.2.6',
+        exports: './dist/index.js',
+      }),
+    )
+    const spawner = vi.fn()
+
+    try {
+      expect(
+        cli.installRuntimeDeps(
+          'npm',
+          ['@napi-rs/wasm-runtime@1.2.6'],
+          tmp,
+          false,
+          false,
+          spawner,
+        ),
+      ).toEqual([])
+      expect(spawner).not.toHaveBeenCalled()
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true })
+    }
+  })
+
+  it.each([
+    ['npm', 'install'],
+    ['pnpm', 'add'],
+    ['yarn', 'add'],
+    ['bun', 'add'],
+  ] as const)('replaces incompatible runtime versions using %s', (pm, command) => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jsx-cli-runtime-upgrade-'))
+    const packageDir = path.join(tmp, 'node_modules', '@emnapi', 'runtime')
+    fs.mkdirSync(packageDir, { recursive: true })
+    fs.writeFileSync(path.join(tmp, 'package.json'), JSON.stringify({ name: 'tmp' }))
+    fs.writeFileSync(path.join(packageDir, 'index.js'), 'module.exports = {}')
+    fs.writeFileSync(
+      path.join(packageDir, 'package.json'),
+      JSON.stringify({ name: '@emnapi/runtime', version: '1.11.3' }),
+    )
+    const spawner = vi.fn().mockReturnValue({ status: 0 })
+
+    try {
+      expect(
+        cli.installRuntimeDeps(
+          pm,
+          ['@emnapi/runtime@2.0.0-beta.2'],
+          tmp,
+          false,
+          false,
+          spawner,
+        ),
+      ).toEqual(['@emnapi/runtime@2.0.0-beta.2'])
+      expect(spawner).toHaveBeenCalledWith(
+        pm,
+        [command, '@emnapi/runtime@2.0.0-beta.2', ...(pm === 'npm' ? ['--save'] : [])],
+        { cwd: tmp, stdio: 'inherit' },
+      )
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true })
+    }
+  })
 })
 
 describe('installBinding + verifyBinding (dry-run)', () => {
@@ -334,15 +405,15 @@ describe('persistBindingSpec', () => {
 
     cli.persistBindingSpec(
       tmp,
-      '@oxc-parser/binding-wasm32-wasi',
-      '^0.142.0',
+      '@oxc-parser/binding-wasm32-wasip1',
+      '^0.156.0',
       false,
       false,
     )
 
     const updated = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
-    expect(updated.optionalDependencies['@oxc-parser/binding-wasm32-wasi']).toBe(
-      '^0.142.0',
+    expect(updated.optionalDependencies['@oxc-parser/binding-wasm32-wasip1']).toBe(
+      '^0.156.0',
     )
   })
 
@@ -572,7 +643,7 @@ describe('main (overrides)', () => {
       force: false,
       skipConfig: true,
       packageManager: 'pnpm' as const,
-      wasmPackage: '@oxc-parser/binding-wasm32-wasi',
+      wasmPackage: '@oxc-parser/binding-wasm32-wasip1',
       wasmVersion: undefined,
       wasmPackageSource: 'default' as const,
     }
@@ -582,19 +653,19 @@ describe('main (overrides)', () => {
     const detectPackageManager = vi.fn().mockReturnValue('pnpm')
     const installRuntimeDeps = vi.fn().mockReturnValue([])
     const installBinding = vi.fn().mockResolvedValue({
-      targetDir: '/tmp/project/node_modules/@oxc-parser/binding-wasm32-wasi',
-      name: '@oxc-parser/binding-wasm32-wasi',
-      version: '0.142.0',
+      targetDir: '/tmp/project/node_modules/@oxc-parser/binding-wasm32-wasip1',
+      name: '@oxc-parser/binding-wasm32-wasip1',
+      version: '0.156.0',
     })
     const persistBindingSpec = vi.fn()
     const verifyBinding = vi.fn().mockResolvedValue('resolved.js')
     const maybeHandleConfigPrompt = vi.fn().mockResolvedValue(undefined)
     const resolveBindingSpec = vi.fn().mockReturnValue({
-      spec: '@oxc-parser/binding-wasm32-wasi@0.142.0',
-      name: '@oxc-parser/binding-wasm32-wasi',
-      version: '0.142.0',
+      spec: '@oxc-parser/binding-wasm32-wasip1@0.156.0',
+      name: '@oxc-parser/binding-wasm32-wasip1',
+      version: '0.156.0',
     })
-    const readLocalOxcParserVersion = vi.fn().mockReturnValue('0.142.0')
+    const readLocalOxcParserVersion = vi.fn().mockReturnValue('0.156.0')
 
     await cli.main({
       parseArgs,
@@ -609,9 +680,20 @@ describe('main (overrides)', () => {
       readLocalOxcParserVersion,
     })
 
-    expect(resolveBindingSpec).toHaveBeenCalledWith(options.wasmPackage, '0.142.0')
+    expect(resolveBindingSpec).toHaveBeenCalledWith(options.wasmPackage, '0.156.0')
+    expect(installRuntimeDeps).toHaveBeenCalledWith(
+      'pnpm',
+      [
+        '@napi-rs/wasm-runtime@1.2.6',
+        '@emnapi/runtime@2.0.0-beta.2',
+        '@emnapi/core@2.0.0-beta.2',
+      ],
+      options.cwd,
+      options.dryRun,
+      options.verbose,
+    )
     expect(installBinding).toHaveBeenCalledWith(
-      '@oxc-parser/binding-wasm32-wasi@0.142.0',
+      '@oxc-parser/binding-wasm32-wasip1@0.156.0',
       options.cwd,
       options.dryRun,
       options.verbose,

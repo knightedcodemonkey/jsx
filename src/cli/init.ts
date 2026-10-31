@@ -9,11 +9,15 @@ import { extract } from 'tar'
 const CLI_REQUIRE = createRequire(
   typeof __filename !== 'undefined' ? __filename : path.join(process.cwd(), 'noop.js'),
 )
-const DEFAULT_BINDING_PACKAGE_NAME = '@oxc-parser/binding-wasm32-wasi'
+const DEFAULT_BINDING_PACKAGE_NAME = '@oxc-parser/binding-wasm32-wasip1'
 const DEFAULT_BINDING_PACKAGE =
   process.env.WASM_BINDING_PACKAGE ?? DEFAULT_BINDING_PACKAGE_NAME
 const DEFAULT_BINDING_SOURCE = process.env.WASM_BINDING_PACKAGE ? 'env' : 'default'
-const RUNTIME_DEPS = ['@napi-rs/wasm-runtime', '@emnapi/runtime', '@emnapi/core']
+const RUNTIME_DEPS = [
+  '@napi-rs/wasm-runtime@1.2.6',
+  '@emnapi/runtime@2.0.0-beta.2',
+  '@emnapi/core@2.0.0-beta.2',
+]
 const SUPPORTED_PACKAGE_MANAGERS = ['npm', 'pnpm', 'yarn', 'bun'] as const
 // Node emits a noisy ExperimentalWarning whenever the WASI shim loads; silence just that message.
 const WASI_WARNING_SNIPPET = 'WASI is an experimental feature'
@@ -336,11 +340,32 @@ function installRuntimeDeps(
   return missing
 }
 
-function isDependencyInstalled(dep: string, cwd: string) {
+function isDependencyInstalled(spec: string, cwd: string) {
   try {
+    const { name, version } = parsePackageName(spec)
     const requireFromCwd = createRequire(path.join(cwd, 'package.json'))
-    requireFromCwd.resolve(dep)
-    return true
+    const resolved = requireFromCwd.resolve(name)
+    if (!version) return true
+
+    let packageDir = path.dirname(resolved)
+    while (true) {
+      const pkgPath = path.join(packageDir, 'package.json')
+      if (fs.existsSync(pkgPath)) {
+        const pkg: unknown = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
+        if (
+          typeof pkg === 'object' &&
+          pkg !== null &&
+          'name' in pkg &&
+          pkg.name === name
+        ) {
+          return 'version' in pkg && pkg.version === version
+        }
+      }
+
+      const parentDir = path.dirname(packageDir)
+      if (parentDir === packageDir) return false
+      packageDir = parentDir
+    }
   } catch {
     return false
   }

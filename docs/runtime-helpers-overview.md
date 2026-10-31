@@ -72,7 +72,7 @@ createRoot(document.getElementById('react-root')!).render(reactJsx`<${Counter} /
 
 ## Parser + WASM considerations
 
-- Browser builds need the WASM binding from `@oxc-parser/binding-wasm32-wasi`. Install it (or rely on CDN bundles that already include it) so the helper can parse JSX outside Node.
+- Browser builds need the WASM binding from `@oxc-parser/binding-wasm32-wasip1`. Install it (or rely on CDN bundles that already include it) so the helper can parse JSX outside Node.
 - When running under Node, the helper automatically loads the native binding and falls back to WASM when necessary.
 
 ### CDN determinism note
@@ -83,13 +83,15 @@ still allow transitive parser/binding/runtime versions to drift over time.
 For stable browser behavior, pin these as a tested set:
 
 - `oxc-parser`
-- `@oxc-parser/binding-wasm32-wasi`
+- `@oxc-parser/binding-wasm32-wasip1`
 - `@napi-rs/wasm-runtime`
+- `@emnapi/core`
+- `@emnapi/runtime`
 
 If you use `@knighted/jsx/transform`, also pin:
 
 - `oxc-transform`
-- `@oxc-transform/binding-wasm32-wasi`
+- `@oxc-transform/binding-wasm32-wasip1`
 
 See the README CDN stability contract section for an `esm.sh` example URL shape.
 

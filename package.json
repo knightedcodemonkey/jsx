@@ -163,7 +163,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@knighted/duel": "^4.1.0",
-    "@oxc-project/types": "^0.142.0",
+    "@oxc-project/types": "^0.156.0",
     "@playwright/test": "^1.60.0",
     "@rspack/core": "^1.0.5",
     "@types/jsdom": "^27.0.0",
@@ -182,7 +182,7 @@
     "lint-staged": "^16.2.7",
     "lit": "^3.2.1",
     "next": "^16.2.12",
-    "oxlint": "^1.66.0",
+    "oxlint": "^1.90.0",
     "prettier": "^3.7.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -195,10 +195,12 @@
     "vitest": "^4.1.10"
   },
   "dependencies": {
-    "@napi-rs/wasm-runtime": "^1.2.2",
+    "@emnapi/core": "2.0.0-beta.2",
+    "@emnapi/runtime": "2.0.0-beta.2",
+    "@napi-rs/wasm-runtime": "~1.2.6",
     "magic-string": "^0.30.21",
-    "oxc-parser": "^0.142.0",
-    "oxc-transform": "^0.142.0",
+    "oxc-parser": "^0.156.0",
+    "oxc-transform": "^0.156.0",
     "property-information": "^7.1.0",
     "tar": "^7.5.22"
   },
@@ -223,9 +225,9 @@
     }
   },
   "optionalDependencies": {
-    "@oxc-parser/binding-darwin-arm64": "^0.142.0",
-    "@oxc-parser/binding-linux-x64-gnu": "^0.142.0",
-    "@oxc-parser/binding-wasm32-wasi": "^0.142.0"
+    "@oxc-parser/binding-darwin-arm64": "^0.156.0",
+    "@oxc-parser/binding-linux-x64-gnu": "^0.156.0",
+    "@oxc-parser/binding-wasm32-wasip1": "^0.156.0"
   },
   "files": [
     "dist",

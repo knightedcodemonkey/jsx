@@ -6,7 +6,7 @@ import { extract } from 'tar'
 const npmExecPath = process.env.npm_execpath
 const npmBin = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 const PACKAGE_SPEC =
-  process.env.WASM_BINDING_PACKAGE ?? '@oxc-parser/binding-wasm32-wasi@^0.142.0'
+  process.env.WASM_BINDING_PACKAGE ?? '@oxc-parser/binding-wasm32-wasip1@0.156.0'
 const cwd = process.cwd()
 
 function runNpmPack() {
@@ -36,7 +36,7 @@ async function main() {
       cwd,
       'node_modules',
       '@oxc-parser',
-      'binding-wasm32-wasi',
+      'binding-wasm32-wasip1',
     )
 
     fs.rmSync(targetDir, { recursive: true, force: true })

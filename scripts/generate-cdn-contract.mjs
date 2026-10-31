@@ -11,9 +11,11 @@ const toContract = pkg => {
   const parserVersion = normalizeVersion(pkg.dependencies?.['oxc-parser'])
   const transformVersion = normalizeVersion(pkg.dependencies?.['oxc-transform'])
   const parserBindingVersion = normalizeVersion(
-    pkg.optionalDependencies?.['@oxc-parser/binding-wasm32-wasi'],
+    pkg.optionalDependencies?.['@oxc-parser/binding-wasm32-wasip1'],
   )
   const wasmRuntimeVersion = normalizeVersion(pkg.dependencies?.['@napi-rs/wasm-runtime'])
+  const emnapiCoreVersion = normalizeVersion(pkg.dependencies?.['@emnapi/core'])
+  const emnapiRuntimeVersion = normalizeVersion(pkg.dependencies?.['@emnapi/runtime'])
 
   return {
     contractVersion: 1,
@@ -24,26 +26,32 @@ const toContract = pkg => {
       core: {
         subpath: '.',
         deps: {
+          '@emnapi/core': emnapiCoreVersion,
+          '@emnapi/runtime': emnapiRuntimeVersion,
           'oxc-parser': parserVersion,
-          '@oxc-parser/binding-wasm32-wasi': parserBindingVersion,
+          '@oxc-parser/binding-wasm32-wasip1': parserBindingVersion,
           '@napi-rs/wasm-runtime': wasmRuntimeVersion,
         },
       },
       react: {
         subpath: './react',
         deps: {
+          '@emnapi/core': emnapiCoreVersion,
+          '@emnapi/runtime': emnapiRuntimeVersion,
           'oxc-parser': parserVersion,
-          '@oxc-parser/binding-wasm32-wasi': parserBindingVersion,
+          '@oxc-parser/binding-wasm32-wasip1': parserBindingVersion,
           '@napi-rs/wasm-runtime': wasmRuntimeVersion,
         },
       },
       transform: {
         subpath: './transform',
         deps: {
+          '@emnapi/core': emnapiCoreVersion,
+          '@emnapi/runtime': emnapiRuntimeVersion,
           'oxc-parser': parserVersion,
           'oxc-transform': transformVersion,
-          '@oxc-parser/binding-wasm32-wasi': parserBindingVersion,
-          '@oxc-transform/binding-wasm32-wasi': transformVersion,
+          '@oxc-parser/binding-wasm32-wasip1': parserBindingVersion,
+          '@oxc-transform/binding-wasm32-wasip1': transformVersion,
           '@napi-rs/wasm-runtime': wasmRuntimeVersion,
         },
       },
@@ -54,11 +62,13 @@ const toContract = pkg => {
 const hasMissingVersion = contract => {
   const versions = [
     contract.packageVersion,
+    contract.entries.core.deps['@emnapi/core'],
+    contract.entries.core.deps['@emnapi/runtime'],
     contract.entries.core.deps['oxc-parser'],
-    contract.entries.core.deps['@oxc-parser/binding-wasm32-wasi'],
+    contract.entries.core.deps['@oxc-parser/binding-wasm32-wasip1'],
     contract.entries.core.deps['@napi-rs/wasm-runtime'],
     contract.entries.transform.deps['oxc-transform'],
-    contract.entries.transform.deps['@oxc-transform/binding-wasm32-wasi'],
+    contract.entries.transform.deps['@oxc-transform/binding-wasm32-wasip1'],
   ]
 
   return versions.some(value => typeof value !== 'string' || value.length === 0)

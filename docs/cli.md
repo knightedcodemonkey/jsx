@@ -10,7 +10,8 @@ npx @knighted/jsx init
 
 What it does by default:
 
-- Installs `@oxc-parser/binding-wasm32-wasi` that matches the library's bundled `oxc-parser` version plus runtime helpers (`@napi-rs/wasm-runtime`, `@emnapi/runtime`, `@emnapi/core`).
+- Installs `@oxc-parser/binding-wasm32-wasip1` that matches the library's bundled `oxc-parser` version plus runtime helpers (`@napi-rs/wasm-runtime`, `@emnapi/runtime`, `@emnapi/core`).
+- Installs the release's exact runtime helper versions, replacing incompatible installed versions and skipping matching versions.
 - Records the binding in `optionalDependencies` so the version is visible in your project.
 - Verifies the binding can be imported and reports the resolved path.
 - Skips loader config changes (prompted only when you opt in).
@@ -42,10 +43,10 @@ npx @knighted/jsx init --pm npm
 npx @knighted/jsx init --config
 
 # Install a specific binding version
-npx @knighted/jsx init --wasm-version 0.100.0
+npx @knighted/jsx init --wasm-version 0.156.0
 
 # Use a custom binding spec entirely
-WASM_BINDING_PACKAGE=@oxc-parser/binding-wasm32-wasi@beta npx @knighted/jsx init
+WASM_BINDING_PACKAGE=@oxc-parser/binding-wasm32-wasip1@beta npx @knighted/jsx init
 ```
 
 ## Notes
@@ -55,4 +56,4 @@ WASM_BINDING_PACKAGE=@oxc-parser/binding-wasm32-wasi@beta npx @knighted/jsx init
 - Loader configuration is opt-in and requires a prompt. No config files are modified unless you request help.
 - If verification fails, rerun with `--verbose` to see the resolved binding path and error details.
 - `@tybys/wasm-util` is not required for the standard flow. Consider it only as an advanced workaround if your environment blocks the normal WASM install/loading path.
-- Bundlers may need a WASM-friendly setting to emit the parser asset: Vite handles `.wasm` out of the box; Webpack/Rspack typically need `experiments.asyncWebAssembly = true` or an asset rule so `parser.wasm32-wasi.wasm` is copied into the build output. Ensure your bundler is configured to serve that file.
+- Bundlers may need a WASM-friendly setting to emit the parser asset: Vite handles `.wasm` out of the box; Webpack/Rspack typically need `experiments.asyncWebAssembly = true` or an asset rule so `parser.wasm32-wasip1.wasm` is copied into the build output. Ensure your bundler is configured to serve that file.
