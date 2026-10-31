@@ -4,7 +4,7 @@ import path from 'node:path'
 import readline from 'node:readline/promises'
 import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
-import { extract } from 'tar'
+import { isDeepStrictEqual } from 'node:util'
 
 const CLI_REQUIRE = createRequire(
   typeof __filename !== 'undefined' ? __filename : path.join(process.cwd(), 'noop.js'),
@@ -13,11 +13,6 @@ const DEFAULT_BINDING_PACKAGE_NAME = '@oxc-parser/binding-wasm32-wasip1'
 const DEFAULT_BINDING_PACKAGE =
   process.env.WASM_BINDING_PACKAGE ?? DEFAULT_BINDING_PACKAGE_NAME
 const DEFAULT_BINDING_SOURCE = process.env.WASM_BINDING_PACKAGE ? 'env' : 'default'
-const RUNTIME_DEPS = [
-  '@napi-rs/wasm-runtime@1.2.6',
-  '@emnapi/runtime@2.0.0-beta.2',
-  '@emnapi/core@2.0.0-beta.2',
-]
 const SUPPORTED_PACKAGE_MANAGERS = ['npm', 'pnpm', 'yarn', 'bun'] as const
 // Node emits a noisy ExperimentalWarning whenever the WASI shim loads; silence just that message.
 const WASI_WARNING_SNIPPET = 'WASI is an experimental feature'
@@ -147,26 +142,6 @@ function ensurePackageJson(cwd: string) {
   }
 }
 
-function runNpmPack(
-  spec: string,
-  cwd: string,
-  dryRun: boolean,
-  verbose: boolean,
-  execFn: typeof execFileSync = execFileSync,
-) {
-  logVerbose(`> npm pack ${spec}`, verbose)
-  if (dryRun) return `${spec.replace(/\W+/g, '_')}.tgz`
-
-  const output = execFn('npm', ['pack', spec], {
-    cwd,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'inherit'],
-  }).trim()
-
-  const lines = output.split('\n').filter(Boolean)
-  return lines[lines.length - 1]
-}
-
 function parsePackageName(spec: string) {
   const match = spec.match(/^(@?[^@\s]+\/[^@\s]+|@?[^@\s]+)(?:@(.+))?$/)
   if (!match) return { name: spec, version: undefined }
@@ -277,123 +252,79 @@ function resolveBindingSpec(
   return { spec: `${name}@${latest}`, name, version: latest }
 }
 
-type PackFunction = (
-  spec: string,
-  cwd: string,
-  dryRun: boolean,
-  verbose: boolean,
-) => string
-
 async function installBinding(
   spec: string,
   cwd: string,
   dryRun: boolean,
   verbose: boolean,
-  pack: PackFunction = runNpmPack,
-): Promise<{ targetDir: string; tarballPath?: string; name: string; version?: string }> {
-  const { name, version } = parsePackageName(spec)
-  const tarballName = pack(spec, cwd, dryRun, verbose)
-  const tarballPath = path.resolve(cwd, tarballName)
-  const targetDir = path.resolve(cwd, 'node_modules', ...name.split('/'))
-
-  log(`> Installing ${spec} into ${targetDir}`)
-  if (!dryRun) {
-    fs.rmSync(targetDir, { recursive: true, force: true })
-    fs.mkdirSync(targetDir, { recursive: true })
-    await extract({ file: tarballPath, cwd: targetDir, strip: 1 })
-    fs.rmSync(tarballPath, { force: true })
-  }
-
-  return { targetDir, tarballPath: dryRun ? undefined : tarballPath, name, version }
-}
-
-function installRuntimeDeps(
-  pm: PackageManager,
-  deps: string[],
-  cwd: string,
-  dryRun: boolean,
-  verbose: boolean,
+  pm: PackageManager = 'npm',
   spawner: typeof spawnSync = spawnSync,
-) {
-  const missing = deps.filter(dep => !isDependencyInstalled(dep, cwd))
-  if (missing.length === 0) {
-    log('> Runtime dependencies already present; skipping install')
-    return []
+): Promise<{ targetDir: string; name: string; version?: string }> {
+  const { name, version } = parsePackageName(spec)
+  if (name === DEFAULT_BINDING_PACKAGE_NAME && version === '0.156.0') {
+    if (pm !== 'npm') {
+      throw new Error(
+        `OXC binding 0.156.0 requires a tested npm-scoped runtime override. ${pm} is not supported for this binding yet; use --pm npm or wait for a compatible upstream release.`,
+      )
+    }
+    persistBindingRuntimeOverride(cwd, dryRun)
   }
-
+  const targetDir = path.resolve(cwd, 'node_modules', ...name.split('/'))
   const commands: Record<PackageManager, [string, string[]]> = {
-    npm: ['npm', ['install', ...missing, '--save', '--save-exact']],
-    pnpm: ['pnpm', ['add', ...missing, '--exact']],
-    yarn: ['yarn', ['add', ...missing, '--exact']],
-    bun: ['bun', ['add', ...missing, '--exact']],
+    npm: ['npm', ['install', spec, '--save-exact']],
+    pnpm: ['pnpm', ['add', spec, '--exact']],
+    yarn: ['yarn', ['add', spec, '--exact']],
+    bun: ['bun', ['add', spec, '--exact']],
   }
-
   const [command, args] = commands[pm]
+
+  log(`> Installing ${spec} with its declared dependencies`)
   logVerbose(`> ${command} ${args.join(' ')}`, verbose)
   if (!dryRun) {
     const result = spawner(command, args, { cwd, stdio: 'inherit' })
     if (result.status !== 0) {
-      throw new Error(`Failed to install runtime dependencies with ${pm}`)
+      throw new Error(`Failed to install WASM binding with ${pm}`)
     }
   }
 
-  return missing
+  return { targetDir, name, version }
 }
 
-function isDependencyInstalled(spec: string, cwd: string) {
-  try {
-    const { name, version } = parsePackageName(spec)
-    const requireFromCwd = createRequire(path.join(cwd, 'package.json'))
-    const resolved = requireFromCwd.resolve(name)
-    if (!version) return true
-
-    let packageDir = path.dirname(resolved)
-    while (true) {
-      const pkgPath = path.join(packageDir, 'package.json')
-      if (fs.existsSync(pkgPath)) {
-        const pkg: unknown = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
-        if (
-          typeof pkg === 'object' &&
-          pkg !== null &&
-          'name' in pkg &&
-          pkg.name === name
-        ) {
-          return 'version' in pkg && pkg.version === version
-        }
-      }
-
-      const parentDir = path.dirname(packageDir)
-      if (parentDir === packageDir) return false
-      packageDir = parentDir
-    }
-  } catch {
-    return false
-  }
-}
-
-function persistBindingSpec(
-  cwd: string,
-  name: string,
-  version: string | undefined,
-  dryRun: boolean,
-  verbose: boolean,
-) {
-  if (!version) {
-    logVerbose('> Skipping package.json update (no version parsed)', verbose)
-    return
-  }
-
+function persistBindingRuntimeOverride(cwd: string, dryRun: boolean) {
   const pkgPath = path.join(cwd, 'package.json')
-  const pkgRaw = fs.readFileSync(pkgPath, 'utf8')
-  const pkgJson = JSON.parse(pkgRaw)
-  pkgJson.optionalDependencies = pkgJson.optionalDependencies ?? {}
-  const semver =
-    version.startsWith('^') || version.startsWith('~') ? version : `^${version}`
-  pkgJson.optionalDependencies[name] = semver
+  const pkg: unknown = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
+  if (typeof pkg !== 'object' || pkg === null || Array.isArray(pkg)) {
+    throw new Error('Invalid project package.json')
+  }
+  const overrides = ('overrides' in pkg ? pkg.overrides : undefined) ?? {}
+  if (typeof overrides !== 'object' || Array.isArray(overrides)) {
+    throw new Error('Invalid npm overrides in project package.json')
+  }
+  const key = `${DEFAULT_BINDING_PACKAGE_NAME}@0.156.0`
+  const workaround = {
+    '@napi-rs/wasm-runtime': {
+      '.': '1.2.5',
+      '@emnapi/core': '2.0.0-alpha.6',
+      '@emnapi/runtime': '2.0.0-alpha.6',
+    },
+  }
+  if (DEFAULT_BINDING_PACKAGE_NAME in overrides) {
+    throw new Error(
+      `Conflicting unversioned npm override for ${DEFAULT_BINDING_PACKAGE_NAME}; no overrides were changed`,
+    )
+  }
+  const existing = key in overrides ? overrides[key] : undefined
+  if (existing !== undefined && !isDeepStrictEqual(existing, workaround)) {
+    throw new Error(`Conflicting npm override for ${key}; no overrides were changed`)
+  }
 
-  log(`> Recording optionalDependency ${name}@${semver}`)
-  if (!dryRun) {
-    fs.writeFileSync(pkgPath, `${JSON.stringify(pkgJson, null, 2)}\n`, 'utf8')
+  log(`> Applying ${key} scoped runtime compatibility override`)
+  if (!dryRun && existing === undefined) {
+    fs.writeFileSync(
+      pkgPath,
+      `${JSON.stringify({ ...pkg, overrides: { ...overrides, [key]: workaround } }, null, 2)}\n`,
+      'utf8',
+    )
   }
 }
 
@@ -459,9 +390,7 @@ type MainDeps = {
   parseArgs: typeof parseArgs
   ensurePackageJson: typeof ensurePackageJson
   detectPackageManager: typeof detectPackageManager
-  installRuntimeDeps: typeof installRuntimeDeps
   installBinding: typeof installBinding
-  persistBindingSpec: typeof persistBindingSpec
   verifyBinding: typeof verifyBinding
   maybeHandleConfigPrompt: typeof maybeHandleConfigPrompt
   resolveBindingSpec: typeof resolveBindingSpec
@@ -474,9 +403,7 @@ async function main(overrides: Partial<MainDeps> = {}) {
     parseArgs: parseArgsImpl = parseArgs,
     ensurePackageJson: ensurePackageJsonImpl = ensurePackageJson,
     detectPackageManager: detectPackageManagerImpl = detectPackageManager,
-    installRuntimeDeps: installRuntimeDepsImpl = installRuntimeDeps,
     installBinding: installBindingImpl = installBinding,
-    persistBindingSpec: persistBindingSpecImpl = persistBindingSpec,
     verifyBinding: verifyBindingImpl = verifyBinding,
     maybeHandleConfigPrompt: maybeHandleConfigPromptImpl = maybeHandleConfigPrompt,
     resolveBindingSpec: resolveBindingSpecImpl = resolveBindingSpec,
@@ -500,27 +427,12 @@ async function main(overrides: Partial<MainDeps> = {}) {
   const packageManager = detectPackageManagerImpl(options.cwd, options.packageManager)
   logImpl(`> Using package manager: ${packageManager}`)
 
-  const installedRuntimeDeps = installRuntimeDepsImpl(
-    packageManager,
-    RUNTIME_DEPS,
-    options.cwd,
-    options.dryRun,
-    options.verbose,
-  )
-
   const binding = await installBindingImpl(
     resolvedBinding.spec,
     options.cwd,
     options.dryRun,
     options.verbose,
-  )
-
-  persistBindingSpecImpl(
-    options.cwd,
-    binding.name,
-    binding.version,
-    options.dryRun,
-    options.verbose,
+    packageManager,
   )
 
   let resolvedPath: string | undefined
@@ -534,9 +446,7 @@ async function main(overrides: Partial<MainDeps> = {}) {
   logImpl('\nDone!')
   logImpl(`- Binding: ${binding.name}${binding.version ? `@${binding.version}` : ''}`)
   logImpl(`- Target: ${binding.targetDir}`)
-  logImpl(
-    `- Runtime deps installed: ${installedRuntimeDeps.join(', ') || 'none (already present)'}`,
-  )
+  logImpl('- Runtime dependencies managed by the binding package')
   if (resolvedPath) logImpl(`- Verified import: ${resolvedPath}`)
 }
 
@@ -554,15 +464,11 @@ export {
   parseArgs,
   detectPackageManager,
   ensurePackageJson,
-  runNpmPack,
   parsePackageName,
   resolveBindingSpec,
   fetchLatestBindingVersion,
   readLocalOxcParserVersion,
   installBinding,
-  installRuntimeDeps,
-  isDependencyInstalled,
-  persistBindingSpec,
   verifyBinding,
   promptYesNo,
   maybeHandleConfigPrompt,

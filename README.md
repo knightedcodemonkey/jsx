@@ -43,7 +43,7 @@ The parser automatically uses native bindings when it runs in Node.js. To enable
 npx @knighted/jsx init
 ```
 
-See [docs/cli.md](docs/cli.md) for flags, dry runs, and package-manager overrides. If you prefer manual install, run `npm install @oxc-parser/binding-wasm32-wasip1@0.156.0 @napi-rs/wasm-runtime@1.2.6 @emnapi/core@2.0.0-beta.2 @emnapi/runtime@2.0.0-beta.2`.
+See [docs/cli.md](docs/cli.md) for flags, dry runs, and manual installation. OXC 0.156.0 requires a tested npm-scoped runtime workaround because its published binding/runtime peer requirements conflict. The CLI applies that policy without replacing the host's direct emnapi dependencies; pnpm, Yarn, and Bun support for this binding version is pending.
 
 > [!TIP]
 > Public CDNs such as `esm.sh` or `jsdelivr` already publish bundles that include the WASM binding, so you can import this package directly from those endpoints in `<script type="module">` blocks without any extra setup.

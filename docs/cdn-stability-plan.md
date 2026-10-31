@@ -33,6 +33,24 @@ version as the initial CDN prototype target. This tests the current OXC graph wi
 requiring another dependency upgrade. The initial alpha does not contain the proposed
 CDN APIs; develop the prototype locally against its published package files.
 
+### Upstream runtime constraint
+
+Continue the v2 alpha prototype while tracking the OXC/NAPI-RS dependency-generation
+issue described in [CLI setup](cli.md#oxc-01560-runtime-compatibility-workaround).
+OXC's workspace pins WASM runtime 1.2.5 with emnapi alpha.6, but generated binding
+0.156.0 declares runtime `~1.2.6`, whose peer requirements exclude alpha.6.
+
+The CLI's version-scoped npm workaround does not constrain CDN resolution. The CDN
+prototype must independently lock and browser-test a compatible binding/runtime pair;
+do not infer browser compatibility from the CLI's successful Node tests. Record any
+temporary compatibility override explicitly in the browser manifest and generated map.
+Reject provider output that bypasses it rather than silently accepting an unlocked graph.
+
+Report the generator mismatch upstream and track its resolution. Before stable v2,
+adopt and verify an upstream fix or explicitly decide to maintain the workaround and
+complete the documented package-manager support. Alpha status does not waive these
+compatibility checks. Keep the detailed dependency explanation in the linked CLI guide.
+
 ## Consumer experience
 
 ### Recommended: one runtime loader
