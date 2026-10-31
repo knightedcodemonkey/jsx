@@ -3,6 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import readline from 'node:readline/promises'
 import { createRequire } from 'node:module'
+import { execFileSync } from 'node:child_process'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { create } from 'tar'
 
@@ -274,42 +275,111 @@ describe('installRuntimeDeps', () => {
   })
 
   it.each([
-    ['npm', 'install'],
-    ['pnpm', 'add'],
-    ['yarn', 'add'],
-    ['bun', 'add'],
-  ] as const)('replaces incompatible runtime versions using %s', (pm, command) => {
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jsx-cli-runtime-upgrade-'))
-    const packageDir = path.join(tmp, 'node_modules', '@emnapi', 'runtime')
-    fs.mkdirSync(packageDir, { recursive: true })
-    fs.writeFileSync(path.join(tmp, 'package.json'), JSON.stringify({ name: 'tmp' }))
-    fs.writeFileSync(path.join(packageDir, 'index.js'), 'module.exports = {}')
-    fs.writeFileSync(
-      path.join(packageDir, 'package.json'),
-      JSON.stringify({ name: '@emnapi/runtime', version: '1.11.3' }),
-    )
-    const spawner = vi.fn().mockReturnValue({ status: 0 })
-
-    try {
-      expect(
-        cli.installRuntimeDeps(
-          pm,
-          ['@emnapi/runtime@2.0.0-beta.2'],
-          tmp,
-          false,
-          false,
-          spawner,
-        ),
-      ).toEqual(['@emnapi/runtime@2.0.0-beta.2'])
-      expect(spawner).toHaveBeenCalledWith(
-        pm,
-        [command, '@emnapi/runtime@2.0.0-beta.2', ...(pm === 'npm' ? ['--save'] : [])],
-        { cwd: tmp, stdio: 'inherit' },
+    ['npm', 'install', '--save-exact'],
+    ['pnpm', 'add', '--exact'],
+    ['yarn', 'add', '--exact'],
+    ['bun', 'add', '--exact'],
+  ] as const)(
+    'replaces incompatible runtime versions using %s',
+    (pm, command, exactFlag) => {
+      const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jsx-cli-runtime-upgrade-'))
+      const packageDir = path.join(tmp, 'node_modules', '@emnapi', 'runtime')
+      fs.mkdirSync(packageDir, { recursive: true })
+      fs.writeFileSync(path.join(tmp, 'package.json'), JSON.stringify({ name: 'tmp' }))
+      fs.writeFileSync(path.join(packageDir, 'index.js'), 'module.exports = {}')
+      fs.writeFileSync(
+        path.join(packageDir, 'package.json'),
+        JSON.stringify({ name: '@emnapi/runtime', version: '1.11.3' }),
       )
-    } finally {
-      fs.rmSync(tmp, { recursive: true, force: true })
-    }
-  })
+      const spawner = vi.fn().mockReturnValue({ status: 0 })
+
+      try {
+        expect(
+          cli.installRuntimeDeps(
+            pm,
+            ['@emnapi/runtime@2.0.0-beta.2'],
+            tmp,
+            false,
+            false,
+            spawner,
+          ),
+        ).toEqual(['@emnapi/runtime@2.0.0-beta.2'])
+        expect(spawner).toHaveBeenCalledWith(
+          pm,
+          [
+            command,
+            '@emnapi/runtime@2.0.0-beta.2',
+            ...(pm === 'npm' ? ['--save'] : []),
+            exactFlag,
+          ],
+          { cwd: tmp, stdio: 'inherit' },
+        )
+      } finally {
+        fs.rmSync(tmp, { recursive: true, force: true })
+      }
+    },
+  )
+})
+
+describe('setup:wasm', () => {
+  it.each([false, true])(
+    'delegates dependency installation to npm with an existing binding: %s',
+    existingBinding => {
+      const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jsx-setup-wasm-'))
+      const npmScript = path.join(tmp, 'npm.cjs')
+      const commandPath = path.join(tmp, 'command.json')
+      const packagePath = path.join(tmp, 'package.json')
+      const lockPath = path.join(tmp, 'package-lock.json')
+      const nestedPackagePath = path.join(
+        tmp,
+        'node_modules/@oxc-parser/binding-wasm32-wasip1/node_modules/@emnapi/runtime/package.json',
+      )
+      const packageContent = JSON.stringify({ name: 'tmp', version: '0.0.0' })
+      const lockContent = JSON.stringify({ lockfileVersion: 3 })
+      const nestedContent = JSON.stringify({
+        name: '@emnapi/runtime',
+        version: '2.0.0-alpha.6',
+      })
+      fs.writeFileSync(packagePath, packageContent)
+      fs.writeFileSync(lockPath, lockContent)
+      fs.writeFileSync(
+        npmScript,
+        `require('node:fs').writeFileSync(${JSON.stringify(commandPath)}, JSON.stringify(process.argv.slice(2)))`,
+      )
+      if (existingBinding) {
+        fs.mkdirSync(path.dirname(nestedPackagePath), { recursive: true })
+        fs.writeFileSync(nestedPackagePath, nestedContent)
+      }
+
+      try {
+        execFileSync(process.execPath, [path.resolve('scripts/setup-wasm.mjs')], {
+          cwd: tmp,
+          env: {
+            ...process.env,
+            npm_execpath: npmScript,
+            WASM_BINDING_PACKAGE: '@oxc-parser/binding-wasm32-wasip1@0.156.0',
+          },
+          stdio: 'pipe',
+        })
+
+        expect(JSON.parse(fs.readFileSync(commandPath, 'utf8'))).toEqual([
+          'install',
+          '@oxc-parser/binding-wasm32-wasip1@0.156.0',
+          '--no-save',
+          '--ignore-scripts',
+          '--include=optional',
+        ])
+        expect(fs.readFileSync(packagePath, 'utf8')).toBe(packageContent)
+        expect(fs.readFileSync(lockPath, 'utf8')).toBe(lockContent)
+        const nestedMetadata = fs.existsSync(nestedPackagePath)
+          ? fs.readFileSync(nestedPackagePath, 'utf8')
+          : undefined
+        expect(nestedMetadata).toBe(existingBinding ? nestedContent : undefined)
+      } finally {
+        fs.rmSync(tmp, { recursive: true, force: true })
+      }
+    },
+  )
 })
 
 describe('installBinding + verifyBinding (dry-run)', () => {

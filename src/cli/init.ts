@@ -322,10 +322,10 @@ function installRuntimeDeps(
   }
 
   const commands: Record<PackageManager, [string, string[]]> = {
-    npm: ['npm', ['install', ...missing, '--save']],
-    pnpm: ['pnpm', ['add', ...missing]],
-    yarn: ['yarn', ['add', ...missing]],
-    bun: ['bun', ['add', ...missing]],
+    npm: ['npm', ['install', ...missing, '--save', '--save-exact']],
+    pnpm: ['pnpm', ['add', ...missing, '--exact']],
+    yarn: ['yarn', ['add', ...missing, '--exact']],
+    bun: ['bun', ['add', ...missing, '--exact']],
   }
 
   const [command, args] = commands[pm]

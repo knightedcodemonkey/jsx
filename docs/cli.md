@@ -11,7 +11,7 @@ npx @knighted/jsx init
 What it does by default:
 
 - Installs `@oxc-parser/binding-wasm32-wasip1` that matches the library's bundled `oxc-parser` version plus runtime helpers (`@napi-rs/wasm-runtime`, `@emnapi/runtime`, `@emnapi/core`).
-- Installs the release's exact runtime helper versions, replacing incompatible installed versions and skipping matching versions.
+- Installs and saves the release's exact runtime helper versions, replacing incompatible installed versions and skipping matching versions.
 - Records the binding in `optionalDependencies` so the version is visible in your project.
 - Verifies the binding can be imported and reports the resolved path.
 - Skips loader config changes (prompted only when you opt in).
@@ -53,6 +53,7 @@ WASM_BINDING_PACKAGE=@oxc-parser/binding-wasm32-wasip1@beta npx @knighted/jsx in
 
 - The default binding install always matches the `oxc-parser` version bundled with `@knighted/jsx`; use `--wasm-version`, `--wasm-package`, or `WASM_BINDING_PACKAGE` when you intentionally need a different build.
 - The command uses `npm pack` internally to pull the WASM binding even when it is marked for `cpu: ["wasm32"]`.
+- The repository's `npm run setup:wasm` helper uses ordinary npm installation for the current binding, preserving its declared dependency graph without modifying project manifests or running install scripts.
 - Loader configuration is opt-in and requires a prompt. No config files are modified unless you request help.
 - If verification fails, rerun with `--verbose` to see the resolved binding path and error details.
 - `@tybys/wasm-util` is not required for the standard flow. Consider it only as an advanced workaround if your environment blocks the normal WASM install/loading path.
