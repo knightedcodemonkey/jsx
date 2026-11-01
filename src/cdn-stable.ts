@@ -154,7 +154,7 @@ export const loadCdnContract = async (): Promise<CdnContract> => {
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
+  typeof value === 'object' && value !== null && !Array.isArray(value)
 
 const isStringRecord = (value: unknown): value is Record<string, string> =>
   isRecord(value) && Object.values(value).every(entry => typeof entry === 'string')
@@ -508,17 +508,6 @@ const installStableCdnImportMap = async (
   }
 }
 
-const entrySpecifier = (
-  manifest: StableCdnImportMapManifest,
-  entry: StableCdnLoadEntry,
-): string => {
-  const specifier = manifest.entries[entry]
-  if (!specifier) {
-    throw new Error(`[cdn-stable] The import map has no "${entry}" entry`)
-  }
-  return specifier
-}
-
 export function loadStableCdn(): Promise<StableCdnCoreModules>
 export function loadStableCdn(options: LoadStableCdnOptions): Promise<StableCdnModules>
 export async function loadStableCdn(
@@ -547,11 +536,7 @@ export async function loadStableCdn(
 
   const modules: StableCdnModules = {}
   for (const entry of new Set(entries)) {
-    const specifier = entrySpecifier(manifest, entry)
-    const url = importMap.imports[specifier]
-    if (!url) {
-      throw new Error(`[cdn-stable] The import map has no URL for "${specifier}"`)
-    }
+    const url = importMap.imports[manifest.entries[entry]]
 
     try {
       Object.assign(modules, await import(url))
