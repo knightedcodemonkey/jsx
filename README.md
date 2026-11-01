@@ -50,7 +50,7 @@ with the [transformer setup command](docs/cli.md#options). Its compatibility pol
 must be recorded in the consuming project, not just this package's development setup.
 
 > [!TIP]
-> Public CDNs such as `esm.sh` or `jsdelivr` already publish bundles that include the WASM binding, so you can import this package directly from those endpoints in `<script type="module">` blocks without any extra setup.
+> Public CDNs can make no-build imports convenient, but a bundle or exact top-level package URL does not by itself lock every transitive dependency. See the version-locked v2 bootstrap below for the tested browser graph.
 
 ### CDN stability contract (browser imports)
 
@@ -58,8 +58,9 @@ If you load `@knighted/jsx` from a CDN, pinning only the top-level package versi
 not always enough for long-term stability. CDNs resolve transitive dependencies remotely,
 and semver ranges inside dependency graphs can drift over time.
 
-For deterministic browser behavior, prefer a fully pinned CDN URL contract that also fixes
-the parser, binding, and WASM runtime versions.
+The legacy `getStableCdnUrls` helper pins selected parser, binding, and WASM runtime
+versions, but it does not lock the complete browser graph. The version-locked v2 bootstrap
+below uses a release-owned JSPM import map and lock for that purpose.
 
 Example (`esm.sh`):
 
@@ -99,6 +100,65 @@ Provider notes:
   `transform`).
 - Because jsDelivr uses a different URL model than `esm`, transitive dependency override
   controls differ between providers.
+
+### Version-locked CDN bootstrap (v2 alpha)
+
+The v2 CDN bootstrap and import-map APIs are available in the next API-containing v2
+release. The upgrade-only `2.0.0-alpha.0` does not include them. Replace
+`<exact-api-version>` with an exact published version; do not use `next` or `latest`.
+
+The loader installs the release's tested import map before loading the requested entries.
+It loads only the DOM runtime by default:
+
+```html
+<script type="module">
+  import { loadStableCdn } from 'https://cdn.jsdelivr.net/npm/@knighted/jsx@<exact-api-version>/dist/cdn-stable.js'
+
+  const { jsx } = await loadStableCdn()
+  document.body.append(jsx`<h1>Hello from JSX</h1>`)
+</script>
+```
+
+The third-party dependency lock is shared across releases when the browser graph is
+unchanged. During packaging, the exact import map is materialized into `dist` with the
+current release's own URLs; version-only releases do not require re-resolving dependencies
+or committing a new map.
+
+Load the React helper or source transformer only when needed. React and ReactDOM can be
+imported after setup, and their React mapping is shared with `reactJsx`:
+
+```js
+const { jsx, reactJsx, transformJsxSource } = await loadStableCdn({
+  entries: ['core', 'react', 'transform'],
+})
+const React = await import('react')
+const { createRoot } = await import('react-dom/client')
+```
+
+For applications that own their bootstrap, `getStableCdnImportMap()` returns a plain
+`{ imports, scopes }` object without modifying the document. Inline that returned JSON in
+an `<script type="importmap">` before module preloads and application modules, or install
+it from a bootstrap module before dynamically importing those modules. External import-map
+`src` is not supported. The loader adds missing mappings and rejects visible conflicts; it
+does not replace host mappings. Set up the map before resolving the affected packages.
+Workers are not supported by this map because they do not inherit the document import map.
+
+An early module can install the pure map before its first bare import:
+
+```html
+<script type="module">
+  const { getStableCdnImportMap } =
+    await import('https://cdn.jsdelivr.net/npm/@knighted/jsx@<exact-api-version>/dist/cdn-stable.js')
+  const importMap = await getStableCdnImportMap()
+  const script = document.createElement('script')
+  script.type = 'importmap'
+  script.textContent = JSON.stringify(importMap)
+  document.head.append(script)
+
+  const { jsx } = await import('@knighted/jsx')
+  document.body.append(jsx`<h1>Hello from JSX</h1>`)
+</script>
+```
 
 ## Usage
 

@@ -1,6 +1,81 @@
 # CDN stability implementation plan
 
-Status: proposed. API names and provider selection below are not implemented.
+Status: feasibility, map/lock generation, and both consumer APIs are implemented locally for the exact published alpha. The published `2.0.0-alpha.0` remains unchanged and does not contain the new APIs; consumer use requires a later exact prerelease.
+
+## Feasibility checkpoint (2026-11-01)
+
+- npm dist-tags are `next: 2.0.0-alpha.0` and `latest: 1.15.0`. The exact alpha's
+  registry manifest, root `cdn-contract.json`, and browser entrypoints are published.
+  The contract is at the package root, not under `dist/`.
+- PR #109 is merged at the local `origin/main` head. Its six Node/OS CI jobs and
+  Codecov checks passed; no approval or requested-change gate remained.
+- `@jspm/generator` 2.11.0 with its `jspm.io` provider (`ga.jspm.io`) resolved the
+  published core, `/react`, and `/transform` entries, plus exact React and React DOM
+  consumer entries. The generated import map covered the traced browser modules,
+  including `magic-string`, `@jridgewell/sourcemap-codec`, `@tybys/wasm-util`, and
+  `@emnapi/wasi-threads`. `@jspm/generator@2.11.0` is now a JSX dev dependency.
+- `cdn-importmap-lock.json` is the tracked, version-independent source of truth for the
+  third-party graph. Its self-package URL uses a token rather than an alpha version.
+  Candidate check re-bases that token to the package's current exact version, freeze-traces
+  the local build, and materializes `dist/cdn-importmap.json`; `prepack` and E2E use this
+  path. The concrete map is a generated package artifact under ignored `dist`, not a
+  per-release source change. Intentional graph changes use candidate update mode to refresh
+  the tracked lock. Published mode remains available for live verification. The npm
+  `pretest` hook also runs candidate check after build so unit tests can read the ignored
+  dist manifest in CI.
+- The generator uses a non-local base URL and exact `npm:` install targets so it cannot
+  resolve the working tree as the package source. Candidate mode supplies local built files
+  at the future exact JSPM URL. A simulated alpha.0-to-alpha.1 package-version-only change
+  materialized alpha.1 self URLs while leaving the tracked lock byte-identical.
+- **Candidate release generation is implemented.** The `--candidate` mode feeds the
+  locally built `dist/` files and package manifest to JSPM as virtual source at the future
+  exact package URL. Candidate update/check commands work before the candidate is
+  published; `prepack` and E2E use candidate check mode. The normal update/check commands
+  still trace published package versions. The current alpha.0 candidate check and prepack
+  pass, and an alpha.1 virtual-source probe produced/froze a lock under its future exact
+  URL. Post-publication Chromium verification uses
+  `KNIGHTED_CDN_IMPORTMAP_LIVE=1` to bypass the local candidate route and fetch the actual
+  package from the provider.
+- Generation must supply explicit resolutions for `@napi-rs/wasm-runtime@1.2.5`,
+  `@emnapi/core@2.0.0-alpha.6`, `@emnapi/runtime@2.0.0-alpha.6`, and the tested
+  `react@19.3.1` / `react-dom@19.3.1` pair. The generated React DOM graph also pins
+  `scheduler@0.28.0`. An unconfigured run selected runtime 1.2.6 and incompatible
+  emnapi resolutions; that output must be rejected, never accepted as a successful
+  resolution.
+- In standalone Chromium, the exact alpha parsed DOM JSX, rendered a React component
+  using hooks through React DOM while `reactJsx` produced a valid element from the same
+  React 19.3.1 instance, and transformed TypeScript/JSX with no diagnostics. Both parser
+  and transformer WASM assets loaded from exact `0.156.0` package paths with HTTP 200.
+  The Playwright audit verified every observed provider request was covered by a locked
+  package URL. Focused unit tests cover schema, transitive edges, compatibility pins,
+  deterministic serialization, package artifact inclusion, and version-only lock reuse.
+- The observed graph used separate provider modules, not a vendor bundle, and needed no
+  handwritten consumer dependency patches. JSPM-generated helper modules were served
+  beneath the versioned alpha package URL. Exact versions do not make those generated
+  bytes immutable; the release must preserve and validate its generated map/lock rather
+  than regenerating at runtime.
+- The browser run did not request a worker. Worker loading is unsupported until its
+  independent graph is traced and tested; the document import map is not evidence that
+  a worker inherits those mappings.
+- jsDelivr's `+esm` entrypoints retain bare imports and the existing contract does not
+  constrain their transitive resolution. The esm.sh URL helper's selected `deps` are
+  also not a complete lock. Neither path is selected for the initial prototype.
+- The OXC binding-generation mismatch is tracked in napi-rs/napi-rs#3674, which is open
+  with no linked PR as of this checkpoint. The related napi-rs/napi-rs#3621 runtime-plugin
+  ABI issue closed via #3650, but that is distinct: both published OXC `0.156.0` WASM
+  bindings still declare emnapi alpha.6 and `@napi-rs/wasm-runtime ~1.2.6`, while
+  runtime 1.2.6 peers with beta.2. Retain and explicitly encode the tested
+  runtime-1.2.5/alpha.6 compatibility resolution until a compatible OXC binding is
+  published and verified.
+- The exact JSPM lock will not silently float when upstream changes. Once a compatible
+  binding is published, deliberately refresh the lock for a new exact JSX release and
+  rerun browser validation. JSPM can then trace the newly published dependency metadata;
+  remove the workaround only after that graph passes compatibility checks.
+
+Prototype provider strategy: use JSPM graph tracing against exact published package
+versions to produce a release-owned import map and lock, with the compatibility and peer
+resolutions above. Keep provider output validation strict; do not use runtime resolution,
+cross-provider fallback, or a vendor bundle.
 
 ## Goals
 
@@ -27,11 +102,10 @@ Exact dependency resolutions do not guarantee byte-identical CDN-generated code.
   consumer API.
 - A local npm lockfile does not constrain a remote CDN's dependency resolution.
 
-Keep the OXC upgrade and CDN implementation in separate commits. Publish the committed
-upgrade as `@knighted/jsx@2.0.0-alpha.0` under the `next` dist-tag, then use that exact
-version as the initial CDN prototype target. This tests the current OXC graph without
-requiring another dependency upgrade. The initial alpha does not contain the proposed
-CDN APIs; develop the prototype locally against its published package files.
+The OXC upgrade and CDN work remain separate. The upgrade-only `@knighted/jsx@2.0.0-alpha.0`
+is the exact feasibility target; it remains published unchanged and does not contain the
+new helper APIs. The local API and package changes require a later exact prerelease before
+they can be used from a CDN.
 
 ### Upstream runtime constraint
 
@@ -55,8 +129,8 @@ compatibility checks. Keep the detailed dependency explanation in the linked CLI
 
 ### Recommended: one runtime loader
 
-Proposed API, with `<release>` replaced by an exact published package version containing
-the new helper. This example will not work against the upgrade-only `2.0.0-alpha.0`:
+Implemented locally. `<release>` must be replaced with an exact published package version
+containing the helper; this does not work against the upgrade-only `2.0.0-alpha.0`:
 
 ```html
 <script type="module">
@@ -83,28 +157,28 @@ unlocked provider. Provider selection defaults to the release's tested provider.
 
 ### Advanced: import-map ownership
 
-Provide `getStableCdnImportMap` for consumers that own their document bootstrap. It returns
-a standard `{ imports, scopes }` map, with integrity metadata only where supported and
-verified. This path permits normal bare imports such as:
+`getStableCdnImportMap` returns a standard `{ imports, scopes }` map without mutating the
+document. Consumers can inline it before module preloads/imports or install it from an
+early bootstrap module. This path permits normal bare imports such as:
 
 ```js
 import { jsx } from '@knighted/jsx'
 import { reactJsx } from '@knighted/jsx/react'
 ```
 
-Document how to embed the generated map inline before importing runtime modules. Native
-external `<script type="importmap" src="...">` is not a supported installation pattern.
-Offer a generated inline HTML snippet; do not require consumers to assemble dependency
-URLs manually or install a generator merely to use the package.
+The README documents inline map installation; native external `<script type="importmap"
+src="...">` is not a supported installation pattern. Consumers do not need JSPM or need
+to assemble dependency URLs manually.
 
 ### Existing applications and peers
 
-- Accept explicit existing peer mappings, particularly React and React DOM. Validate
-  supported versions and route all relevant imports to one canonical React URL.
-- Default to a tested exact React/React DOM pair when the consumer supplies neither.
+- Accept existing peer mappings only when their effective URLs match the map's tested
+  canonical React/ReactDOM pair. Conflicting mappings are rejected. Arbitrary alternate
+  peer URLs are not supported by the initial API.
+- Default to the tested exact React/React DOM pair `19.3.1`.
 - Use scopes for legitimate dependency-version coexistence, not duplicate React instances
   within the same application tree.
-- Detect visible mapping conflicts and reject incompatible repeated loader calls.
+- Detect visible mapping conflicts and reject them rather than replacing host mappings.
 - Require setup before the affected packages resolve. Import maps cannot replace modules
   already resolved or loaded; DOM inspection cannot detect every prior resolution.
 - Do not globally remap unrelated application packages or silently overwrite host maps.
@@ -121,10 +195,11 @@ Extend or replace the existing contract with a versioned manifest containing:
 - Peer constraints and the exact compatible defaults used for release verification.
 - Manifest schema version and the matching `@knighted/jsx` release version.
 
-Use a proven dependency/import-map generator where feasible. Evaluate `@jspm/generator`
-first, but do not assume its provider can resolve `@knighted/jsx` or OXC bindings: earlier
-workspace experiments encountered provider resolution failures. If it cannot satisfy the
-requirements, evaluate a different generator/provider before designing a custom resolver.
+Use a proven dependency/import-map generator where feasible. `@jspm/generator` 2.11.0
+with the `jspm.io` provider is verified for the exact alpha graph. Always give it a
+non-local `baseUrl`/`mapUrl` and exact `npm:` install targets: without those, running from
+the package root can self-resolve local `@knighted/jsx` files instead of the published
+release. Reassess the provider if it cannot satisfy these checks for a future release.
 
 Seed generation from the verified dependency versions and preserve the resulting lock
 between runs. Ordinary release builds validate it without re-resolving ranges; intentional
@@ -158,25 +233,28 @@ and peer identity; omit fallback from the initial implementation.
 
 ## Implementation milestones
 
-1. **Prove feasibility.** After the user publishes `2.0.0-alpha.0`, verify its package and
-   CDN files are available and generate a complete map for that exact release. Run DOM
-   parsing, React hooks, and browser TypeScript/JSX transformation in Chromium. Inspect all
-   loaded module and WASM URLs. Prove that no mutable dependency edge is hidden or
-   uncontrolled. Stop and reassess the provider if this cannot be demonstrated without a
-   vendor bundle.
-2. **Implement the frozen manifest.** Reuse the contract generator's home, add explicit
-   update/check modes and schema validation, and publish the verified map/asset records.
-   Generate the consumer HTML snippet from that same manifest.
-3. **Implement the consumer APIs.** Extend the existing CDN helper module with the loader
-   and advanced map API. Keep map installation separate from pure manifest/map computation.
-   Add clear errors for unsupported providers, conflicts, invalid manifests, and failed
-   fetches. Avoid a custom module loader or legacy-browser polyfills.
+1. **Prove feasibility. Complete for alpha.0.** The exact package and CDN files were
+   verified; DOM parsing, React hooks/identity, and browser TypeScript/JSX transformation
+   passed in standalone Chromium. Module requests and WASM asset URLs were audited against
+   the generated lock without a vendor bundle.
+2. **Generate and validate the frozen map. Complete for alpha.0.** The
+   explicit update/check commands, schema validation, map/lock artifacts, graph tests, and
+   browser audit are implemented. The stable third-party lock is tracked; the concrete
+   exact-version map is generated into `dist` and included by the package allowlist.
+3. **Implement the consumer APIs. Complete locally.** `loadStableCdn` installs only
+   missing compatible mappings and imports requested entries; `getStableCdnImportMap`
+   returns the validated map without document mutation. User-facing release remains
+   pending a new exact prerelease containing these changes.
 4. **Adopt in the demo.** Replace handwritten dependency patches and mismatched preloads
    with the new bootstrap. Keep the existing demo design unchanged. Ensure startup failures
    replace the loading state with an actionable error rather than leaving a spinner.
-5. **Release and document.** Test package artifacts and release-specific CDN paths, update
-   installation examples, and document peer composition and import-map ordering. Separate
-   pre-publication artifact checks from post-publication live-CDN verification.
+5. **Release and document.** The pre-publication graph workflow is implemented. For a
+   version-only release, candidate check should materialize the new exact self URLs without
+   refreshing the third-party lock. If the graph changes, refresh the lock deliberately
+   and browser-test it. Bump the package version only after authorization, then run
+   candidate check, prepack, package-content checks, and standalone Chromium against the
+   local candidate. Publish only with explicit authorization, then run the live-CDN smoke
+   test with `KNIGHTED_CDN_IMPORTMAP_LIVE=1`.
 
 New generator dependencies, publishing/build changes, and public API changes require
 approval before implementation under the repository's existing boundaries.
@@ -184,9 +262,11 @@ approval before implementation under the repository's existing boundaries.
 ## Verification and acceptance
 
 - Unit tests cover manifest validation, graph completeness, deterministic serialization,
-  scopes, peer identity, map conflicts, loader idempotence, and error handling.
-- Browser tests cover DOM, React hooks, combined DOM/React use, JSX/TypeScript
-  transformation, repeated entry loads, existing host maps, and isolated documents.
+  scopes, peer identity, visible map conflicts, loader option validation, and artifact
+  inclusion.
+- Chromium covers DOM, React hooks, shared React identity, JSX/TypeScript transformation,
+  repeated loader calls, package module requests, and WASM assets. Broader browser coverage
+  for map composition remains a pre-stable-release gate.
 - Simulate an upstream version change using intercepted CDN responses. The locked graph
   must remain unchanged or fail explicitly, not silently load the new dependency.
 - Audit actual module requests/imports and asset requests against the manifest. Supplement
@@ -202,6 +282,24 @@ approval before implementation under the repository's existing boundaries.
 
 ## Versioning and migration
 
+### Legacy CDN contract decision
+
+`cdn-contract.json`, its package export, and `getStableCdnUrls`/`buildStableCdnUrls` are
+legacy selected-pin tooling, not a complete browser lock. They are not deprecated yet and
+remain available during the alpha period so existing consumers are not broken mid-prototype.
+
+Before the v2 release candidate, decide whether to remove them from stable v2. Prefer
+removal if the JSPM map/lock and both consumer APIs pass the release gates and no supported
+workflow still needs the old URL builder. If retained, document its limited guarantees and
+do not label its URLs as fully locked.
+
+If removing the legacy contract, do so as one coordinated v2 change: remove its JSON
+package export and generated file, generator/check scripts and prepack steps, legacy
+helper functions/types, tests, and README/runtime-helper examples. Document migration from
+`getStableCdnUrls` to `loadStableCdn` for runtime loading or `getStableCdnImportMap` for
+host-owned import-map setup. Keep the JSPM import map and lock as the sole complete graph
+source of truth.
+
 Use a v2 alpha series for real-CDN testing, starting with the upgrade-only
 `2.0.0-alpha.0`. Publish each subsequent implementation snapshot with a new exact
 prerelease version under `next`; do not change the stable `latest` dist-tag. Use `rc`
@@ -216,9 +314,10 @@ the implementation workflow.
 Prefer adding the new APIs first without changing existing helper behavior. Document
 the older URL helper's actual limits instead of claiming complete determinism.
 
-Use a major release if we remove the old helper, change its return contract/defaults, or
-make existing supported workflows require import-map installation. A v2 may provide a
-cleaner unified API, but versioning alone does not fix dependency resolution.
+Removing the old helper or changing its return contract/defaults is a v2 breaking change.
+Making existing supported workflows require import-map installation is also breaking.
+A v2 may provide a cleaner unified API, but versioning alone does not fix dependency
+resolution.
 
 Confirm the final stable release's API and migration requirements after the feasibility
 milestone and a consumer compatibility check. The v2 prerelease testing path does not

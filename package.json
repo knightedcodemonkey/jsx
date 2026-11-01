@@ -1,6 +1,6 @@
 {
   "name": "@knighted/jsx",
-  "version": "2.0.0-alpha.0",
+  "version": "2.0.0-alpha.1",
   "description": "Runtime JSX tagged template that renders DOM or React trees anywhere with or without a build step.",
   "keywords": [
     "jsx runtime",
@@ -121,6 +121,8 @@
       "default": "./dist/loader/jsx.js"
     },
     "./cdn-contract.json": "./cdn-contract.json",
+    "./cdn-importmap.json": "./dist/cdn-importmap.json",
+    "./cdn-importmap-lock.json": "./cdn-importmap-lock.json",
     "./package.json": "./package.json"
   },
   "engines": {
@@ -139,13 +141,13 @@
     "clean:dist": "rimraf dist",
     "clean": "npm run clean:dist && npm run clean:deps",
     "lint": "eslint src test",
-    "pretest": "npm run build",
+    "pretest": "npm run build && npm run check:cdn-importmap:candidate",
     "cycles": "oxlint --import-plugin --tsconfig tsconfig.json -A all -D import/no-cycle src test",
     "prettier": "prettier -w .",
     "prettier:check": "prettier --check .",
     "test": "cross-env KNIGHTED_JSX_CLI_TEST=1 vitest run --coverage",
     "test:watch": "cross-env KNIGHTED_JSX_CLI_TEST=1 vitest",
-    "test:e2e": "npm run build && npm run setup:wasm && npm run build:fixture && npm run generate:cdn-contract && npm run check:cdn-contract && playwright test",
+    "test:e2e": "npm run build && npm run setup:wasm && npm run build:fixture && npm run generate:cdn-contract && npm run check:cdn-contract && npm run check:cdn-importmap:candidate && playwright test",
     "build:fixture": "node scripts/build-rspack-fixture.mjs",
     "demo:e2e-fixture": "npm run build && npx serve . -l tcp://127.0.0.1:4173",
     "demo:node-ssr": "node test/fixtures/node-ssr/render.mjs",
@@ -157,11 +159,16 @@
     "setup:wasm": "node scripts/setup-wasm.mjs",
     "generate:cdn-contract": "node scripts/generate-cdn-contract.mjs",
     "check:cdn-contract": "node scripts/generate-cdn-contract.mjs --check",
+    "generate:cdn-importmap": "node scripts/generate-cdn-importmap.mjs --update",
+    "check:cdn-importmap": "node scripts/generate-cdn-importmap.mjs --check",
+    "generate:cdn-importmap:candidate": "node scripts/generate-cdn-importmap.mjs --update --candidate",
+    "check:cdn-importmap:candidate": "node scripts/generate-cdn-importmap.mjs --check --candidate",
     "sizecheck": "node scripts/sizecheck.mjs",
-    "prepack": "npm run build && npm run generate:cdn-contract && npm run check:cdn-contract"
+    "prepack": "npm run build && npm run generate:cdn-contract && npm run check:cdn-contract && npm run check:cdn-importmap:candidate"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@jspm/generator": "^2.11.0",
     "@knighted/duel": "^4.1.0",
     "@oxc-project/types": "^0.156.0",
     "@playwright/test": "^1.60.0",
@@ -250,7 +257,8 @@
   },
   "files": [
     "dist",
-    "cdn-contract.json"
+    "cdn-contract.json",
+    "cdn-importmap-lock.json"
   ],
   "author": "KCM <knightedcodemonkey@gmail.com>",
   "license": "MIT",
