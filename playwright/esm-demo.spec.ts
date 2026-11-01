@@ -40,6 +40,20 @@ test('clean consumer browser build transforms TypeScript and JSX with both WASM 
         { cwd: process.cwd(), encoding: 'utf8', shell: process.platform === 'win32' },
       ),
     )
+    const sourcePackage = JSON.parse(fs.readFileSync('package.json', 'utf8'))
+    expect(packed[0].version).toBe(sourcePackage.version)
+    expect(packed[0].files).toEqual(
+      expect.arrayContaining(
+        [
+          'dist/index.js',
+          'dist/react/index.js',
+          'dist/transform.js',
+          'dist/cdn-stable.js',
+          'dist/cli/init.js',
+          'cdn-contract.json',
+        ].map(filePath => expect.objectContaining({ path: filePath })),
+      ),
+    )
     fs.writeFileSync(
       path.join(projectDir, 'package.json'),
       JSON.stringify({
@@ -54,6 +68,24 @@ test('clean consumer browser build transforms TypeScript and JSX with both WASM 
       stdio: 'pipe',
       shell: process.platform === 'win32',
     })
+    const installedRoot = path.join(projectDir, 'node_modules/@knighted/jsx')
+    const installedPackage = JSON.parse(
+      fs.readFileSync(path.join(installedRoot, 'package.json'), 'utf8'),
+    )
+    const contract = JSON.parse(
+      fs.readFileSync(path.join(installedRoot, 'cdn-contract.json'), 'utf8'),
+    )
+    expect(installedPackage.version).toBe(sourcePackage.version)
+    expect(contract.packageVersion).toBe(installedPackage.version)
+    expect(installedPackage.exports['./cdn-stable'].import).toBe('./dist/cdn-stable.js')
+    expect(installedPackage.exports['./transform'].import).toBe('./dist/transform.js')
+    for (const key of ['core', 'react', 'transform']) {
+      expect(contract.entries[key].deps).toMatchObject({
+        '@napi-rs/wasm-runtime': '1.2.5',
+        '@emnapi/core': '2.0.0-alpha.6',
+        '@emnapi/runtime': '2.0.0-alpha.6',
+      })
+    }
     const consumerCli = path.join(
       projectDir,
       'node_modules/@knighted/jsx/dist/cli/init.js',

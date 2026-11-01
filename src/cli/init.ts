@@ -5,7 +5,7 @@ import path from 'node:path'
 import readline from 'node:readline/promises'
 import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
-import { applyWasmRuntimePolicy } from './wasm-runtime-policy.js'
+import { withWasmRuntimePolicies } from './wasm-runtime-policy.js'
 
 const CLI_REQUIRE = createRequire(
   typeof __filename !== 'undefined' ? __filename : path.join(process.cwd(), 'noop.js'),
@@ -267,7 +267,6 @@ async function installBinding(
   spawner: typeof spawnSync = crossSpawn.sync,
 ): Promise<{ targetDir: string; name: string; version?: string }> {
   const { name, version } = parsePackageName(spec)
-  applyWasmRuntimePolicy(cwd, name, version, pm, dryRun)
   const targetDir = path.resolve(cwd, 'node_modules', ...name.split('/'))
   const commands: Record<PackageManager, [string, string[]]> = {
     npm: ['npm', ['install', spec, '--save-exact']],
@@ -279,13 +278,13 @@ async function installBinding(
 
   log(`> Installing ${spec} with its declared dependencies`)
   logVerbose(`> ${command} ${args.join(' ')}`, verbose)
-  if (!dryRun) {
+  withWasmRuntimePolicies(cwd, [{ name, version }], pm, dryRun, () => {
     const result = spawner(command, args, { cwd, stdio: 'inherit' })
     if (result.error) throw result.error
     if (result.status !== 0) {
       throw new Error(`Failed to install WASM binding with ${pm}`)
     }
-  }
+  })
 
   return { targetDir, name, version }
 }

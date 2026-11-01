@@ -54,6 +54,7 @@ npx @knighted/jsx init --pm npm --wasm-package @oxc-transform/binding-wasm32-was
 - The default binding install always matches the `oxc-parser` version bundled with `@knighted/jsx`; use `--wasm-version`, `--wasm-package`, or `WASM_BINDING_PACKAGE` when you intentionally need a different build.
 - The current WASM binding has no CPU restriction and is installed normally; the CLI no longer deletes its directory or extracts a tarball without installing dependencies.
 - The repository's `npm run setup:wasm` helper applies the same compatibility policies to both WASM bindings and uses npm installation without saving dependency changes or running install scripts. Missing root policies are saved first; existing matching policies and the lockfile are preserved.
+- Both policies are validated before any write. If npm installation fails, the original project manifest and npm lockfile are restored; partial `node_modules` changes are not rolled back.
 - For the supported OXC bindings, use a canonical exact version. Ranges, tags, prefixed versions such as `=0.156.0`, and version strings with leading zeroes are rejected before installation.
 - Run affected npm installs from the workspace root. Workspace-child installs are rejected before any files change because npm ignores child-package overrides. This conservative check also rejects nested projects beneath a workspace manifest.
 - Loader configuration is opt-in and requires a prompt. No config files are modified unless you request help.

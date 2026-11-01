@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { getWasmRuntimeOverride } from '../src/cli/wasm-runtime-policy.ts'
 
 const rootDir = process.cwd()
 const packageJsonPath = path.join(rootDir, 'package.json')
@@ -13,9 +14,26 @@ const toContract = pkg => {
   const parserBindingVersion = normalizeVersion(
     pkg.optionalDependencies?.['@oxc-parser/binding-wasm32-wasip1'],
   )
-  const wasmRuntimeVersion = normalizeVersion(pkg.dependencies?.['@napi-rs/wasm-runtime'])
-  const emnapiCoreVersion = normalizeVersion(pkg.dependencies?.['@emnapi/core'])
-  const emnapiRuntimeVersion = normalizeVersion(pkg.dependencies?.['@emnapi/runtime'])
+  const parserPolicy = getWasmRuntimeOverride(
+    '@oxc-parser/binding-wasm32-wasip1',
+    parserBindingVersion,
+  )?.['@napi-rs/wasm-runtime']
+  const transformPolicy = getWasmRuntimeOverride(
+    '@oxc-transform/binding-wasm32-wasip1',
+    transformVersion,
+  )?.['@napi-rs/wasm-runtime']
+  if (JSON.stringify(parserPolicy) !== JSON.stringify(transformPolicy)) {
+    throw new Error(
+      '[cdn-contract] Parser and transformer runtime policies differ; separate graphs are required',
+    )
+  }
+  const wasmRuntimeVersion =
+    parserPolicy?.['.'] ?? normalizeVersion(pkg.dependencies?.['@napi-rs/wasm-runtime'])
+  const emnapiCoreVersion =
+    parserPolicy?.['@emnapi/core'] ?? normalizeVersion(pkg.dependencies?.['@emnapi/core'])
+  const emnapiRuntimeVersion =
+    parserPolicy?.['@emnapi/runtime'] ??
+    normalizeVersion(pkg.dependencies?.['@emnapi/runtime'])
 
   return {
     contractVersion: 1,

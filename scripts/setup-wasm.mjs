@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import crossSpawn from 'cross-spawn'
-import { applyWasmRuntimePolicy } from '../src/cli/wasm-runtime-policy.ts'
+import { withWasmRuntimePolicies } from '../src/cli/wasm-runtime-policy.ts'
 
 const npmExecPath = process.env.npm_execpath
 const packageSpecs = process.env.WASM_BINDING_PACKAGE
@@ -13,12 +13,12 @@ const packageSpecs = process.env.WASM_BINDING_PACKAGE
 
 function main() {
   try {
-    for (const spec of packageSpecs) {
+    const bindings = packageSpecs.map(spec => {
       const separator = spec.lastIndexOf('@')
       const name = separator > 0 ? spec.slice(0, separator) : spec
       const version = separator > 0 ? spec.slice(separator + 1) : undefined
-      applyWasmRuntimePolicy(process.cwd(), name, version, 'npm', false)
-    }
+      return { name, version }
+    })
     const args = [
       'install',
       ...packageSpecs,
@@ -33,11 +33,13 @@ function main() {
       fs.existsSync(npmExecPath)
         ? npmExecPath
         : undefined
-    const result = verifiedNpmScript
-      ? crossSpawn.sync(process.execPath, [verifiedNpmScript, ...args], options)
-      : crossSpawn.sync('npm', args, options)
-    if (result.error) throw result.error
-    if (result.status !== 0) throw new Error('npm failed to install WASM bindings')
+    withWasmRuntimePolicies(process.cwd(), bindings, 'npm', false, () => {
+      const result = verifiedNpmScript
+        ? crossSpawn.sync(process.execPath, [verifiedNpmScript, ...args], options)
+        : crossSpawn.sync('npm', args, options)
+      if (result.error) throw result.error
+      if (result.status !== 0) throw new Error('npm failed to install WASM bindings')
+    })
 
     console.log(
       `Installed ${packageSpecs.join(', ')} with their compatible dependency graphs`,

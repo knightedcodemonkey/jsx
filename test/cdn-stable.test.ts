@@ -1,4 +1,5 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { execFileSync } from 'node:child_process'
 import os from 'node:os'
 import path from 'node:path'
 
@@ -16,7 +17,7 @@ const fixtureParserVersion = '9.1.0'
 const fixtureTransformVersion = '9.2.0'
 const fixtureBindingVersion = '9.3.0'
 const fixtureRuntimeVersion = '9.4.0'
-const fixtureEmnapiVersion = '2.0.0-beta.2'
+const fixtureEmnapiVersion = '2.0.0-alpha.6'
 
 const contract: CdnContract = {
   contractVersion: 1,
@@ -56,6 +57,45 @@ const contract: CdnContract = {
 }
 
 describe('buildStableCdnUrls', () => {
+  it('generates binding-compatible pins rather than copying root runtime peers', async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'jsx-cdn-compatible-'))
+    try {
+      await writeFile(
+        path.join(tempDir, 'package.json'),
+        JSON.stringify({
+          name: '@knighted/jsx',
+          version: '2.0.0-alpha.0',
+          dependencies: {
+            'oxc-parser': '^0.156.0',
+            'oxc-transform': '^0.156.0',
+            '@napi-rs/wasm-runtime': '~1.2.6',
+            '@emnapi/core': '2.0.0-beta.2',
+            '@emnapi/runtime': '2.0.0-beta.2',
+          },
+          optionalDependencies: { '@oxc-parser/binding-wasm32-wasip1': '0.156.0' },
+        }),
+      )
+      execFileSync(
+        process.execPath,
+        [path.resolve('scripts/generate-cdn-contract.mjs')],
+        { cwd: tempDir, stdio: 'pipe' },
+      )
+      const generated = JSON.parse(
+        await readFile(path.join(tempDir, 'cdn-contract.json'), 'utf8'),
+      )
+      const result = buildStableCdnUrls({ contract: generated, provider: 'esm' })
+      for (const url of Object.values(result.urls)) {
+        const deps = new URL(url).searchParams.get('deps') ?? ''
+        expect(deps).toContain('@napi-rs/wasm-runtime@1.2.5')
+        expect(deps).toContain('@emnapi/core@2.0.0-alpha.6')
+        expect(deps).toContain('@emnapi/runtime@2.0.0-alpha.6')
+        expect(deps).not.toContain('beta.2')
+        expect(deps).not.toContain('wasm-runtime@1.2.6')
+      }
+    } finally {
+      await rm(tempDir, { recursive: true, force: true })
+    }
+  })
   it('builds esm.sh URLs for all stable entries', () => {
     const result = buildStableCdnUrls({
       contract,

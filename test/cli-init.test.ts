@@ -206,6 +206,66 @@ describe('resolveBindingSpec + fetchLatestBindingVersion', () => {
 })
 
 describe('setup:wasm', () => {
+  it('restores the original manifest and lockfile when setup npm fails', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jsx-setup-rollback-'))
+    const pkgPath = path.join(tmp, 'package.json')
+    const lockPath = path.join(tmp, 'package-lock.json')
+    const npmScript = path.join(tmp, 'npm-cli.js')
+    const original = JSON.stringify({ name: 'tmp' })
+    const originalLock = JSON.stringify({ lockfileVersion: 3 })
+    fs.writeFileSync(pkgPath, original)
+    fs.writeFileSync(lockPath, originalLock)
+    fs.writeFileSync(
+      npmScript,
+      `const fs = require('node:fs'); fs.writeFileSync(${JSON.stringify(pkgPath)}, '{}'); fs.writeFileSync(${JSON.stringify(lockPath)}, '{}'); process.exit(1)`,
+    )
+    const env = Object.fromEntries(
+      Object.entries(process.env).filter(
+        ([key]) => !['npm_execpath', 'wasm_binding_package'].includes(key.toLowerCase()),
+      ),
+    )
+    try {
+      expect(() =>
+        execFileSync(process.execPath, [path.resolve('scripts/setup-wasm.mjs')], {
+          cwd: tmp,
+          env: {
+            ...env,
+            NODE_ENV: process.env.NODE_ENV ?? 'test',
+            npm_execpath: npmScript,
+            WASM_BINDING_PACKAGE: '',
+          },
+          stdio: 'pipe',
+        }),
+      ).toThrow()
+      expect(fs.readFileSync(pkgPath, 'utf8')).toBe(original)
+      expect(fs.readFileSync(lockPath, 'utf8')).toBe(originalLock)
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true })
+    }
+  })
+
+  it('validates both policies before writing either one', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jsx-setup-policy-conflict-'))
+    const pkgPath = path.join(tmp, 'package.json')
+    const content = JSON.stringify({
+      name: 'tmp',
+      overrides: { '@oxc-transform/binding-wasm32-wasip1@0.156.0': '0.154.0' },
+    })
+    fs.writeFileSync(pkgPath, content)
+    try {
+      expect(() =>
+        execFileSync(process.execPath, [path.resolve('scripts/setup-wasm.mjs')], {
+          cwd: tmp,
+          env: { ...process.env, WASM_BINDING_PACKAGE: '' },
+          stdio: 'pipe',
+        }),
+      ).toThrow()
+      expect(fs.readFileSync(pkgPath, 'utf8')).toBe(content)
+      expect(fs.existsSync(path.join(tmp, 'node_modules'))).toBe(false)
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true })
+    }
+  })
   it.each(['', 'pnpm.cjs', 'yarn.js', 'missing/npm-cli.js'])(
     'resolves npm from PATH when npm_execpath is %s',
     npmExecpath => {
@@ -335,6 +395,45 @@ describe('setup:wasm', () => {
 })
 
 describe('installBinding', () => {
+  it.each([false, true])(
+    'restores manifests when npm fails with an existing lockfile: %s',
+    async existingLock => {
+      const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jsx-cli-rollback-'))
+      const pkgPath = path.join(tmp, 'package.json')
+      const lockPath = path.join(tmp, 'package-lock.json')
+      const original = JSON.stringify({
+        name: 'tmp',
+        dependencies: { '@emnapi/runtime': '1.11.3' },
+      })
+      const originalLock = JSON.stringify({ lockfileVersion: 3 })
+      fs.writeFileSync(pkgPath, original)
+      if (existingLock) fs.writeFileSync(lockPath, originalLock)
+      const spawner = vi.fn().mockImplementation(() => {
+        fs.writeFileSync(pkgPath, JSON.stringify({ name: 'npm-partial-write' }))
+        fs.writeFileSync(lockPath, JSON.stringify({ lockfileVersion: 1 }))
+        return { status: 1 }
+      })
+      try {
+        await expect(
+          cli.installBinding(
+            '@oxc-parser/binding-wasm32-wasip1@0.156.0',
+            tmp,
+            false,
+            false,
+            'npm',
+            spawner,
+          ),
+        ).rejects.toThrow('Failed to install')
+        expect(fs.readFileSync(pkgPath, 'utf8')).toBe(original)
+        const lock = fs.existsSync(lockPath)
+          ? fs.readFileSync(lockPath, 'utf8')
+          : undefined
+        expect(lock).toBe(existingLock ? originalLock : undefined)
+      } finally {
+        fs.rmSync(tmp, { recursive: true, force: true })
+      }
+    },
+  )
   it.each(['', 'pnpm.cjs', 'yarn.js'])(
     'does not derive npm from the invoking manager %s',
     async npmExecpath => {
