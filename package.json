@@ -141,7 +141,7 @@
     "clean:dist": "rimraf dist",
     "clean": "npm run clean:dist && npm run clean:deps",
     "lint": "eslint src test",
-    "pretest": "npm run build",
+    "pretest": "npm run build && npm run check:cdn-importmap:candidate",
     "cycles": "oxlint --import-plugin --tsconfig tsconfig.json -A all -D import/no-cycle src test",
     "prettier": "prettier -w .",
     "prettier:check": "prettier --check .",

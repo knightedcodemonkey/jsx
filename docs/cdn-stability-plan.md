@@ -20,7 +20,9 @@ Status: feasibility, map/lock generation, and both consumer APIs are implemented
   the local build, and materializes `dist/cdn-importmap.json`; `prepack` and E2E use this
   path. The concrete map is a generated package artifact under ignored `dist`, not a
   per-release source change. Intentional graph changes use candidate update mode to refresh
-  the tracked lock. Published mode remains available for live verification.
+  the tracked lock. Published mode remains available for live verification. The npm
+  `pretest` hook also runs candidate check after build so unit tests can read the ignored
+  dist manifest in CI.
 - The generator uses a non-local base URL and exact `npm:` install targets so it cannot
   resolve the working tree as the package source. Candidate mode supplies local built files
   at the future exact JSPM URL. A simulated alpha.0-to-alpha.1 package-version-only change
