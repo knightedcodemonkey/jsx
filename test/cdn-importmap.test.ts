@@ -12,6 +12,16 @@ const manifestPath = path.join(rootDir, 'dist/cdn-importmap.json')
 const lockPath = path.join(rootDir, 'cdn-importmap-lock.json')
 const packageJsonPath = path.join(rootDir, 'package.json')
 const packageLockPath = path.join(rootDir, 'package-lock.json')
+const packageVersion = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
+  .version as string
+const getNextAlphaVersion = (version: string) => {
+  const match = /^(.*-alpha\.)(\d+)$/.exec(version)
+  if (!match) {
+    throw new Error(`Expected an alpha package version, received ${version}`)
+  }
+  return `${match[1]}${Number(match[2]) + 1}`
+}
+const nextAlphaVersion = getNextAlphaVersion(packageVersion)
 const { serializeArtifact, validateCdnImportMapArtifacts } = await import(
   pathToFileURL(path.join(rootDir, 'scripts/generate-cdn-importmap.mjs')).href
 )
@@ -74,7 +84,7 @@ describe('CDN import map artifacts', () => {
 
     expect(result).toMatchObject({
       packageName: '@knighted/jsx',
-      packageVersion: '2.0.0-alpha.0',
+      packageVersion,
       resolutions: {
         '@napi-rs/wasm-runtime': '1.2.5',
         '@emnapi/core': '2.0.0-alpha.6',
@@ -84,7 +94,9 @@ describe('CDN import map artifacts', () => {
       },
     })
     expect(
-      artifacts.manifest.scopes['https://ga.jspm.io/npm:@knighted/jsx@2.0.0-alpha.0/'],
+      artifacts.manifest.scopes[
+        `https://ga.jspm.io/npm:@knighted/jsx@${packageVersion}/`
+      ],
     ).toMatchObject({
       'oxc-parser': 'https://ga.jspm.io/npm:oxc-parser@0.156.0/src-js/wasm.js',
       'oxc-transform': 'https://ga.jspm.io/npm:oxc-transform@0.156.0/browser.js',
@@ -101,7 +113,7 @@ describe('CDN import map artifacts', () => {
 
   it('rejects a bare or unlocked transitive mapping', () => {
     const artifacts = readArtifacts()
-    const selfScope = 'https://ga.jspm.io/npm:@knighted/jsx@2.0.0-alpha.0/'
+    const selfScope = `https://ga.jspm.io/npm:@knighted/jsx@${packageVersion}/`
     const selfScopeTemplate = 'https://ga.jspm.io/npm:@knighted/jsx@__SELF_VERSION__/'
     const unstableUrl = 'https://ga.jspm.io/npm:property-information@latest/index.js'
     artifacts.manifest.scopes[selfScope]['property-information'] = unstableUrl
@@ -149,7 +161,7 @@ describe('CDN import map artifacts', () => {
     const originalLock = fs.readFileSync(lockPath, 'utf8')
     try {
       const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
-      packageJson.version = '2.0.0-alpha.1'
+      packageJson.version = nextAlphaVersion
       await writeFile(
         path.join(temporaryRoot, 'package.json'),
         JSON.stringify(packageJson),
@@ -184,9 +196,9 @@ describe('CDN import map artifacts', () => {
       const candidateManifest = JSON.parse(
         fs.readFileSync(path.join(temporaryRoot, 'dist/cdn-importmap.json'), 'utf8'),
       )
-      expect(candidateManifest.package.version).toBe('2.0.0-alpha.1')
+      expect(candidateManifest.package.version).toBe(nextAlphaVersion)
       expect(candidateManifest.imports['@knighted/jsx']).toBe(
-        'https://ga.jspm.io/npm:@knighted/jsx@2.0.0-alpha.1/dist/index.js',
+        `https://ga.jspm.io/npm:@knighted/jsx@${nextAlphaVersion}/dist/index.js`,
       )
       expect(
         fs.readFileSync(path.join(temporaryRoot, 'cdn-importmap-lock.json'), 'utf8'),
