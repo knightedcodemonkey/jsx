@@ -410,12 +410,25 @@ const assertNoImportMapConflicts = (
 
   for (const [specifier, target] of Object.entries(generated.imports)) {
     checkMapping(specifier, target, document.baseURI)
+    checkMapping(target, target, document.baseURI)
   }
 
   for (const [scope, mappings] of Object.entries(generated.scopes)) {
-    const parentUrl = new URL(scope, document.baseURI).href
-    for (const [specifier, target] of Object.entries(mappings)) {
-      checkMapping(specifier, target, parentUrl)
+    const scopeUrl = new URL(scope, document.baseURI).href
+    const parentUrls = new Set([
+      scopeUrl,
+      ...existingMaps.flatMap(importMap =>
+        Object.keys(importMap.scopes)
+          .map(existingScope => new URL(existingScope, document.baseURI).href)
+          .filter(existingScope => existingScope.startsWith(scopeUrl)),
+      ),
+    ])
+
+    for (const parentUrl of parentUrls) {
+      for (const [specifier, target] of Object.entries(mappings)) {
+        checkMapping(specifier, target, parentUrl)
+        checkMapping(target, target, parentUrl)
+      }
     }
   }
 }

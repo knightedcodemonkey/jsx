@@ -76,6 +76,7 @@ describe('CDN import map artifacts', () => {
       './cdn-importmap-lock.json',
     )
     expect(packageJson.scripts.prepack).toContain('check:cdn-importmap')
+    expect(packageJson.scripts.pretest).toContain('check:cdn-importmap:candidate')
   })
 
   it('locks the published entries, transitive edges, React identity, and WASM assets', () => {

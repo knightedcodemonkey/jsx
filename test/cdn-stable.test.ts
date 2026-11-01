@@ -346,19 +346,38 @@ describe('loadCdnContract', () => {
   })
 })
 
+const stubImportMapManifestUrl = () => {
+  const RealUrl = URL
+  vi.stubGlobal(
+    'URL',
+    class extends RealUrl {
+      constructor(url: string | URL, base?: string | URL) {
+        const source = String(url)
+        const isManifestUrl =
+          source === './cdn-importmap.json' || source.endsWith('/src/cdn-importmap.json')
+        super(isManifestUrl ? 'https://cdn.example.test/cdn-importmap.json' : url, base)
+      }
+    },
+  )
+}
+
+const stubImportMapManifestFetch = () => {
+  stubImportMapManifestUrl()
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => ({ ok: true, json: async () => fixtureImportMapManifest })),
+  )
+}
+
 describe('getStableCdnImportMap', () => {
   it('returns a validated map without mutating document import maps', async () => {
     const fetchMock = vi.fn(async () => ({
       ok: true,
       json: async () => fixtureImportMapManifest,
     }))
-    const RealUrl = URL
-    const fakeUrl = function () {
-      return new RealUrl('https://cdn.example.test/cdn-importmap.json')
-    } as unknown as typeof URL
     const importMapCount = document.querySelectorAll('script[type="importmap"]').length
 
-    vi.stubGlobal('URL', fakeUrl)
+    stubImportMapManifestUrl()
     vi.stubGlobal('fetch', fetchMock)
 
     try {
@@ -381,12 +400,7 @@ describe('getStableCdnImportMap', () => {
   })
 
   it('rejects invalid manifest URLs and failed fetches', async () => {
-    const RealUrl = URL
-    const fakeUrl = function () {
-      return new RealUrl('https://cdn.example.test/cdn-importmap.json')
-    } as unknown as typeof URL
-
-    vi.stubGlobal('URL', fakeUrl)
+    stubImportMapManifestUrl()
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => ({
@@ -421,10 +435,7 @@ describe('getStableCdnImportMap', () => {
 
 describe('loadStableCdn', () => {
   it('rejects visible host mappings that conflict with the stable graph', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => ({ ok: true, json: async () => fixtureImportMapManifest })),
-    )
+    stubImportMapManifestFetch()
     const hostMap = document.createElement('script')
     hostMap.type = 'importmap'
     hostMap.textContent = JSON.stringify({
@@ -438,6 +449,55 @@ describe('loadStableCdn', () => {
     } finally {
       vi.unstubAllGlobals()
       hostMap.remove()
+    }
+  })
+
+  it('rejects React mappings in more-specific host scopes', async () => {
+    stubImportMapManifestFetch()
+    const hostMap = document.createElement('script')
+    hostMap.type = 'importmap'
+    hostMap.textContent = JSON.stringify({
+      scopes: {
+        'https://ga.jspm.io/npm:@knighted/jsx@2.0.0-alpha.0/dist/react/': {
+          react: 'https://esm.sh/react@19.3.1',
+        },
+      },
+    })
+    document.head.append(hostMap)
+
+    try {
+      await expect(loadStableCdn()).rejects.toThrow(/Import map conflict for "react"/)
+      expect(document.querySelectorAll('script[type="importmap"]')).toHaveLength(1)
+    } finally {
+      vi.unstubAllGlobals()
+      hostMap.remove()
+    }
+  })
+
+  it('rejects exact and prefix remappings of locked helper URLs', async () => {
+    const helperUrl = fixtureImportMapManifest.imports['@knighted/jsx']
+    const remappings = [
+      { [helperUrl]: 'https://esm.sh/replacement.js' },
+      {
+        'https://ga.jspm.io/npm:@knighted/jsx@2.0.0-alpha.0/':
+          'https://esm.sh/@knighted/jsx@2.0.0-alpha.0/',
+      },
+    ]
+
+    for (const imports of remappings) {
+      stubImportMapManifestFetch()
+      const hostMap = document.createElement('script')
+      hostMap.type = 'importmap'
+      hostMap.textContent = JSON.stringify({ imports })
+      document.head.append(hostMap)
+
+      try {
+        await expect(loadStableCdn()).rejects.toThrow(/Import map conflict/)
+        expect(document.querySelectorAll('script[type="importmap"]')).toHaveLength(1)
+      } finally {
+        vi.unstubAllGlobals()
+        hostMap.remove()
+      }
     }
   })
 

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -17,6 +17,22 @@ type CdnSmokeResult = {
     code: string
   }
 }
+
+const CDN_TEST_TIMEOUT = 120_000
+const CDN_SMOKE_TIMEOUT = 110_000
+
+test.describe.configure({ timeout: CDN_TEST_TIMEOUT })
+
+const waitForCdnSmokeResult = (page: Page) =>
+  page.waitForFunction(
+    () =>
+      ['ok', 'error'].includes(
+        (window as Window & { __cdnSmokeResult?: CdnSmokeResult }).__cdnSmokeResult
+          ?.status ?? 'running',
+      ),
+    undefined,
+    { timeout: CDN_SMOKE_TIMEOUT },
+  )
 
 const rootDir = process.cwd()
 const manifest = JSON.parse(
@@ -94,7 +110,6 @@ const routeCandidatePackage = async (page: import('@playwright/test').Page) => {
 test('frozen CDN graph works in standalone Chromium and every request is locked', async ({
   page,
 }) => {
-  test.setTimeout(120_000)
   await routeCandidatePackage(page)
   await page.goto('https://ga.jspm.io/')
 
@@ -139,14 +154,7 @@ test('frozen CDN graph works in standalone Chromium and every request is locked'
     `<!doctype html><script type="importmap">${importMap}</script><div id="root"></div><script type="module">${moduleSource}</script>`,
     { waitUntil: 'domcontentloaded' },
   )
-  await page.waitForFunction(
-    () =>
-      ['ok', 'error'].includes(
-        (window as Window & { __cdnSmokeResult?: CdnSmokeResult }).__cdnSmokeResult
-          ?.status ?? 'running',
-      ),
-    { timeout: 110_000 },
-  )
+  await waitForCdnSmokeResult(page)
 
   const result = await page.evaluate(
     () => (window as Window & { __cdnSmokeResult?: CdnSmokeResult }).__cdnSmokeResult,
@@ -186,7 +194,6 @@ test('frozen CDN graph works in standalone Chromium and every request is locked'
 test('stable CDN loader installs the packaged map before importing runtime entries', async ({
   page,
 }) => {
-  test.setTimeout(120_000)
   await routeCandidatePackage(page)
   await page.goto('/')
 
@@ -238,14 +245,7 @@ test('stable CDN loader installs the packaged map before importing runtime entri
     `<!doctype html><div id="root"></div><script type="module">${moduleSource}</script>`,
     { waitUntil: 'domcontentloaded' },
   )
-  await page.waitForFunction(
-    () =>
-      ['ok', 'error'].includes(
-        (window as Window & { __cdnSmokeResult?: CdnSmokeResult }).__cdnSmokeResult
-          ?.status ?? 'running',
-      ),
-    { timeout: 110_000 },
-  )
+  await waitForCdnSmokeResult(page)
 
   const result = await page.evaluate(
     () => (window as Window & { __cdnSmokeResult?: CdnSmokeResult }).__cdnSmokeResult,
@@ -320,14 +320,7 @@ test('host-owned bootstrap can inline the pure map before bare imports', async (
   await page.setContent(`<!doctype html><script type="module">${moduleSource}</script>`, {
     waitUntil: 'domcontentloaded',
   })
-  await page.waitForFunction(
-    () =>
-      ['ok', 'error'].includes(
-        (window as Window & { __cdnSmokeResult?: CdnSmokeResult }).__cdnSmokeResult
-          ?.status ?? 'running',
-      ),
-    { timeout: 60_000 },
-  )
+  await waitForCdnSmokeResult(page)
 
   const result = await page.evaluate(
     () => (window as Window & { __cdnSmokeResult?: CdnSmokeResult }).__cdnSmokeResult,
