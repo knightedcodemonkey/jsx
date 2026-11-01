@@ -8,7 +8,9 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   buildStableCdnUrls,
   type CdnContract,
+  getStableCdnImportMap,
   getStableCdnUrls,
+  loadStableCdn,
   loadCdnContract,
 } from '../src/cdn-stable.js'
 
@@ -18,6 +20,44 @@ const fixtureTransformVersion = '9.2.0'
 const fixtureBindingVersion = '9.3.0'
 const fixtureRuntimeVersion = '9.4.0'
 const fixtureEmnapiVersion = '2.0.0-alpha.6'
+const fixtureImportMapManifest = {
+  schemaVersion: 1,
+  package: { name: '@knighted/jsx', version: '2.0.0-alpha.0' },
+  provider: 'jspm.io',
+  entries: {
+    core: '@knighted/jsx',
+    react: '@knighted/jsx/react',
+    transform: '@knighted/jsx/transform',
+    reactDomClient: 'react-dom/client',
+  },
+  resolutions: { react: '19.3.1', 'react-dom': '19.3.1' },
+  assets: [
+    {
+      moduleUrl: 'https://ga.jspm.io/npm:binding@1.0.0/browser.js',
+      packageName: 'binding',
+      packageVersion: '1.0.0',
+      url: 'https://ga.jspm.io/npm:binding@1.0.0/binding.wasm',
+    },
+  ],
+  imports: {
+    '@knighted/jsx': 'https://ga.jspm.io/npm:@knighted/jsx@2.0.0-alpha.0/dist/index.js',
+    '@knighted/jsx/react':
+      'https://ga.jspm.io/npm:@knighted/jsx@2.0.0-alpha.0/dist/react/index.js',
+    '@knighted/jsx/transform':
+      'https://ga.jspm.io/npm:@knighted/jsx@2.0.0-alpha.0/dist/transform.js',
+    react: 'https://ga.jspm.io/npm:react@19.3.1/index.js',
+    'react-dom': 'https://ga.jspm.io/npm:react-dom@19.3.1/index.js',
+    'react-dom/client': 'https://ga.jspm.io/npm:react-dom@19.3.1/client.js',
+  },
+  scopes: {
+    'https://ga.jspm.io/npm:@knighted/jsx@2.0.0-alpha.0/': {
+      react: 'https://ga.jspm.io/npm:react@19.3.1/index.js',
+    },
+    'https://ga.jspm.io/npm:react-dom@19.3.1/': {
+      react: 'https://ga.jspm.io/npm:react@19.3.1/index.js',
+    },
+  },
+}
 
 const contract: CdnContract = {
   contractVersion: 1,
@@ -303,6 +343,109 @@ describe('loadCdnContract', () => {
     } finally {
       vi.unstubAllGlobals()
     }
+  })
+})
+
+describe('getStableCdnImportMap', () => {
+  it('returns a validated map without mutating document import maps', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => fixtureImportMapManifest,
+    }))
+    const RealUrl = URL
+    const fakeUrl = function () {
+      return new RealUrl('https://cdn.example.test/cdn-importmap.json')
+    } as unknown as typeof URL
+    const importMapCount = document.querySelectorAll('script[type="importmap"]').length
+
+    vi.stubGlobal('URL', fakeUrl)
+    vi.stubGlobal('fetch', fetchMock)
+
+    try {
+      const map = await getStableCdnImportMap()
+
+      expect(map).toEqual({
+        imports: fixtureImportMapManifest.imports,
+        scopes: fixtureImportMapManifest.scopes,
+      })
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://cdn.example.test/cdn-importmap.json',
+      )
+      expect(document.querySelectorAll('script[type="importmap"]')).toHaveLength(
+        importMapCount,
+      )
+      expect(map.imports).not.toBe(fixtureImportMapManifest.imports)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('rejects invalid manifest URLs and failed fetches', async () => {
+    const RealUrl = URL
+    const fakeUrl = function () {
+      return new RealUrl('https://cdn.example.test/cdn-importmap.json')
+    } as unknown as typeof URL
+
+    vi.stubGlobal('URL', fakeUrl)
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          ...fixtureImportMapManifest,
+          imports: {
+            ...fixtureImportMapManifest.imports,
+            unexpected: 'https://unpkg.com/react@19.3.1/index.js',
+          },
+        }),
+      })),
+    )
+
+    try {
+      await expect(getStableCdnImportMap()).rejects.toThrow(/unsupported URL/)
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => ({ ok: false, status: 503 })),
+      )
+      await expect(getStableCdnImportMap()).rejects.toThrow(/503/)
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => Promise.reject(new Error('offline'))),
+      )
+      await expect(getStableCdnImportMap()).rejects.toThrow(/Failed to fetch import map/)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+})
+
+describe('loadStableCdn', () => {
+  it('rejects visible host mappings that conflict with the stable graph', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: true, json: async () => fixtureImportMapManifest })),
+    )
+    const hostMap = document.createElement('script')
+    hostMap.type = 'importmap'
+    hostMap.textContent = JSON.stringify({
+      imports: { react: 'https://esm.sh/react@19.3.1' },
+    })
+    document.head.append(hostMap)
+
+    try {
+      await expect(loadStableCdn()).rejects.toThrow(/Import map conflict for "react"/)
+      expect(document.querySelectorAll('script[type="importmap"]')).toHaveLength(1)
+    } finally {
+      vi.unstubAllGlobals()
+      hostMap.remove()
+    }
+  })
+
+  it('rejects empty or unsupported entry requests before loading the manifest', async () => {
+    await expect(loadStableCdn({ entries: [] })).rejects.toThrow(/At least one/)
+    await expect(loadStableCdn({ entries: ['unsupported' as 'core'] })).rejects.toThrow(
+      /Unsupported entry/,
+    )
   })
 })
 
