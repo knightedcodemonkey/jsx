@@ -15,7 +15,7 @@ const nextConfig = {
       '@knighted/jsx/react': path.join(distDir, 'react/index.js'),
       '@knighted/jsx/node': path.join(distDir, 'node/index.js'),
       '@knighted/jsx/node/react': path.join(distDir, 'node/react/index.js'),
-      '@oxc-parser/binding-wasm32-wasi': path.join(
+      '@oxc-parser/binding-wasm32-wasip1': path.join(
         repoRoot,
         'test/fixtures/rspack-app/stubs/oxc-wasm.js',
       ),

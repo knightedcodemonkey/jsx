@@ -55,8 +55,19 @@ jobs:
         run: npm run build
       - name: Pack
         run: npm pack
+      - name: Determine npm tag
+        id: npm-tag
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync, readFileSync } from 'node:fs'
+
+          const { version } = JSON.parse(readFileSync('package.json', 'utf8'))
+          const tag = version.split('+')[0].includes('-') ? 'next' : 'latest'
+          appendFileSync(process.env.GITHUB_OUTPUT, `tag=${tag}\n`)
+          console.log(`Publishing ${version} under ${tag}`)
+          NODE
       - name: Publish to npm
         uses: JS-DevTools/npm-publish@v4.1.5
         with:
           access: public
-          tag: ${{ contains(github.ref, '-') && 'next' || 'latest' }}
+          tag: ${{ steps.npm-tag.outputs.tag }}

@@ -26,7 +26,7 @@ export default defineConfig({
     ],
   },
   optimizeDeps: {
-    exclude: ['oxc-parser', '@oxc-parser/binding-wasm32-wasi'],
+    exclude: ['oxc-parser', '@oxc-parser/binding-wasm32-wasip1'],
   },
   assetsInclude: ['**/*.wasm'],
   build: {

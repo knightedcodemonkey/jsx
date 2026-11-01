@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -19,7 +18,7 @@ const reactRuntimePath = path.join(rootDir, 'dist/react/index.js')
 const wasmStubPath = path.join(fixtureDir, 'stubs/oxc-wasm.js')
 const wasmBindingPath = path.join(
   rootDir,
-  'node_modules/@oxc-parser/binding-wasm32-wasi/parser.wasi.cjs',
+  'node_modules/@oxc-parser/binding-wasm32-wasip1/parser.wasip1.cjs',
 )
 const useStub = process.argv.includes('--use-stub')
 
@@ -91,7 +90,7 @@ try {
       alias: {
         '@knighted/jsx': runtimePath,
         '@knighted/jsx/react': reactRuntimePath,
-        ...(useStub ? { '@oxc-parser/binding-wasm32-wasi': wasmStubPath } : {}),
+        ...(useStub ? { '@oxc-parser/binding-wasm32-wasip1': wasmStubPath } : {}),
       },
     },
     module: {

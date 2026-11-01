@@ -1,55 +1,53 @@
-import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
-import { extract } from 'tar'
+import crossSpawn from 'cross-spawn'
+import { withWasmRuntimePolicies } from '../src/cli/wasm-runtime-policy.ts'
 
 const npmExecPath = process.env.npm_execpath
-const npmBin = process.platform === 'win32' ? 'npm.cmd' : 'npm'
-const PACKAGE_SPEC =
-  process.env.WASM_BINDING_PACKAGE ?? '@oxc-parser/binding-wasm32-wasi@^0.142.0'
-const cwd = process.cwd()
+const packageSpecs = process.env.WASM_BINDING_PACKAGE
+  ? [process.env.WASM_BINDING_PACKAGE]
+  : [
+      '@oxc-parser/binding-wasm32-wasip1@0.156.0',
+      '@oxc-transform/binding-wasm32-wasip1@0.156.0',
+    ]
 
-function runNpmPack() {
-  const baseOptions = {
-    cwd,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'inherit'],
-  }
-  const output = (
-    npmExecPath
-      ? execFileSync(process.execPath, [npmExecPath, 'pack', PACKAGE_SPEC], baseOptions)
-      : execFileSync(npmBin, ['pack', PACKAGE_SPEC], {
-          ...baseOptions,
-          shell: process.platform === 'win32',
-        })
-  ).trim()
-  const lines = output.split('\n').filter(Boolean)
-
-  return lines[lines.length - 1]
-}
-
-async function main() {
+function main() {
   try {
-    const tarballName = runNpmPack()
-    const tarballPath = path.resolve(cwd, tarballName)
-    const targetDir = path.resolve(
-      cwd,
-      'node_modules',
-      '@oxc-parser',
-      'binding-wasm32-wasi',
+    const bindings = packageSpecs.map(spec => {
+      const separator = spec.lastIndexOf('@')
+      const name = separator > 0 ? spec.slice(0, separator) : spec
+      const version = separator > 0 ? spec.slice(separator + 1) : undefined
+      return { name, version }
+    })
+    const args = [
+      'install',
+      ...packageSpecs,
+      '--no-save',
+      '--ignore-scripts',
+      '--include=optional',
+    ]
+    const options = { cwd: process.cwd(), stdio: 'inherit' }
+    const verifiedNpmScript =
+      npmExecPath &&
+      path.basename(npmExecPath).toLowerCase() === 'npm-cli.js' &&
+      fs.existsSync(npmExecPath)
+        ? npmExecPath
+        : undefined
+    withWasmRuntimePolicies(process.cwd(), bindings, 'npm', false, () => {
+      const result = verifiedNpmScript
+        ? crossSpawn.sync(process.execPath, [verifiedNpmScript, ...args], options)
+        : crossSpawn.sync('npm', args, options)
+      if (result.error) throw result.error
+      if (result.status !== 0) throw new Error('npm failed to install WASM bindings')
+    })
+
+    console.log(
+      `Installed ${packageSpecs.join(', ')} with their compatible dependency graphs`,
     )
-
-    fs.rmSync(targetDir, { recursive: true, force: true })
-    fs.mkdirSync(targetDir, { recursive: true })
-
-    await extract({ file: tarballPath, cwd: targetDir, strip: 1 })
-    fs.rmSync(tarballPath, { force: true })
-
-    console.log(`Installed ${PACKAGE_SPEC} into ${targetDir}`)
   } catch (error) {
     console.error('Failed to install WASM binding:', error)
     process.exit(1)
   }
 }
 
-await main()
+main()

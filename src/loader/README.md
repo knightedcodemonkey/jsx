@@ -19,7 +19,7 @@ npx @knighted/jsx init
 # add --config to walk through loader options, or --dry-run to inspect first
 ```
 
-`init` installs the required runtimes plus `@oxc-parser/binding-wasm32-wasi` with the right platform flags so JSX inside template literals can be parsed at runtime. If you cannot run the CLI, install those same packages manually, passing `npm_config_ignore_platform=true` (or an equivalent flag for your package manager) when adding the binding or vendoring it like `scripts/setup-wasm.mjs`.
+`init` installs `@oxc-parser/binding-wasm32-wasip1` and its dependency graph through the selected package manager without replacing the host's direct runtime dependencies. Binding 0.156.0 currently requires the npm-only compatibility workaround documented in [CLI setup](../../docs/cli.md#oxc-01560-runtime-compatibility-workaround); follow that guide for manual setup and package-manager limitations. For this repository's fixtures, `npm run setup:wasm` installs both bindings without saving dependency changes and adds missing scoped overrides to the project manifest. Both policies are validated before writing; the original manifest is restored if npm installation fails.
 
 ## Basic usage
 
