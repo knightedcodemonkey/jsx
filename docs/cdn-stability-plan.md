@@ -60,13 +60,15 @@ Status: feasibility, map/lock generation, and both consumer APIs are implemented
 - jsDelivr's `+esm` entrypoints retain bare imports and the existing contract does not
   constrain their transitive resolution. The esm.sh URL helper's selected `deps` are
   also not a complete lock. Neither path is selected for the initial prototype.
-- The OXC binding-generation mismatch is tracked in napi-rs/napi-rs#3674, which is open
-  with no linked PR as of this checkpoint. The related napi-rs/napi-rs#3621 runtime-plugin
-  ABI issue closed via #3650, but that is distinct: both published OXC `0.156.0` WASM
-  bindings still declare emnapi alpha.6 and `@napi-rs/wasm-runtime ~1.2.6`, while
-  runtime 1.2.6 peers with beta.2. Retain and explicitly encode the tested
-  runtime-1.2.5/alpha.6 compatibility resolution until a compatible OXC binding is
-  published and verified.
+- The published binding mismatch is tracked from both sides: oxc-project/oxc#28717
+  records the parser binding failure and its masked loader error, while
+  napi-rs/napi-rs#3674 tracks the suspected generator behavior that selects registry
+  latest independently of the workspace-pinned runtime. Both are open with no linked fix
+  as of this checkpoint. The related napi-rs/napi-rs#3621 runtime-plugin ABI issue closed
+  via #3650, but is distinct: both published OXC `0.156.0` WASM bindings still declare
+  emnapi alpha.6 and `@napi-rs/wasm-runtime ~1.2.6`, while runtime 1.2.6 peers with
+  beta.2. Retain and explicitly encode the tested runtime-1.2.5/alpha.6 compatibility
+  resolution until a compatible OXC binding is published and verified.
 - The exact JSPM lock will not silently float when upstream changes. Once a compatible
   binding is published, deliberately refresh the lock for a new exact JSX release and
   rerun browser validation. JSPM can then trace the newly published dependency metadata;
